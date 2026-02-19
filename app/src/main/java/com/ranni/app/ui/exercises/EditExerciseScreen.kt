@@ -52,22 +52,13 @@ fun EditExerciseScreen(
                 label = { Text("Exercise Name") },
                 modifier = Modifier.fillMaxWidth()
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
-                    value = state.sets,
-                    onValueChange = { viewModel.update(state.copy(sets = it)) },
-                    label = { Text("Sets") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.weight(1f)
-                )
-                OutlinedTextField(
-                    value = state.reps,
-                    onValueChange = { viewModel.update(state.copy(reps = it)) },
-                    label = { Text("Reps") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.weight(1f)
-                )
-            }
+            OutlinedTextField(
+                value = state.sets,
+                onValueChange = { viewModel.update(state.copy(sets = it)) },
+                label = { Text("Sets") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth()
+            )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("Timed sets", modifier = Modifier.weight(1f))
                 Switch(

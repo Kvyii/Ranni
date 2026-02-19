@@ -28,7 +28,7 @@ fun SessionScreen(
             TopAppBar(
                 title = { Text(exerciseName) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = { viewModel.stopAlarms(); onBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
                     }
                 }
@@ -60,7 +60,7 @@ fun SessionScreen(
                     } else {
                         PhaseLayout(
                             subtitle = "Set ${p.currentSet} of ${p.totalSets}",
-                            mainText = "${p.reps} reps",
+                            mainText = "Go",
                             buttonText = "Done — Start Rest",
                             onButton = { viewModel.finishSet() }
                         )
@@ -79,7 +79,7 @@ fun SessionScreen(
                     onButton = {}
                 )
 
-                is SessionPhase.Complete -> CompleteScreen(onBack)
+                is SessionPhase.Complete -> CompleteScreen { viewModel.stopAlarms(); onBack() }
             }
         }
     }

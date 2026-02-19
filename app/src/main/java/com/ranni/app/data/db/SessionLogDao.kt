@@ -11,4 +11,7 @@ interface SessionLogDao {
 
     @Query("SELECT * FROM session_logs ORDER BY completedAt DESC")
     fun getAllLogs(): Flow<List<SessionLog>>
+
+    @Delete
+    suspend fun delete(log: SessionLog)
 }

@@ -9,7 +9,6 @@ data class Exercise(
     val id: Long = 0,
     val name: String,
     val sets: Int,
-    val reps: Int,
     val setDurationSeconds: Int?,   // null = no timer
     val restDurationSeconds: Int
 )

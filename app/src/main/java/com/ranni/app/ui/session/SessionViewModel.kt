@@ -15,8 +15,8 @@ import kotlinx.coroutines.launch
 
 sealed class SessionPhase {
     object Loading : SessionPhase()
-    data class SetReady(val currentSet: Int, val totalSets: Int, val reps: Int) : SessionPhase()
-    data class SetActive(val currentSet: Int, val totalSets: Int, val reps: Int, val remainingSeconds: Int?) : SessionPhase()
+    data class SetReady(val currentSet: Int, val totalSets: Int) : SessionPhase()
+    data class SetActive(val currentSet: Int, val totalSets: Int, val remainingSeconds: Int?) : SessionPhase()
     data class RestReady(val currentSet: Int, val totalSets: Int) : SessionPhase()
     data class RestActive(val currentSet: Int, val totalSets: Int, val remainingSeconds: Int) : SessionPhase()
     object Complete : SessionPhase()
@@ -46,7 +46,7 @@ class SessionViewModel(
             exercise = ex
             _exerciseName.value = ex.name
             currentSet = 1
-            _phase.value = SessionPhase.SetReady(currentSet, ex.sets, ex.reps)
+            _phase.value = SessionPhase.SetReady(currentSet, ex.sets)
         }
     }
 
@@ -55,21 +55,21 @@ class SessionViewModel(
         alarmPlayer.stopRest()
         val timed = ex.setDurationSeconds
         if (timed != null) {
-            _phase.value = SessionPhase.SetActive(currentSet, ex.sets, ex.reps, timed)
+            _phase.value = SessionPhase.SetActive(currentSet, ex.sets, timed)
             timerJob?.cancel()
             timerJob = viewModelScope.launch {
                 var remaining = timed
                 while (remaining > 0) {
                     delay(1000)
                     remaining--
-                    _phase.value = SessionPhase.SetActive(currentSet, ex.sets, ex.reps, remaining)
+                    _phase.value = SessionPhase.SetActive(currentSet, ex.sets, remaining)
                 }
                 // auto-transition to rest without requiring user tap
                 alarmPlayer.playSetComplete()
                 startRest(autoStart = true)
             }
         } else {
-            _phase.value = SessionPhase.SetActive(currentSet, ex.sets, ex.reps, null)
+            _phase.value = SessionPhase.SetActive(currentSet, ex.sets, null)
         }
     }
 
@@ -109,13 +109,19 @@ class SessionViewModel(
             if (currentSet > ex.sets) {
                 logAndComplete(ex.name)
             } else {
-                _phase.value = SessionPhase.SetReady(currentSet, ex.sets, ex.reps)
+                _phase.value = SessionPhase.SetReady(currentSet, ex.sets)
             }
         }
     }
 
+    fun stopAlarms() {
+        timerJob?.cancel()
+        alarmPlayer.stopAll()
+    }
+
     private fun logAndComplete(name: String) {
         viewModelScope.launch {
+            alarmPlayer.stopAll()
             sessionRepo.logSession(name)
             _phase.value = SessionPhase.Complete
         }

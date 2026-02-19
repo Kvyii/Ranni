@@ -7,4 +7,5 @@ import kotlinx.coroutines.flow.Flow
 class SessionRepository(private val dao: SessionLogDao) {
     fun getAllLogs(): Flow<List<SessionLog>> = dao.getAllLogs()
     suspend fun logSession(exerciseName: String) = dao.insert(SessionLog(exerciseName = exerciseName))
+    suspend fun deleteLog(log: SessionLog) = dao.delete(log)
 }

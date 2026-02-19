@@ -12,7 +12,6 @@ import kotlinx.coroutines.launch
 data class EditExerciseState(
     val name: String = "",
     val sets: String = "3",
-    val reps: String = "10",
     val hasSetDuration: Boolean = false,
     val setDurationSeconds: String = "30",
     val restDurationSeconds: String = "60"
@@ -32,7 +31,6 @@ class EditExerciseViewModel(private val repo: ExerciseRepository) : ViewModel() 
             _state.value = EditExerciseState(
                 name = ex.name,
                 sets = ex.sets.toString(),
-                reps = ex.reps.toString(),
                 hasSetDuration = ex.setDurationSeconds != null,
                 setDurationSeconds = ex.setDurationSeconds?.toString() ?: "30",
                 restDurationSeconds = ex.restDurationSeconds.toString()
@@ -48,7 +46,6 @@ class EditExerciseViewModel(private val repo: ExerciseRepository) : ViewModel() 
             id = editingId ?: 0,
             name = s.name.trim(),
             sets = s.sets.toIntOrNull() ?: 1,
-            reps = s.reps.toIntOrNull() ?: 1,
             setDurationSeconds = if (s.hasSetDuration) s.setDurationSeconds.toIntOrNull() ?: 30 else null,
             restDurationSeconds = s.restDurationSeconds.toIntOrNull() ?: 60
         )

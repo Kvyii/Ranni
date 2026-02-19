@@ -22,10 +22,21 @@ class AlarmPlayer(private val context: Context) {
         }
     }
 
+    fun stopSet() {
+        setPlayer?.stop()
+        setPlayer?.release()
+        setPlayer = null
+    }
+
     fun stopRest() {
         restPlayer?.stop()
         restPlayer?.release()
         restPlayer = null
+    }
+
+    fun stopAll() {
+        stopSet()
+        stopRest()
     }
 
     fun release() {

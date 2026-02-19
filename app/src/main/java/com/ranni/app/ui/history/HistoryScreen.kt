@@ -6,6 +6,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -13,12 +16,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.kizitonwose.calendar.compose.CalendarState
 import com.kizitonwose.calendar.compose.HorizontalCalendar
 import com.kizitonwose.calendar.compose.rememberCalendarState
 import com.kizitonwose.calendar.core.CalendarDay
 import com.kizitonwose.calendar.core.DayPosition
 import com.kizitonwose.calendar.core.firstDayOfWeekFromLocale
 import com.ranni.app.data.model.SessionLog
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
@@ -28,7 +33,8 @@ import java.util.Locale
 @Composable
 fun HistoryScreen(viewModel: HistoryViewModel) {
     val logs by viewModel.logs.collectAsState()
-    var selectedDate by remember { mutableStateOf<LocalDate?>(null) }
+    var selectedDate by remember { mutableStateOf<LocalDate?>(LocalDate.now()) }
+    var logToDelete by remember { mutableStateOf<SessionLog?>(null) }
 
     val logsByDate: Map<LocalDate, List<SessionLog>> = remember(logs) {
         logs.groupBy { log ->
@@ -51,6 +57,23 @@ fun HistoryScreen(viewModel: HistoryViewModel) {
         firstDayOfWeek = firstDayOfWeek
     )
 
+    if (logToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { logToDelete = null },
+            title = { Text("Delete entry?") },
+            text = { Text("Remove \"${logToDelete!!.exerciseName}\" from your history?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.deleteLog(logToDelete!!)
+                    logToDelete = null
+                }) { Text("Delete") }
+            },
+            dismissButton = {
+                TextButton(onClick = { logToDelete = null }) { Text("Cancel") }
+            }
+        )
+    }
+
     Column(modifier = Modifier.fillMaxSize()) {
         HorizontalCalendar(
             state = calendarState,
@@ -62,7 +85,7 @@ fun HistoryScreen(viewModel: HistoryViewModel) {
                 }
             },
             monthHeader = { month ->
-                MonthHeader(month.yearMonth)
+                MonthHeader(month.yearMonth, calendarState)
             }
         )
 
@@ -80,8 +103,12 @@ fun HistoryScreen(viewModel: HistoryViewModel) {
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(dayLogs) { log ->
-                        Card(modifier = Modifier.fillMaxWidth()) {
+                    items(dayLogs, key = { it.id }) { log ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { logToDelete = log }
+                        ) {
                             Text(
                                 log.exerciseName,
                                 modifier = Modifier.padding(16.dp),
@@ -135,12 +162,28 @@ private fun Day(
 }
 
 @Composable
-private fun MonthHeader(yearMonth: YearMonth) {
-    Text(
-        text = "${yearMonth.month.getDisplayName(TextStyle.FULL, Locale.getDefault())} ${yearMonth.year}",
-        style = MaterialTheme.typography.titleMedium,
+private fun MonthHeader(yearMonth: YearMonth, calendarState: CalendarState) {
+    val scope = rememberCoroutineScope()
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp, horizontal = 16.dp)
-    )
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        IconButton(onClick = {
+            scope.launch { calendarState.animateScrollToMonth(yearMonth.minusMonths(1)) }
+        }) {
+            Icon(Icons.Default.KeyboardArrowLeft, contentDescription = "Previous month")
+        }
+        Text(
+            text = "${yearMonth.month.getDisplayName(TextStyle.FULL, Locale.getDefault())} ${yearMonth.year}",
+            style = MaterialTheme.typography.titleMedium
+        )
+        IconButton(onClick = {
+            scope.launch { calendarState.animateScrollToMonth(yearMonth.plusMonths(1)) }
+        }) {
+            Icon(Icons.Default.KeyboardArrowRight, contentDescription = "Next month")
+        }
+    }
 }

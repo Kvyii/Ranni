@@ -104,7 +104,7 @@ private fun ExerciseCard(
             Column(modifier = Modifier.weight(1f)) {
                 Text(exercise.name, style = MaterialTheme.typography.titleMedium)
                 Text(
-                    "${exercise.sets} sets × ${exercise.reps} reps" +
+                    "${exercise.sets} sets" +
                     (exercise.setDurationSeconds?.let { " · ${it}s hold" } ?: "") +
                     " · ${exercise.restDurationSeconds}s rest",
                     style = MaterialTheme.typography.bodySmall

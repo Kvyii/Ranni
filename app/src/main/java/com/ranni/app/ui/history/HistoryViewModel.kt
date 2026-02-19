@@ -7,8 +7,13 @@ import com.ranni.app.data.repository.SessionRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 class HistoryViewModel(private val repo: SessionRepository) : ViewModel() {
     val logs: StateFlow<List<SessionLog>> = repo.getAllLogs()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun deleteLog(log: SessionLog) {
+        viewModelScope.launch { repo.deleteLog(log) }
+    }
 }

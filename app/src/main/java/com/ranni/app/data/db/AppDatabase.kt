@@ -4,13 +4,15 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import com.ranni.app.data.model.ClimbLog
 import com.ranni.app.data.model.Exercise
 import com.ranni.app.data.model.SessionLog
 
-@Database(entities = [Exercise::class, SessionLog::class], version = 1, exportSchema = false)
+@Database(entities = [Exercise::class, SessionLog::class, ClimbLog::class], version = 4, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun exerciseDao(): ExerciseDao
     abstract fun sessionLogDao(): SessionLogDao
+    abstract fun climbLogDao(): ClimbLogDao
 
     companion object {
         @Volatile private var INSTANCE: AppDatabase? = null
@@ -21,7 +23,7 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "ranni_db"
-                ).build().also { INSTANCE = it }
+                ).fallbackToDestructiveMigration().build().also { INSTANCE = it }
             }
     }
 }
