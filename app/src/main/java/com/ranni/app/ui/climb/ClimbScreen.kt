@@ -5,6 +5,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -16,67 +19,102 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-
-private data class RouteColor(val name: String, val grade: String, val color: Color, val score: Int)
-
-private val gymColors = listOf(
-    RouteColor("Green",  "VB",      Color(0xFF60B555),   75),
-    RouteColor("Blue",   "V0",      Color(0xFF4279C7),  100),
-    RouteColor("Teal",   "V1 - V2", Color(0xFF42B5C7),  150),
-    RouteColor("Pink",   "V2 - V3", Color(0xFFDB72CD),  250),
-    RouteColor("Orange", "V3 - V4", Color(0xFFDB8272),  450),
-    RouteColor("Black",  "V5 - V6", Color(0xFF050101),  700),
-    RouteColor("Purple", "V6 - V8", Color(0xFF6A3CBA), 1000),
-    RouteColor("White",  "V7+",     Color(0xFFEDEDED), 1300),
-)
+import androidx.compose.ui.unit.sp
+import com.ranni.app.data.model.RouteColor
+import com.ranni.app.data.model.gyms
 
 @Composable
 fun ClimbScreen(viewModel: ClimbViewModel) {
-    var gymExpanded by remember { mutableStateOf(false) }
+    var expandedGym by remember { mutableStateOf<String?>(null) }
     var selectedColor by remember { mutableStateOf<RouteColor?>(null) }
+    var showLiarDialog by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
-    Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { padding ->
+    if (showLiarDialog) {
+        AlertDialog(
+            onDismissRequest = { showLiarDialog = false },
+            text = {
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Text("Liar!!", fontSize = 40.sp, fontWeight = FontWeight.Bold)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showLiarDialog = false }) {
+                    Text("Okay I lied")
+                }
+            }
+        )
+    }
+
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        contentWindowInsets = WindowInsets(0)
+    ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .verticalScroll(rememberScrollState())
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Gym menu
-            Surface(
-                shape = RoundedCornerShape(12.dp),
-                tonalElevation = 2.dp,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { gymExpanded = !gymExpanded }
-                            .padding(horizontal = 16.dp, vertical = 14.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+            gyms.forEach { gym ->
+                if (gym.comingSoon) {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        tonalElevation = 2.dp,
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("9 Degrees", style = MaterialTheme.typography.titleMedium)
-                        Icon(
-                            if (gymExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                            contentDescription = null
-                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 14.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(gym.name, style = MaterialTheme.typography.titleMedium)
+                            Text("Coming soon", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
-
-                    AnimatedVisibility(visible = gymExpanded) {
+                } else {
+                    val isExpanded = expandedGym == gym.name
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        tonalElevation = 2.dp,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
                         Column {
-                            gymColors.forEach { rc ->
-                                ColorRow(
-                                    routeColor = rc,
-                                    isSelected = selectedColor == rc,
-                                    onClick = {
-                                        selectedColor = if (selectedColor == rc) null else rc
-                                    }
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { expandedGym = if (isExpanded) null else gym.name }
+                                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(gym.name, style = MaterialTheme.typography.titleMedium)
+                                Icon(
+                                    if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                    contentDescription = null
                                 )
+                            }
+
+                            AnimatedVisibility(visible = isExpanded) {
+                                Column {
+                                    gym.routes.forEach { rc ->
+                                        ColorRow(
+                                            routeColor = rc,
+                                            isSelected = selectedColor == rc,
+                                            onClick = {
+                                                val wasSelected = selectedColor == rc
+                                                selectedColor = if (wasSelected) null else rc
+                                                if (rc.grade == "V12" && !wasSelected) showLiarDialog = true
+                                            }
+                                        )
+                                    }
+                                }
                             }
                         }
                     }

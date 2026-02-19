@@ -121,7 +121,6 @@ class SessionViewModel(
 
     private fun logAndComplete(name: String) {
         viewModelScope.launch {
-            alarmPlayer.stopAll()
             sessionRepo.logSession(name)
             _phase.value = SessionPhase.Complete
         }

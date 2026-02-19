@@ -4,24 +4,33 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import com.ranni.app.data.db.AppDatabase
 import com.ranni.app.data.repository.ClimbRepository
 import com.ranni.app.data.repository.ExerciseRepository
+import com.ranni.app.data.repository.MetricsRepository
 import com.ranni.app.data.repository.SessionRepository
-import com.ranni.app.ui.about.AboutScreen
+import com.ranni.app.ui.about.AboutContent
+import com.ranni.app.ui.about.SettingsScreen
 import com.ranni.app.ui.climb.ClimbScreen
 import com.ranni.app.ui.climb.ClimbViewModel
 import com.ranni.app.ui.exercises.EditExerciseScreen
@@ -32,6 +41,10 @@ import com.ranni.app.ui.history.HistoryScreen
 import com.ranni.app.ui.history.HistoryViewModel
 import com.ranni.app.ui.session.SessionScreen
 import com.ranni.app.ui.session.SessionViewModel
+import com.ranni.app.ui.settings.InfoScreen
+import com.ranni.app.ui.settings.MetricsScreen
+import com.ranni.app.ui.settings.DeveloperScreen
+import com.ranni.app.ui.settings.MetricsViewModel
 import com.ranni.app.ui.theme.RanniTheme
 
 class MainActivity : ComponentActivity() {
@@ -54,6 +67,7 @@ fun MainScaffold() {
     val exerciseRepo = remember { ExerciseRepository(db.exerciseDao()) }
     val sessionRepo = remember { SessionRepository(db.sessionLogDao()) }
     val climbRepo = remember { ClimbRepository(db.climbLogDao()) }
+    val metricsRepo = remember { MetricsRepository(db.metricsConfigDao()) }
 
     var selectedTab by remember { mutableIntStateOf(0) }
     var screenState by remember { mutableStateOf<ScreenState>(ScreenState.Climb) }
@@ -64,30 +78,51 @@ fun MainScaffold() {
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {},
-                navigationIcon = {
-                    if (!isTopLevel) {
+            if (isTopLevel) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .padding(horizontal = 4.dp),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    IconButton(onClick = { screenState = ScreenState.About }) {
+                        Icon(Icons.Default.Settings, contentDescription = "About", modifier = Modifier.size(20.dp))
+                    }
+                }
+            } else {
+                TopAppBar(
+                    title = {
+                        Text(when (screenState) {
+                            is ScreenState.About -> "Settings"
+                            is ScreenState.SettingsInfo -> "Info"
+                            is ScreenState.SettingsMetrics -> "Configure Metrics"
+                            is ScreenState.SettingsAbout -> "About"
+                            is ScreenState.SettingsDev -> "Developer"
+                            else -> ""
+                        })
+                    },
+                    navigationIcon = {
                         IconButton(onClick = {
                             screenState = when (screenState) {
-                                is ScreenState.About -> ScreenState.ExerciseList
-                                is ScreenState.EditExercise -> ScreenState.ExerciseList
-                                is ScreenState.Session -> ScreenState.ExerciseList
+                                is ScreenState.About -> when (selectedTab) {
+                                    0 -> ScreenState.Climb
+                                    1 -> ScreenState.ExerciseList
+                                    2 -> ScreenState.History
+                                    else -> ScreenState.ExerciseList
+                                }
+                                is ScreenState.SettingsInfo,
+                                is ScreenState.SettingsMetrics,
+                                is ScreenState.SettingsAbout,
+                                is ScreenState.SettingsDev -> ScreenState.About
                                 else -> ScreenState.ExerciseList
                             }
                         }) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                         }
                     }
-                },
-                actions = {
-                    if (isTopLevel) {
-                        IconButton(onClick = { screenState = ScreenState.About }) {
-                            Icon(Icons.Default.Info, contentDescription = "About")
-                        }
-                    }
-                }
-            )
+                )
+            }
         },
         bottomBar = {
             if (isTopLevel) {
@@ -146,11 +181,30 @@ fun MainScaffold() {
                     ClimbScreen(vm)
                 }
                 is ScreenState.History -> {
-                    val vm = remember { HistoryViewModel(sessionRepo) }
+                    val vm = remember { HistoryViewModel(sessionRepo, climbRepo, metricsRepo) }
                     HistoryScreen(vm)
                 }
                 is ScreenState.About -> {
-                    AboutScreen()
+                    SettingsScreen(
+                        onNavigateInfo = { screenState = ScreenState.SettingsInfo },
+                        onNavigateMetrics = { screenState = ScreenState.SettingsMetrics },
+                        onNavigateAbout = { screenState = ScreenState.SettingsAbout },
+                        onNavigateDev = { screenState = ScreenState.SettingsDev },
+                        showDevTools = BuildConfig.SHOW_DEV_TOOLS
+                    )
+                }
+                is ScreenState.SettingsInfo -> {
+                    InfoScreen()
+                }
+                is ScreenState.SettingsMetrics -> {
+                    val vm = remember { MetricsViewModel(metricsRepo) }
+                    MetricsScreen(vm)
+                }
+                is ScreenState.SettingsAbout -> {
+                    AboutContent()
+                }
+                is ScreenState.SettingsDev -> {
+                    DeveloperScreen(db)
                 }
             }
         }
@@ -164,4 +218,8 @@ sealed class ScreenState {
     object Climb : ScreenState()
     object History : ScreenState()
     object About : ScreenState()
+    object SettingsInfo : ScreenState()
+    object SettingsMetrics : ScreenState()
+    object SettingsAbout : ScreenState()
+    object SettingsDev : ScreenState()
 }

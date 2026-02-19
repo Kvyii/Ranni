@@ -7,4 +7,5 @@ import kotlinx.coroutines.flow.Flow
 class ClimbRepository(private val dao: ClimbLogDao) {
     fun getAllLogs(): Flow<List<ClimbLog>> = dao.getAllLogs()
     suspend fun logClimb(color: String, score: Int) = dao.insert(ClimbLog(color = color, score = score))
+    suspend fun deleteLog(log: ClimbLog) = dao.delete(log)
 }

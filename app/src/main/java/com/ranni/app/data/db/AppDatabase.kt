@@ -6,13 +6,15 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.ranni.app.data.model.ClimbLog
 import com.ranni.app.data.model.Exercise
+import com.ranni.app.data.model.MetricsConfig
 import com.ranni.app.data.model.SessionLog
 
-@Database(entities = [Exercise::class, SessionLog::class, ClimbLog::class], version = 4, exportSchema = false)
+@Database(entities = [Exercise::class, SessionLog::class, ClimbLog::class, MetricsConfig::class], version = 8, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun exerciseDao(): ExerciseDao
     abstract fun sessionLogDao(): SessionLogDao
     abstract fun climbLogDao(): ClimbLogDao
+    abstract fun metricsConfigDao(): MetricsConfigDao
 
     companion object {
         @Volatile private var INSTANCE: AppDatabase? = null
