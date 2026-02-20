@@ -11,7 +11,9 @@ import androidx.compose.ui.unit.dp
 import com.ranni.app.data.db.AppDatabase
 import com.ranni.app.data.db.clearDatabase
 import com.ranni.app.data.db.seedDatabase
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun DeveloperScreen(db: AppDatabase) {
@@ -33,7 +35,8 @@ fun DeveloperScreen(db: AppDatabase) {
         Button(
             onClick = {
                 scope.launch {
-                    seedDatabase(db)
+                    // Run DB write on background thread
+                    withContext(Dispatchers.IO) { seedDatabase(db) }
                     Toast.makeText(context, "Test data seeded", Toast.LENGTH_SHORT).show()
                 }
             },
@@ -45,7 +48,8 @@ fun DeveloperScreen(db: AppDatabase) {
         OutlinedButton(
             onClick = {
                 scope.launch {
-                    clearDatabase(db)
+                    // Run DB write on background thread
+                    withContext(Dispatchers.IO) { clearDatabase(db) }
                     Toast.makeText(context, "All data cleared", Toast.LENGTH_SHORT).show()
                 }
             },
