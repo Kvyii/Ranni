@@ -76,7 +76,7 @@ fun AboutContent() {
                 modifier = Modifier.size(300.dp).align(Alignment.CenterHorizontally)
             )
             Text("Ranni.app", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-            Text("v1.1.0", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("v1.2.0", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text("By w_kvib", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
         }
 
@@ -85,6 +85,18 @@ fun AboutContent() {
 
         // Changelog section — scrolls with the rest of the page
         Text("Changelog", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text("v1.2.0", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            Text(
+                """
+                • Fix alarm bug
+                • Update icons
+                """.trimIndent(),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
 
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("v1.1.0", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
