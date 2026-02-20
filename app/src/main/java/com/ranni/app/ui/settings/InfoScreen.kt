@@ -17,6 +17,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.ranni.app.data.model.gyms
 
@@ -80,6 +82,7 @@ fun ScoresScreen() {
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.spacedBy(14.dp)
                                     ) {
+                                        // Color swatch
                                         Box(
                                             modifier = Modifier
                                                 .size(28.dp)
@@ -87,20 +90,27 @@ fun ScoresScreen() {
                                                 .background(route.color)
                                                 .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
                                         )
+                                        // Route name — takes up available space
                                         Text(
                                             route.name,
                                             style = MaterialTheme.typography.bodyLarge,
                                             modifier = Modifier.weight(1f)
                                         )
+                                        // Grade — fixed width so all grades align
                                         Text(
                                             route.grade,
                                             style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.width(64.dp),
+                                            textAlign = TextAlign.End
                                         )
+                                        // Points — right-aligned with monospace for consistent digit width
                                         Text(
-                                            "${route.score} pts",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            "${route.score} pts".padStart(8),
+                                            style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.width(72.dp),
+                                            textAlign = TextAlign.End
                                         )
                                     }
                                 }

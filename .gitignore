@@ -33,5 +33,8 @@ google-services.json
 # Android Profiling
 *.hprof
 
+# Baseline profile binaries (auto-generated)
+app/release/baselineProfiles/
+
 # Claude Code
 .claude/

@@ -28,6 +28,7 @@ import com.kizitonwose.calendar.core.CalendarDay
 import com.kizitonwose.calendar.core.DayPosition
 import com.kizitonwose.calendar.core.firstDayOfWeekFromLocale
 import com.ranni.app.data.model.ClimbLog
+import com.ranni.app.data.model.ClimbType
 import com.ranni.app.data.model.SessionLog
 import com.ranni.app.data.model.climbColorMap
 import com.ranni.app.data.model.climbGradeMap
@@ -42,7 +43,8 @@ import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
 
-private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+// 12-hour time format with AM/PM (e.g. "1:22 PM")
+private val timeFormatter = DateTimeFormatter.ofPattern("h:mm a")
 private val dateFormatter = DateTimeFormatter.ofPattern("MMM d, yyyy")
 
 @Composable
@@ -217,6 +219,12 @@ private fun CalendarTab(viewModel: HistoryViewModel) {
                                         )
                                         Text(climbGradeMap[climb.color] ?: climb.color, style = MaterialTheme.typography.bodyLarge)
                                         Text(climbGymMap[climb.color] ?: "Unknown", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        // Show "- Flash" or "- Repeat" label for non-New climbs
+                                        if (climb.climbType == ClimbType.FLASH.name) {
+                                            Text("- Flash", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        } else if (climb.climbType == ClimbType.REPEAT.name) {
+                                            Text("- Repeat", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
                                     }
                                     Text(time, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
@@ -382,6 +390,12 @@ private fun ProgressTab(viewModel: HistoryViewModel) {
                                 )
                                 Text(climbGradeMap[climb.color] ?: climb.color, style = MaterialTheme.typography.bodyLarge)
                                 Text(climbGymMap[climb.color] ?: "Unknown", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                // Show "- Flash" or "- Repeat" label for non-New climbs
+                                if (climb.climbType == ClimbType.FLASH.name) {
+                                    Text("- Flash", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                } else if (climb.climbType == ClimbType.REPEAT.name) {
+                                    Text("- Repeat", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
                             }
                             Text(date, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }

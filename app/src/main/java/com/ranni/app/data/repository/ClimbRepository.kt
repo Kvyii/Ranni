@@ -2,10 +2,13 @@ package com.ranni.app.data.repository
 
 import com.ranni.app.data.db.ClimbLogDao
 import com.ranni.app.data.model.ClimbLog
+import com.ranni.app.data.model.ClimbType
 import kotlinx.coroutines.flow.Flow
 
 class ClimbRepository(private val dao: ClimbLogDao) {
     fun getAllLogs(): Flow<List<ClimbLog>> = dao.getAllLogs()
-    suspend fun logClimb(color: String, score: Int) = dao.insert(ClimbLog(color = color, score = score))
+    // Log a climb with the given type (New/Flash/Repeat) — score is already multiplied by caller
+    suspend fun logClimb(color: String, score: Int, climbType: ClimbType = ClimbType.NEW) =
+        dao.insert(ClimbLog(color = color, score = score, climbType = climbType.name))
     suspend fun deleteLog(log: ClimbLog) = dao.delete(log)
 }

@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ranni.app.data.model.ClimbType
 import com.ranni.app.data.model.RouteColor
 import com.ranni.app.data.model.gyms
 
@@ -48,7 +49,7 @@ fun ClimbScreen(viewModel: ClimbViewModel) {
         )
     }
 
-    // Log confirmation dialog shown when a route is tapped
+    // Log confirmation dialog with climb type options (New / Flash / Repeat)
     if (selectedColor != null) {
         val color = selectedColor!!
         AlertDialog(
@@ -59,13 +60,33 @@ fun ClimbScreen(viewModel: ClimbViewModel) {
                 }
             },
             confirmButton = {
-                // Full-width centered confirm button
-                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                // Three climb type buttons: New (1x), Flash (1.25x), Repeat (0.75x)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
                     TextButton(onClick = {
-                        viewModel.logClimb(color.name, color.score)
+                        // New: base score (1x multiplier)
+                        viewModel.logClimb(color.name, color.score, ClimbType.NEW)
                         selectedColor = null
                     }) {
-                        Text("Log")
+                        Text("New")
+                    }
+                    TextButton(onClick = {
+                        // Flash: 1.25x score multiplier for first-try sends
+                        val flashScore = (color.score * 1.25).toInt()
+                        viewModel.logClimb(color.name, flashScore, ClimbType.FLASH)
+                        selectedColor = null
+                    }) {
+                        Text("Flash")
+                    }
+                    TextButton(onClick = {
+                        // Repeat: 0.75x score multiplier for re-climbed routes
+                        val repeatScore = (color.score * 0.75).toInt()
+                        viewModel.logClimb(color.name, repeatScore, ClimbType.REPEAT)
+                        selectedColor = null
+                    }) {
+                        Text("Repeat")
                     }
                 }
             }
