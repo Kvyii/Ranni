@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.ranni.app.data.model.ClimbLog
 import com.ranni.app.data.model.MetricsConfig
 import com.ranni.app.data.model.SessionLog
+import com.ranni.app.data.model.climbGymMap
+import com.ranni.app.data.model.gyms
 import com.ranni.app.data.repository.ClimbRepository
 import com.ranni.app.data.repository.MetricsRepository
 import com.ranni.app.data.repository.SessionRepository
@@ -171,16 +173,19 @@ private fun computeWeeklyActivity(
     }.groupBy({ it.first }, { it.second })
 
     // Build a WeekActivity for each week in range
+    val gymOrder = gyms.mapIndexed { i, g -> g.name to i }.toMap()
     val weeks = mutableListOf<WeekActivity>()
     var weekStart = firstMonday
     while (!weekStart.isAfter(today)) {
         // Top climbs by score for this week, capped at MAX_CLIMB_DOTS.
-        // Sorted ascending so highest scores are drawn last (at the top of the stack).
+        // Grouped by gym (in gyms list order), sorted ascending within each group
+        // so highest scores are drawn last (at the top of each gym's stack).
         val colors = (climbsByWeek[weekStart] ?: emptyList())
             .sortedByDescending { it.score }
             .take(MAX_CLIMB_DOTS)
-            .sortedBy { it.score }
-            .map { it.color }
+            .groupBy { climbGymMap[it.color] ?: "" }
+            .toSortedMap(compareBy { gymOrder[it] ?: Int.MAX_VALUE })
+            .flatMap { (_, climbs) -> climbs.sortedBy { it.score }.map { it.color } }
 
         // Exercise count capped at MAX_EXERCISE_DOTS
         val exerciseCount = (sessionsByWeek[weekStart]?.size ?: 0)

@@ -63,3 +63,9 @@ val climbGradeMap: Map<String, String> = gyms
 val climbGymMap: Map<String, String> = gyms
     .flatMap { gym -> gym.routes.map { it.name to gym.name } }
     .toMap()
+
+// Route names belonging to the Custom gym — dots render as outlines instead of filled circles
+val outlineRoutes: Set<String> = gyms
+    .first { it.name == "Custom" }
+    .routes.map { it.name }
+    .toSet()
