@@ -1,11 +1,17 @@
 package com.ranni.app
 
+import android.content.Intent
 import android.os.Bundle
 import android.os.SystemClock
+import android.provider.OpenableColumns
+import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.compose.ui.res.painterResource
 import androidx.activity.compose.setContent
 import androidx.activity.compose.BackHandler
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ExperimentalAnimationApi
@@ -55,6 +61,8 @@ import com.ranni.app.ui.settings.ScoresScreen
 import com.ranni.app.ui.settings.MetricsScreen
 import com.ranni.app.ui.settings.DeveloperScreen
 import com.ranni.app.ui.settings.MetricsViewModel
+import com.ranni.app.ui.settings.SoundsScreen
+import com.ranni.app.data.AlarmPreferences
 import com.ranni.app.ui.theme.RanniTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -118,6 +126,34 @@ fun MainContent(
     val sessionRepo = remember { SessionRepository(db.sessionLogDao()) }
     val climbRepo = remember { ClimbRepository(db.climbLogDao()) }
     val metricsRepo = remember { MetricsRepository(db.metricsConfigDao()) }
+    val alarmPrefs = remember { AlarmPreferences(context) }
+
+    // Track the display name of the custom rest alarm (null = default)
+    var customRestAlarmName by remember { mutableStateOf(getAlarmDisplayName(context, alarmPrefs)) }
+
+    // SAF file picker for choosing a custom alarm sound
+    val alarmPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            // Check file size — reject files larger than 20 MB
+            val sizeBytes = try {
+                context.contentResolver.openFileDescriptor(uri, "r")?.use { it.statSize } ?: 0L
+            } catch (_: Exception) { 0L }
+
+            if (sizeBytes > MAX_ALARM_FILE_BYTES) {
+                Toast.makeText(context, "File too large (max 20 MB)", Toast.LENGTH_SHORT).show()
+                return@rememberLauncherForActivityResult
+            }
+
+            // Take persistable permission so the URI survives app restarts
+            context.contentResolver.takePersistableUriPermission(
+                uri, Intent.FLAG_GRANT_READ_URI_PERMISSION
+            )
+            alarmPrefs.setCustomRestAlarmUri(uri)
+            customRestAlarmName = getAlarmDisplayName(context, alarmPrefs)
+        }
+    }
 
     var selectedTab by remember { mutableIntStateOf(0) }
 
@@ -130,6 +166,7 @@ fun MainContent(
         onScreenStateChange(when (screenState) {
             is ScreenState.SettingsScores,
             is ScreenState.SettingsMetrics,
+            is ScreenState.SettingsSounds,
             is ScreenState.SettingsAbout,
             is ScreenState.SettingsDev -> ScreenState.About
 
@@ -168,6 +205,7 @@ fun MainContent(
                             is ScreenState.About -> "Settings"
                             is ScreenState.SettingsScores -> "Scores"
                             is ScreenState.SettingsMetrics -> "Configure Metrics"
+                            is ScreenState.SettingsSounds -> "Sounds"
                             is ScreenState.SettingsAbout -> "About"
                             is ScreenState.SettingsDev -> "Developer"
                             else -> ""
@@ -184,6 +222,7 @@ fun MainContent(
                                 }
                                 is ScreenState.SettingsScores,
                                 is ScreenState.SettingsMetrics,
+                                is ScreenState.SettingsSounds,
                                 is ScreenState.SettingsAbout,
                                 is ScreenState.SettingsDev -> ScreenState.About
                                 else -> ScreenState.ExerciseList
@@ -201,7 +240,7 @@ fun MainContent(
                     NavigationBarItem(
                         selected = selectedTab == 0,
                         onClick = { selectedTab = 0; onScreenStateChange(ScreenState.Climb) },
-                        icon = { Icon(Icons.Default.Star, null) },
+                        icon = { Icon(painterResource(R.drawable.shoe_icon), null, modifier = Modifier.size(24.dp)) },
                         label = { Text("Climb") }
                     )
                     NavigationBarItem(
@@ -278,9 +317,20 @@ fun MainContent(
                     SettingsScreen(
                         onNavigateScores = { onScreenStateChange(ScreenState.SettingsScores) },
                         onNavigateMetrics = { onScreenStateChange(ScreenState.SettingsMetrics) },
+                        onNavigateSounds = { onScreenStateChange(ScreenState.SettingsSounds) },
                         onNavigateAbout = { onScreenStateChange(ScreenState.SettingsAbout) },
                         onNavigateDev = { onScreenStateChange(ScreenState.SettingsDev) },
                         showDevTools = BuildConfig.SHOW_DEV_TOOLS
+                    )
+                }
+                is ScreenState.SettingsSounds -> {
+                    SoundsScreen(
+                        customRestAlarmName = customRestAlarmName,
+                        onPickRestAlarm = { alarmPickerLauncher.launch(arrayOf("audio/*")) },
+                        onResetRestAlarm = {
+                            alarmPrefs.setCustomRestAlarmUri(null)
+                            customRestAlarmName = null
+                        }
                     )
                 }
                 is ScreenState.SettingsScores -> {
@@ -302,6 +352,26 @@ fun MainContent(
     }
 }
 
+/** Maximum allowed file size for custom alarm sounds (20 MB). */
+private const val MAX_ALARM_FILE_BYTES = 20L * 1024 * 1024
+
+/**
+ * Resolves the display name for the currently saved custom alarm URI.
+ * Returns null if no custom alarm is set, or the file name from the content provider.
+ */
+private fun getAlarmDisplayName(context: android.content.Context, prefs: AlarmPreferences): String? {
+    val uri = prefs.getCustomRestAlarmUri() ?: return null
+    return try {
+        context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
+            ?.use { cursor ->
+                if (cursor.moveToFirst()) cursor.getString(0) else null
+            }
+    } catch (_: Exception) {
+        // URI may no longer be accessible
+        null
+    }
+}
+
 sealed class ScreenState {
     object Loading : ScreenState()
     object ExerciseList : ScreenState()
@@ -312,6 +382,7 @@ sealed class ScreenState {
     object About : ScreenState()
     object SettingsScores : ScreenState()
     object SettingsMetrics : ScreenState()
+    object SettingsSounds : ScreenState()
     object SettingsAbout : ScreenState()
     object SettingsDev : ScreenState()
 
@@ -319,6 +390,6 @@ sealed class ScreenState {
     val depth: Int get() = when (this) {
         is Loading, is Climb, is ExerciseList, is History -> 0
         is About, is EditExercise, is Session -> 1
-        is SettingsScores, is SettingsMetrics, is SettingsAbout, is SettingsDev -> 2
+        is SettingsScores, is SettingsMetrics, is SettingsSounds, is SettingsAbout, is SettingsDev -> 2
     }
 }
