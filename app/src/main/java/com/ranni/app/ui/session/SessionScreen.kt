@@ -18,7 +18,13 @@ fun SessionScreen(
     exerciseId: Long,
     onBack: () -> Unit
 ) {
+    // Load the exercise when the screen is shown
     LaunchedEffect(exerciseId) { viewModel.load(exerciseId) }
+
+    // Stop any running timers/alarms when leaving the screen (covers system back, rotation, etc.)
+    DisposableEffect(viewModel) {
+        onDispose { viewModel.stopAlarms() }
+    }
 
     val phase by viewModel.phase.collectAsState()
     val exerciseName by viewModel.exerciseName.collectAsState()
