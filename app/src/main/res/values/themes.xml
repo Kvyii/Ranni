@@ -1,6 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.Ranni" parent="android:Theme.Material.NoActionBar">
+    <style name="Theme.Ranni" parent="Theme.SplashScreen">
+        <!-- Splash screen: show app icon on dark background -->
+        <item name="windowSplashScreenBackground">#191C2D</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <!-- Post-splash theme inherits the dark no-action-bar look -->
+        <item name="postSplashScreenTheme">@style/Theme.Ranni.Main</item>
+    </style>
+
+    <style name="Theme.Ranni.Main" parent="android:Theme.Material.NoActionBar">
         <item name="android:windowBackground">@android:color/black</item>
         <item name="android:statusBarColor">@android:color/black</item>
         <item name="android:navigationBarColor">@android:color/black</item>

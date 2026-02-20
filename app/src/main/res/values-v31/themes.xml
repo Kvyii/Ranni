@@ -1,11 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Extends base theme with Android 12+ splash screen customization -->
-    <style name="Theme.Ranni" parent="android:Theme.Material.NoActionBar">
+    <!-- Android 12+ uses the compat splash screen library; no extra overrides needed -->
+    <style name="Theme.Ranni" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#191C2D</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="postSplashScreenTheme">@style/Theme.Ranni.Main</item>
+    </style>
+
+    <style name="Theme.Ranni.Main" parent="android:Theme.Material.NoActionBar">
         <item name="android:windowBackground">@android:color/black</item>
         <item name="android:statusBarColor">@android:color/black</item>
         <item name="android:navigationBarColor">@android:color/black</item>
-        <!-- Match splash screen background to the icon/app dark color -->
-        <item name="android:windowSplashScreenBackground">#191C2D</item>
     </style>
 </resources>
