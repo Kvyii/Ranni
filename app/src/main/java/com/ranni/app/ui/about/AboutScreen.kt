@@ -96,6 +96,8 @@ fun AboutContent() {
 
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("v1.2.1", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            // Release date
+            Text("21/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
             Text(
                 """
                 • Added database migration to preserve data between versions
@@ -109,6 +111,8 @@ fun AboutContent() {
 
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("v1.2.0", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            // Release date
+            Text("21/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
             Text(
                 """
                 • Fix alarm bug
@@ -121,6 +125,8 @@ fun AboutContent() {
 
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("v1.1.0", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            // Release date
+            Text("20/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
             Text(
                 """
                 • Added multipliers for flash and repeat attempts
@@ -135,6 +141,8 @@ fun AboutContent() {
 
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("v1.0.2", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            // Release date
+            Text("20/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
             Text(
                 """
                 • More UI fixes.
@@ -147,6 +155,8 @@ fun AboutContent() {
 
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("v1.0.1", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            // Release date
+            Text("20/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
             Text(
                 "• Small UI fixes",
                 style = MaterialTheme.typography.bodyMedium,
@@ -156,6 +166,8 @@ fun AboutContent() {
 
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("v1.0.0", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            // Release date
+            Text("19/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
             Text(
                 """
                 • Climb tab — log routes at 9 Degrees by colour and grade
