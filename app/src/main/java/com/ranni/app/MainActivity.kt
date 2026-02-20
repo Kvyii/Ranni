@@ -1,9 +1,18 @@
 package com.ranni.app
 
 import android.os.Bundle
+import android.os.SystemClock
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -51,6 +60,12 @@ import kotlinx.coroutines.async
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Hold the system splash screen (with app icon) for at least 3 seconds
+        val startTime = SystemClock.uptimeMillis()
+        installSplashScreen().setKeepOnScreenCondition {
+            SystemClock.uptimeMillis() - startTime < 2000L
+        }
+
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
@@ -182,8 +197,27 @@ fun MainContent(
             }
         }
     ) { padding ->
-        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
-            when (val s = screenState) {
+        // Animated screen transitions: slide for depth changes, crossfade for same-level
+        AnimatedContent(
+            targetState = screenState,
+            modifier = Modifier.fillMaxSize().padding(padding),
+            transitionSpec = {
+                val fromDepth = initialState.depth
+                val toDepth = targetState.depth
+                if (fromDepth == toDepth) {
+                    // Same-level navigation (tab switches): crossfade
+                    fadeIn() togetherWith fadeOut()
+                } else if (toDepth > fromDepth) {
+                    // Going deeper: slide in from right
+                    slideInHorizontally { it } togetherWith slideOutHorizontally { -it }
+                } else {
+                    // Going back: slide in from left
+                    slideInHorizontally { -it } togetherWith slideOutHorizontally { it }
+                }
+            },
+            label = "screenTransition"
+        ) { target ->
+            when (val s = target) {
                 is ScreenState.ExerciseList -> {
                     val vm = remember { ExerciseListViewModel(exerciseRepo) }
                     ExerciseListScreen(
@@ -257,4 +291,11 @@ sealed class ScreenState {
     object SettingsMetrics : ScreenState()
     object SettingsAbout : ScreenState()
     object SettingsDev : ScreenState()
+
+    // Navigation depth used to determine slide direction for transitions
+    val depth: Int get() = when (this) {
+        is Loading, is Climb, is ExerciseList, is History -> 0
+        is About, is EditExercise, is Session -> 1
+        is SettingsScores, is SettingsMetrics, is SettingsAbout, is SettingsDev -> 2
+    }
 }

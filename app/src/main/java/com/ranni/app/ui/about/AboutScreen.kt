@@ -1,5 +1,6 @@
 package com.ranni.app.ui.about
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -10,8 +11,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.ranni.app.R
 
 @Composable
 fun SettingsScreen(
@@ -59,25 +62,46 @@ fun AboutContent() {
             .padding(bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
+        // App logo displayed at top of the about page
+        Image(
+            painter = painterResource(R.drawable.ranni_transp),
+            contentDescription = "Ranni logo",
+            modifier = Modifier.size(300.dp).align(Alignment.CenterHorizontally)
+        )
+
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("Ranni.app", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-            Text("v1.0", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("v1.0.1", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text("Made by w_kvib", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
         }
 
         HorizontalDivider()
 
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("What's new", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            Text(
-                """
-                • Climb tab — log routes at 9 Degrees by colour and grade
-                • Exercise sessions with set/rest timers and alarm sounds
-                • History calendar showing completed sessions by day
-                """.trimIndent(),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+        // Changelog with version history, newest first
+        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Text("Changelog", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("v1.0.1", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                Text(
+                    "• Small UI fixes",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("v1.0.0", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                Text(
+                    """
+                    • Climb tab — log routes at 9 Degrees by colour and grade
+                    • Exercise sessions with set/rest timers and alarm sounds
+                    • History calendar showing completed sessions by day
+                    """.trimIndent(),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
