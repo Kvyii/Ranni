@@ -35,6 +35,17 @@
 | Database | Room |
 | Architecture | MVVM, sealed-class navigation |
 
+## Recent Releases
+
+**v1.2.1** — 21/02/2026
+- Added database migration to preserve data between versions
+- Redesigned About page
+- Added Easter egg
+
+**v1.2.0** — 21/02/2026
+- Fix alarm bug
+- Update icons
+
 ## Building
 
 Open in Android Studio and run on a device or emulator.
