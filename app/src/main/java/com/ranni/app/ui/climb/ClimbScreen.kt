@@ -25,25 +25,38 @@ import androidx.compose.ui.unit.sp
 import com.ranni.app.data.model.ClimbType
 import com.ranni.app.data.model.RouteColor
 import com.ranni.app.data.model.gyms
+import com.ranni.app.data.model.outlineRoutes
 
 @Composable
 fun ClimbScreen(viewModel: ClimbViewModel) {
     var expandedGym by remember { mutableStateOf<String?>(null) }
     var selectedColor by remember { mutableStateOf<RouteColor?>(null) }
-    var showLiarDialog by remember { mutableStateOf(false) }
+    // Holds the RouteColor that triggered the liar dialog (null = hidden)
+    var liarRoute by remember { mutableStateOf<RouteColor?>(null) }
 
-    // "Liar" dialog for V12 routes
-    if (showLiarDialog) {
+    // "Liar" dialog for V12 routes — dismissing proceeds to the log confirmation
+    if (liarRoute != null) {
         AlertDialog(
-            onDismissRequest = { showLiarDialog = false },
+            onDismissRequest = {
+                // Proceed to log confirmation with the V12 route
+                selectedColor = liarRoute
+                liarRoute = null
+            },
             text = {
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     Text("Liar!!", fontSize = 40.sp, fontWeight = FontWeight.Bold)
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showLiarDialog = false }) {
-                    Text("Okay I lied")
+                // Centered button row
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    TextButton(onClick = {
+                        // Proceed to log confirmation with the V12 route
+                        selectedColor = liarRoute
+                        liarRoute = null
+                    }) {
+                        Text("Okay I lied")
+                    }
                 }
             }
         )
@@ -163,7 +176,7 @@ fun ClimbScreen(viewModel: ClimbViewModel) {
                                             routeColor = rc,
                                             onClick = {
                                                 // Show liar dialog for V12, otherwise show log confirmation
-                                                if (rc.grade == "V12") showLiarDialog = true
+                                                if (rc.grade == "V12") liarRoute = rc
                                                 else selectedColor = rc
                                             }
                                         )
@@ -192,13 +205,18 @@ private fun ColorRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // Color swatch circle
+        // Color swatch circle — hollow outline for Custom gym routes, filled for others
+        val isOutline = routeColor.name in outlineRoutes
         Box(
             modifier = Modifier
                 .size(32.dp)
                 .clip(CircleShape)
-                .background(routeColor.color)
-                .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                .then(
+                    if (isOutline) Modifier.border(2.dp, MaterialTheme.colorScheme.onSurfaceVariant, CircleShape)
+                    else Modifier
+                        .background(routeColor.color)
+                        .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                )
         )
         Text(
             routeColor.name,
