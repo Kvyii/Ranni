@@ -11,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -63,28 +64,35 @@ fun AboutContent() {
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp)
             .padding(bottom = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         // App logo and app info with no gap between them
         Column(
             modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(0.dp)
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
+            // Crop top-aligned to trim the transparent padding at the bottom of the PNG
             Image(
                 painter = painterResource(R.drawable.ranni_transp),
                 contentDescription = "Ranni logo",
-                modifier = Modifier.size(300.dp).align(Alignment.CenterHorizontally)
+                contentScale = ContentScale.FillWidth,
+                alignment = Alignment.TopCenter,
+                modifier = Modifier
+                    .fillMaxWidth(0.6f)
+                    .height(170.dp)
+                    .align(Alignment.CenterHorizontally)
             )
             Text("Ranni.app", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-            Text("v1.2.0", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text("By w_kvib", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
         }
 
-        Spacer(Modifier.height(8.dp))
         HorizontalDivider()
 
         // Changelog section — scrolls with the rest of the page
         Text("Changelog", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+
+        // Extra spacing between each version entry
+        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
 
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("v1.2.0", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
@@ -145,5 +153,7 @@ fun AboutContent() {
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+
+        } // end changelog column
     }
 }

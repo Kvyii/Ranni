@@ -43,6 +43,11 @@ android {
     }
 }
 
+// Export Room schemas for AutoMigration support
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

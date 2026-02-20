@@ -1,13 +1,13 @@
 [versions]
-agp = "8.13.2"
-kotlin = "2.0.21"
-ksp = "2.0.21-1.0.27"
+agp = "9.0.1"
+kotlin = "2.2.10"
+ksp = "2.3.2"
 coreKtx = "1.13.1"
 lifecycleRuntimeKtx = "2.8.6"
 activityCompose = "1.9.2"
 composeBom = "2024.09.03"
 navigationCompose = "2.8.2"
-room = "2.6.1"
+room = "2.7.1"
 calendarCompose = "2.6.2"
 splashscreen = "1.0.1"
 
