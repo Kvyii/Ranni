@@ -60,60 +60,75 @@ fun AboutContent() {
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp)
             .padding(bottom = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        // App logo displayed at top of the about page
-        Image(
-            painter = painterResource(R.drawable.ranni_transp),
-            contentDescription = "Ranni logo",
-            modifier = Modifier.size(300.dp).align(Alignment.CenterHorizontally)
-        )
-
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        // App logo and app info with no gap between them
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(0.dp)
+        ) {
+            Image(
+                painter = painterResource(R.drawable.ranni_transp),
+                contentDescription = "Ranni logo",
+                modifier = Modifier.size(300.dp).align(Alignment.CenterHorizontally)
+            )
             Text("Ranni.app", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-            Text("v1.0.2", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("v1.1.0", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text("By w_kvib", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
         }
 
+        Spacer(Modifier.height(8.dp))
         HorizontalDivider()
 
-        // Changelog with version history, newest first
-        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Text("Changelog", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        // Changelog section — scrolls with the rest of the page
+        Text("Changelog", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
 
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("v1.0.2", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                Text(
-                    """
-                    • More UI fixes. 
-                    • Gym dots separation.
-                    """.trimIndent(),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text("v1.1.0", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            Text(
+                """
+                • Added multipliers for flash and repeat attempts
+                • Updated visuals for custom category
+                • Fixed text indentations for scores
+                • New logo
+                """.trimIndent(),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
 
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("v1.0.1", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                Text(
-                    "• Small UI fixes",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text("v1.0.2", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            Text(
+                """
+                • More UI fixes.
+                • Gym dots separation.
+                """.trimIndent(),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
 
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("v1.0.0", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                Text(
-                    """
-                    • Climb tab — log routes at 9 Degrees by colour and grade
-                    • Exercise sessions with set/rest timers and alarm sounds
-                    • History calendar showing completed sessions by day
-                    """.trimIndent(),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text("v1.0.1", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            Text(
+                "• Small UI fixes",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text("v1.0.0", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            Text(
+                """
+                • Climb tab — log routes at 9 Degrees by colour and grade
+                • Exercise sessions with set/rest timers and alarm sounds
+                • History calendar showing completed sessions by day
+                """.trimIndent(),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
