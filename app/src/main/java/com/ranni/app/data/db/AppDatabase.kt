@@ -9,7 +9,7 @@ import com.ranni.app.data.model.Exercise
 import com.ranni.app.data.model.MetricsConfig
 import com.ranni.app.data.model.SessionLog
 
-@Database(entities = [Exercise::class, SessionLog::class, ClimbLog::class, MetricsConfig::class], version = 8, exportSchema = false)
+@Database(entities = [Exercise::class, SessionLog::class, ClimbLog::class, MetricsConfig::class], version = 9, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun exerciseDao(): ExerciseDao
     abstract fun sessionLogDao(): SessionLogDao

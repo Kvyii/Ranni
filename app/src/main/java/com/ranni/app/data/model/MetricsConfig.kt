@@ -8,7 +8,7 @@ data class MetricsConfig(
     @PrimaryKey val id: Int = 1,
     val months: Int = 2,
     val topK: Int = 10,
-    val timelineMonths: Int = 12,
+    val timelineMonths: Int = 3,
     val showClimbDots: Boolean = true,
-    val showExerciseDots: Boolean = true
+    val showExerciseDots: Boolean = false
 )

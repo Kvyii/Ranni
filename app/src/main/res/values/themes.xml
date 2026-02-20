@@ -3,7 +3,7 @@
     <style name="Theme.Ranni" parent="Theme.SplashScreen">
         <!-- Splash screen: show app icon on dark background -->
         <item name="windowSplashScreenBackground">#191C2D</item>
-        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ranni_splash</item>
         <!-- Post-splash theme inherits the dark no-action-bar look -->
         <item name="postSplashScreenTheme">@style/Theme.Ranni.Main</item>
     </style>
