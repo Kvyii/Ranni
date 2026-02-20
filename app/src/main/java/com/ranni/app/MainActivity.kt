@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.os.SystemClock
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.compose.BackHandler
 import androidx.activity.enableEdgeToEdge
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.compose.animation.AnimatedContent
@@ -123,6 +124,28 @@ fun MainContent(
     val isTopLevel = screenState is ScreenState.ExerciseList
             || screenState is ScreenState.Climb
             || screenState is ScreenState.History
+
+    // Handle system back button — mirror the toolbar back arrow behavior
+    BackHandler(enabled = !isTopLevel) {
+        onScreenStateChange(when (screenState) {
+            is ScreenState.SettingsScores,
+            is ScreenState.SettingsMetrics,
+            is ScreenState.SettingsAbout,
+            is ScreenState.SettingsDev -> ScreenState.About
+
+            is ScreenState.About -> when (selectedTab) {
+                0 -> ScreenState.Climb
+                1 -> ScreenState.ExerciseList
+                2 -> ScreenState.History
+                else -> ScreenState.ExerciseList
+            }
+
+            is ScreenState.EditExercise,
+            is ScreenState.Session -> ScreenState.ExerciseList
+
+            else -> ScreenState.ExerciseList
+        })
+    }
 
     Scaffold(
         topBar = {

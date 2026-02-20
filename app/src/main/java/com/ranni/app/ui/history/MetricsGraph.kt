@@ -24,6 +24,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ranni.app.data.model.climbColorMap
+import com.ranni.app.data.model.climbGymMap
+import com.ranni.app.data.model.outlineRoutes
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 
@@ -56,6 +58,7 @@ fun MetricsGraph(
         val lineColor = MaterialTheme.colorScheme.primary
         val axisColor = MaterialTheme.colorScheme.outlineVariant
         val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+        val outlineStrokeColor = MaterialTheme.colorScheme.onSurfaceVariant // for outline-only dots
         val labelStyle = TextStyle(fontSize = 10.sp, color = labelColor)
         val textMeasurer = rememberTextMeasurer()
 
@@ -111,8 +114,8 @@ fun MetricsGraph(
                 }
             }
 
-            // X-axis labels: 5 evenly spaced dates
-            val labelCount = 5
+            // X-axis labels: 3 evenly spaced dates
+            val labelCount = 3
             for (i in 0 until labelCount) {
                 val fraction = i.toFloat() / (labelCount - 1)
                 val dayOffset = (totalDays * fraction).toLong()
@@ -134,6 +137,8 @@ fun MetricsGraph(
             val dotSpacing = 1.dp.toPx()      // vertical gap between dots
             val columnGap = 2.dp.toPx()        // horizontal gap between exercise & climb columns
             val dotStep = dotRadius * 2 + dotSpacing  // vertical stride per dot
+            val separatorHeight = 1.dp.toPx()  // thin bar between gym groups
+            val separatorGap = 5.dp.toPx()     // extra spacing around separators
 
             // Base Y: just above the X-axis line
             val baseY = topPadding + plotHeight - dotRadius
@@ -183,16 +188,49 @@ fun MetricsGraph(
                     }
                 }
 
-                // Draw climb dots — colored, stacking upward
+                // Draw climb dots — grouped by gym with separator bars between groups
                 if (hasClimbs) {
-                    week.climbColors.forEachIndexed { i, colorName ->
-                        val dotY = baseY - i * dotStep
-                        if (dotY - dotRadius < topPadding) return@forEachIndexed // don't overflow
-                        drawCircle(
-                            color = climbColorMap[colorName] ?: Color.White,
-                            radius = dotRadius,
-                            center = Offset(climbColumnX, dotY)
-                        )
+                    var currentY = baseY
+                    var prevGym: String? = null
+
+                    week.climbColors.forEach { colorName ->
+                        val gym = climbGymMap[colorName] ?: ""
+
+                        // Insert a gap + gray bar between different gym groups.
+                        // currentY is one dotStep above the last drawn dot center.
+                        if (prevGym != null && gym != prevGym) {
+                            // Push the next dot up by separatorGap to create room
+                            currentY -= separatorGap
+                            // Draw separator at 3dp into the 5dp gap (3dp above next dot, 2dp below prev)
+                            val sepY = currentY + dotRadius + 3.dp.toPx()
+                            if (sepY < topPadding) return@forEach
+                            val halfWidth = dotRadius * 0.8f
+                            drawLine(
+                                color = Color.LightGray,
+                                start = Offset(climbColumnX - halfWidth, sepY),
+                                end = Offset(climbColumnX + halfWidth, sepY),
+                                strokeWidth = separatorHeight
+                            )
+                        }
+                        prevGym = gym
+
+                        if (currentY - dotRadius < topPadding) return@forEach // don't overflow
+                        if (colorName in outlineRoutes) {
+                            // Outline-only for Custom gym routes
+                            drawCircle(
+                                color = outlineStrokeColor,
+                                radius = dotRadius,
+                                center = Offset(climbColumnX, currentY),
+                                style = Stroke(width = 1.dp.toPx())
+                            )
+                        } else {
+                            drawCircle(
+                                color = climbColorMap[colorName] ?: Color.White,
+                                radius = dotRadius,
+                                center = Offset(climbColumnX, currentY)
+                            )
+                        }
+                        currentY -= dotStep
                     }
                 }
             }

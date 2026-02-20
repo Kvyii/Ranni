@@ -71,8 +71,8 @@ fun AboutContent() {
 
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("Ranni.app", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-            Text("v1.0.1", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text("Made by w_kvib", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
+            Text("v1.0.2", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("By w_kvib", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
         }
 
         HorizontalDivider()
@@ -80,6 +80,18 @@ fun AboutContent() {
         // Changelog with version history, newest first
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text("Changelog", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("v1.0.2", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                Text(
+                    """
+                    • More UI fixes. 
+                    • Gym dots separation.
+                    """.trimIndent(),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
 
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text("v1.0.1", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
