@@ -15,14 +15,14 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun SettingsScreen(
-    onNavigateInfo: () -> Unit,
+    onNavigateScores: () -> Unit,
     onNavigateMetrics: () -> Unit,
     onNavigateAbout: () -> Unit,
     onNavigateDev: () -> Unit = {},
     showDevTools: Boolean = false
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
-        SettingsRow("Info", onClick = onNavigateInfo)
+        SettingsRow("Scores", onClick = onNavigateScores)
         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
         SettingsRow("Configure Metrics", onClick = onNavigateMetrics)
         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))

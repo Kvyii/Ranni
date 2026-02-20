@@ -30,8 +30,8 @@ fun ClimbScreen(viewModel: ClimbViewModel) {
     var expandedGym by remember { mutableStateOf<String?>(null) }
     var selectedColor by remember { mutableStateOf<RouteColor?>(null) }
     var showLiarDialog by remember { mutableStateOf(false) }
-    val snackbarHostState = remember { SnackbarHostState() }
 
+    // "Liar" dialog for V12 routes
     if (showLiarDialog) {
         AlertDialog(
             onDismissRequest = { showLiarDialog = false },
@@ -48,8 +48,31 @@ fun ClimbScreen(viewModel: ClimbViewModel) {
         )
     }
 
+    // Log confirmation dialog shown when a route is tapped
+    if (selectedColor != null) {
+        val color = selectedColor!!
+        AlertDialog(
+            onDismissRequest = { selectedColor = null },
+            text = {
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Text("Log climb?", style = MaterialTheme.typography.titleMedium)
+                }
+            },
+            confirmButton = {
+                // Full-width centered confirm button
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    TextButton(onClick = {
+                        viewModel.logClimb(color.name, color.score)
+                        selectedColor = null
+                    }) {
+                        Text("Log")
+                    }
+                }
+            }
+        )
+    }
+
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
         contentWindowInsets = WindowInsets(0)
     ) { padding ->
         Column(
@@ -60,6 +83,13 @@ fun ClimbScreen(viewModel: ClimbViewModel) {
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            // Header text prompting the user to pick a climb
+            Text(
+                "Select climb",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+            )
+
             gyms.forEach { gym ->
                 if (gym.comingSoon) {
                     Surface(
@@ -89,7 +119,11 @@ fun ClimbScreen(viewModel: ClimbViewModel) {
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clickable { expandedGym = if (isExpanded) null else gym.name }
+                                    .clickable {
+                                        expandedGym = if (isExpanded) null else gym.name
+                                        // Clear route selection when switching gyms
+                                        selectedColor = null
+                                    }
                                     .padding(horizontal = 16.dp, vertical = 14.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
@@ -106,11 +140,10 @@ fun ClimbScreen(viewModel: ClimbViewModel) {
                                     gym.routes.forEach { rc ->
                                         ColorRow(
                                             routeColor = rc,
-                                            isSelected = selectedColor == rc,
                                             onClick = {
-                                                val wasSelected = selectedColor == rc
-                                                selectedColor = if (wasSelected) null else rc
-                                                if (rc.grade == "V12" && !wasSelected) showLiarDialog = true
+                                                // Show liar dialog for V12, otherwise show log confirmation
+                                                if (rc.grade == "V12") showLiarDialog = true
+                                                else selectedColor = rc
                                             }
                                         )
                                     }
@@ -121,31 +154,6 @@ fun ClimbScreen(viewModel: ClimbViewModel) {
                 }
             }
 
-            // Confirm button — only visible when a color is selected
-            AnimatedVisibility(visible = selectedColor != null) {
-                val color = selectedColor
-                if (color != null) {
-                    var confirming by remember(color) { mutableStateOf(false) }
-                    Button(
-                        onClick = {
-                            confirming = true
-                            viewModel.logClimb(color.name, color.score)
-                            selectedColor = null
-                        },
-                        enabled = !confirming,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Log")
-                    }
-
-                    LaunchedEffect(confirming) {
-                        if (confirming) {
-                            snackbarHostState.showSnackbar("${color.name} logged")
-                            confirming = false
-                        }
-                    }
-                }
-            }
         }
     }
 }
@@ -153,19 +161,17 @@ fun ClimbScreen(viewModel: ClimbViewModel) {
 @Composable
 private fun ColorRow(
     routeColor: RouteColor,
-    isSelected: Boolean,
     onClick: () -> Unit
 ) {
-    val containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(containerColor)
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp)
     ) {
+        // Color swatch circle
         Box(
             modifier = Modifier
                 .size(32.dp)
@@ -176,13 +182,12 @@ private fun ColorRow(
         Text(
             routeColor.name,
             style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.weight(1f),
-            color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+            modifier = Modifier.weight(1f)
         )
         Text(
             routeColor.grade,
             style = MaterialTheme.typography.bodyMedium,
-            color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }

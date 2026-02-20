@@ -41,11 +41,13 @@ import com.ranni.app.ui.history.HistoryScreen
 import com.ranni.app.ui.history.HistoryViewModel
 import com.ranni.app.ui.session.SessionScreen
 import com.ranni.app.ui.session.SessionViewModel
-import com.ranni.app.ui.settings.InfoScreen
+import com.ranni.app.ui.settings.ScoresScreen
 import com.ranni.app.ui.settings.MetricsScreen
 import com.ranni.app.ui.settings.DeveloperScreen
 import com.ranni.app.ui.settings.MetricsViewModel
 import com.ranni.app.ui.theme.RanniTheme
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -59,18 +61,49 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScaffold() {
     val context = LocalContext.current
-    val db = remember { AppDatabase.getInstance(context) }
+    var screenState by remember { mutableStateOf<ScreenState>(ScreenState.Loading) }
+
+    // DB reference, initialized during splash loading
+    var db by remember { mutableStateOf<AppDatabase?>(null) }
+
+    if (screenState is ScreenState.Loading) {
+        // Initialize DB while the system splash screen is shown
+        LaunchedEffect(Unit) {
+            db = async(Dispatchers.IO) { AppDatabase.getInstance(context) }.await()
+            screenState = ScreenState.Climb
+        }
+    } else {
+        // DB is guaranteed non-null after loading completes
+        MainContent(
+            db = db!!,
+            context = context,
+            screenState = screenState,
+            onScreenStateChange = { screenState = it }
+        )
+    }
+}
+
+/**
+ * Main app content with bottom nav, top bar, and all screen routing.
+ * Shown after the splash/loading screen completes.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MainContent(
+    db: AppDatabase,
+    context: android.content.Context,
+    screenState: ScreenState,
+    onScreenStateChange: (ScreenState) -> Unit
+) {
     val exerciseRepo = remember { ExerciseRepository(db.exerciseDao()) }
     val sessionRepo = remember { SessionRepository(db.sessionLogDao()) }
     val climbRepo = remember { ClimbRepository(db.climbLogDao()) }
     val metricsRepo = remember { MetricsRepository(db.metricsConfigDao()) }
 
     var selectedTab by remember { mutableIntStateOf(0) }
-    var screenState by remember { mutableStateOf<ScreenState>(ScreenState.Climb) }
 
     val isTopLevel = screenState is ScreenState.ExerciseList
             || screenState is ScreenState.Climb
@@ -86,7 +119,7 @@ fun MainScaffold() {
                         .padding(horizontal = 4.dp),
                     horizontalArrangement = Arrangement.End
                 ) {
-                    IconButton(onClick = { screenState = ScreenState.About }) {
+                    IconButton(onClick = { onScreenStateChange(ScreenState.About) }) {
                         Icon(Icons.Default.Settings, contentDescription = "About", modifier = Modifier.size(20.dp))
                     }
                 }
@@ -95,7 +128,7 @@ fun MainScaffold() {
                     title = {
                         Text(when (screenState) {
                             is ScreenState.About -> "Settings"
-                            is ScreenState.SettingsInfo -> "Info"
+                            is ScreenState.SettingsScores -> "Scores"
                             is ScreenState.SettingsMetrics -> "Configure Metrics"
                             is ScreenState.SettingsAbout -> "About"
                             is ScreenState.SettingsDev -> "Developer"
@@ -104,19 +137,19 @@ fun MainScaffold() {
                     },
                     navigationIcon = {
                         IconButton(onClick = {
-                            screenState = when (screenState) {
+                            onScreenStateChange(when (screenState) {
                                 is ScreenState.About -> when (selectedTab) {
                                     0 -> ScreenState.Climb
                                     1 -> ScreenState.ExerciseList
                                     2 -> ScreenState.History
                                     else -> ScreenState.ExerciseList
                                 }
-                                is ScreenState.SettingsInfo,
+                                is ScreenState.SettingsScores,
                                 is ScreenState.SettingsMetrics,
                                 is ScreenState.SettingsAbout,
                                 is ScreenState.SettingsDev -> ScreenState.About
                                 else -> ScreenState.ExerciseList
-                            }
+                            })
                         }) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                         }
@@ -129,19 +162,19 @@ fun MainScaffold() {
                 NavigationBar {
                     NavigationBarItem(
                         selected = selectedTab == 0,
-                        onClick = { selectedTab = 0; screenState = ScreenState.Climb },
+                        onClick = { selectedTab = 0; onScreenStateChange(ScreenState.Climb) },
                         icon = { Icon(Icons.Default.Star, null) },
                         label = { Text("Climb") }
                     )
                     NavigationBarItem(
                         selected = selectedTab == 1,
-                        onClick = { selectedTab = 1; screenState = ScreenState.ExerciseList },
+                        onClick = { selectedTab = 1; onScreenStateChange(ScreenState.ExerciseList) },
                         icon = { Icon(Icons.Default.List, null) },
                         label = { Text("Exercises") }
                     )
                     NavigationBarItem(
                         selected = selectedTab == 2,
-                        onClick = { selectedTab = 2; screenState = ScreenState.History },
+                        onClick = { selectedTab = 2; onScreenStateChange(ScreenState.History) },
                         icon = { Icon(Icons.Default.DateRange, null) },
                         label = { Text("History") }
                     )
@@ -155,9 +188,9 @@ fun MainScaffold() {
                     val vm = remember { ExerciseListViewModel(exerciseRepo) }
                     ExerciseListScreen(
                         viewModel = vm,
-                        onAddExercise = { screenState = ScreenState.EditExercise(null) },
-                        onEditExercise = { id -> screenState = ScreenState.EditExercise(id) },
-                        onStartSession = { id -> screenState = ScreenState.Session(id) }
+                        onAddExercise = { onScreenStateChange(ScreenState.EditExercise(null)) },
+                        onEditExercise = { id -> onScreenStateChange(ScreenState.EditExercise(id)) },
+                        onStartSession = { id -> onScreenStateChange(ScreenState.Session(id)) }
                     )
                 }
                 is ScreenState.EditExercise -> {
@@ -165,7 +198,7 @@ fun MainScaffold() {
                     EditExerciseScreen(
                         viewModel = vm,
                         exerciseId = s.exerciseId,
-                        onBack = { screenState = ScreenState.ExerciseList }
+                        onBack = { onScreenStateChange(ScreenState.ExerciseList) }
                     )
                 }
                 is ScreenState.Session -> {
@@ -173,7 +206,7 @@ fun MainScaffold() {
                     SessionScreen(
                         viewModel = vm,
                         exerciseId = s.exerciseId,
-                        onBack = { screenState = ScreenState.ExerciseList }
+                        onBack = { onScreenStateChange(ScreenState.ExerciseList) }
                     )
                 }
                 is ScreenState.Climb -> {
@@ -186,15 +219,15 @@ fun MainScaffold() {
                 }
                 is ScreenState.About -> {
                     SettingsScreen(
-                        onNavigateInfo = { screenState = ScreenState.SettingsInfo },
-                        onNavigateMetrics = { screenState = ScreenState.SettingsMetrics },
-                        onNavigateAbout = { screenState = ScreenState.SettingsAbout },
-                        onNavigateDev = { screenState = ScreenState.SettingsDev },
+                        onNavigateScores = { onScreenStateChange(ScreenState.SettingsScores) },
+                        onNavigateMetrics = { onScreenStateChange(ScreenState.SettingsMetrics) },
+                        onNavigateAbout = { onScreenStateChange(ScreenState.SettingsAbout) },
+                        onNavigateDev = { onScreenStateChange(ScreenState.SettingsDev) },
                         showDevTools = BuildConfig.SHOW_DEV_TOOLS
                     )
                 }
-                is ScreenState.SettingsInfo -> {
-                    InfoScreen()
+                is ScreenState.SettingsScores -> {
+                    ScoresScreen()
                 }
                 is ScreenState.SettingsMetrics -> {
                     val vm = remember { MetricsViewModel(metricsRepo) }
@@ -206,19 +239,21 @@ fun MainScaffold() {
                 is ScreenState.SettingsDev -> {
                     DeveloperScreen(db)
                 }
+                is ScreenState.Loading -> { /* Handled in MainScaffold */ }
             }
         }
     }
 }
 
 sealed class ScreenState {
+    object Loading : ScreenState()
     object ExerciseList : ScreenState()
     data class EditExercise(val exerciseId: Long?) : ScreenState()
     data class Session(val exerciseId: Long) : ScreenState()
     object Climb : ScreenState()
     object History : ScreenState()
     object About : ScreenState()
-    object SettingsInfo : ScreenState()
+    object SettingsScores : ScreenState()
     object SettingsMetrics : ScreenState()
     object SettingsAbout : ScreenState()
     object SettingsDev : ScreenState()

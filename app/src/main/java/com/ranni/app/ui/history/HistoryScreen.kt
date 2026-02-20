@@ -1,10 +1,12 @@
 package com.ranni.app.ui.history
 
 import androidx.compose.foundation.background
+import androidx.compose.ui.draw.alpha
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
@@ -28,6 +30,7 @@ import com.ranni.app.data.model.ClimbLog
 import com.ranni.app.data.model.SessionLog
 import com.ranni.app.data.model.climbColorMap
 import com.ranni.app.data.model.climbGradeMap
+import com.ranni.app.data.model.climbGymMap
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
@@ -206,7 +209,7 @@ private fun CalendarTab(viewModel: HistoryViewModel) {
                                                 .background(dotColor)
                                         )
                                         Text(climbGradeMap[climb.color] ?: climb.color, style = MaterialTheme.typography.bodyLarge)
-                                        Text("9 Degrees", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        Text(climbGymMap[climb.color] ?: "Unknown", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
                                     Text(time, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
@@ -295,7 +298,7 @@ private fun ProgressTab(viewModel: HistoryViewModel) {
         // Graph with weekly dot overlay — top half
         MetricsGraph(
             data = graphData,
-            title = "Top ${config.topK} climbs over ${config.months} months",
+            title = "Average of Top ${config.topK} climbs over the Last ${config.months} months",
             weeklyActivity = if (dotsEnabled) weeklyActivity else emptyList(),
             showClimbs = showClimbs,
             showExercises = showExercises,
@@ -330,13 +333,24 @@ private fun ProgressTab(viewModel: HistoryViewModel) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                items(topClimbs, key = { it.id }) { climb ->
+                itemsIndexed(topClimbs, key = { _, climb -> climb.id }) { index, climb ->
+                    // Climbs beyond topK are greyed out to show they aren't counted
+                    val isCounted = index < config.topK
+                    val alpha = if (isCounted) 1f else 0.4f
                     val dotColor = climbColorMap[climb.color] ?: Color.White
-                    val date = Instant.ofEpochMilli(climb.loggedAt)
+                    val climbDate = Instant.ofEpochMilli(climb.loggedAt)
                         .atZone(ZoneId.systemDefault())
                         .toLocalDate()
-                        .format(dateFormatter)
-                    Card(modifier = Modifier.fillMaxWidth()) {
+                    // Days remaining until this climb falls out of the metric window (months * 30 days)
+                    val expiryDate = climbDate.plusDays((config.months * 30).toLong())
+                    val daysRemaining = java.time.temporal.ChronoUnit.DAYS.between(LocalDate.now(), expiryDate)
+                        .coerceAtLeast(0)
+                    val date = "${climbDate.format(dateFormatter)} (${daysRemaining}d)"
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .alpha(alpha)
+                    ) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -355,7 +369,7 @@ private fun ProgressTab(viewModel: HistoryViewModel) {
                                         .background(dotColor)
                                 )
                                 Text(climbGradeMap[climb.color] ?: climb.color, style = MaterialTheme.typography.bodyLarge)
-                                Text("9 Degrees", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(climbGymMap[climb.color] ?: "Unknown", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                             Text(date, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }

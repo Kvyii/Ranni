@@ -58,3 +58,8 @@ val climbColorMap: Map<String, Color> = gyms
 val climbGradeMap: Map<String, String> = gyms
     .flatMap { it.routes }
     .associate { it.name to it.grade }
+
+// Maps a route color name to the gym it belongs to (e.g. "Green" -> "9 Degrees", "V3" -> "Custom")
+val climbGymMap: Map<String, String> = gyms
+    .flatMap { gym -> gym.routes.map { it.name to gym.name } }
+    .toMap()

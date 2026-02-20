@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.dp
 import com.ranni.app.data.model.gyms
 
 @Composable
-fun InfoScreen() {
+fun ScoresScreen() {
     Column(
         modifier = Modifier
             .fillMaxSize()

@@ -47,10 +47,15 @@ class HistoryViewModel(
         computeGraphPoints(climbs, config.months, config.topK, config.timelineMonths)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    // Returns up to 50 climbs within the metric window, sorted by score desc.
+    // The UI greys out those beyond topK.
     val topClimbs: StateFlow<List<ClimbLog>> = combine(climbLogs, metricsConfig) { climbs, config ->
+        val windowDays = config.months * 30L
+        val cutoff = System.currentTimeMillis() - windowDays * 24 * 60 * 60 * 1000
         climbs
+            .filter { it.loggedAt > cutoff }
             .sortedWith(compareByDescending<ClimbLog> { it.score }.thenByDescending { it.loggedAt })
-            .take(config.topK)
+            .take(MAX_DISPLAY_CLIMBS)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     /** Weekly activity dots: combines climbs + sessions, grouped by Mon-Sun weeks. */
@@ -122,6 +127,9 @@ private fun computeGraphPoints(climbs: List<ClimbLog>, n: Int, k: Int, timelineM
 
     return points
 }
+
+/** Max climbs shown in the Progress tab list (beyond topK they are greyed out). */
+private const val MAX_DISPLAY_CLIMBS = 50
 
 /** Hard cap on exercise dots per week in the Progress tab tally. */
 private const val MAX_EXERCISE_DOTS = 25
