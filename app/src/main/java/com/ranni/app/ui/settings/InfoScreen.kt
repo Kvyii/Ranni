@@ -21,6 +21,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.ranni.app.data.model.gyms
+import com.ranni.app.data.model.outlineRoutes
 
 @Composable
 fun ScoresScreen() {
@@ -31,6 +32,24 @@ fun ScoresScreen() {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        // Scoring info card
+        Surface(
+            shape = MaterialTheme.shapes.medium,
+            tonalElevation = 2.dp,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text("Information", style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(4.dp))
+                Text("Scores are for new climbs.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Flashes are scored at 1.25x.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Repeats are scored at 0.75x.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+
         gyms.forEach { gym ->
             if (gym.comingSoon) {
                 Surface(
@@ -82,13 +101,18 @@ fun ScoresScreen() {
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.spacedBy(14.dp)
                                     ) {
-                                        // Color swatch
+                                        // Color swatch — hollow outline for Custom gym routes
+                                        val isOutline = route.name in outlineRoutes
                                         Box(
                                             modifier = Modifier
                                                 .size(28.dp)
                                                 .clip(CircleShape)
-                                                .background(route.color)
-                                                .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                                                .then(
+                                                    if (isOutline) Modifier.border(2.dp, MaterialTheme.colorScheme.onSurfaceVariant, CircleShape)
+                                                    else Modifier
+                                                        .background(route.color)
+                                                        .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                                                )
                                         )
                                         // Route name — takes up available space
                                         Text(
