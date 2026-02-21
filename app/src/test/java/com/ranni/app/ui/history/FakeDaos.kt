@@ -1,9 +1,11 @@
 package com.ranni.app.ui.history
 
 import com.ranni.app.data.db.ClimbLogDao
+import com.ranni.app.data.db.InjuryLogDao
 import com.ranni.app.data.db.MetricsConfigDao
 import com.ranni.app.data.db.SessionLogDao
 import com.ranni.app.data.model.ClimbLog
+import com.ranni.app.data.model.InjuryLog
 import com.ranni.app.data.model.MetricsConfig
 import com.ranni.app.data.model.SessionLog
 import kotlinx.coroutines.flow.Flow
@@ -54,6 +56,29 @@ class FakeSessionLogDao : SessionLogDao {
     /** Bulk-set sessions for test setup. */
     fun setSessions(logs: List<SessionLog>) {
         sessions.value = logs
+    }
+}
+
+/**
+ * In-memory fake of [InjuryLogDao] for unit tests.
+ */
+class FakeInjuryLogDao : InjuryLogDao {
+    private val injuries = MutableStateFlow<List<InjuryLog>>(emptyList())
+
+    override suspend fun insert(log: InjuryLog) {
+        injuries.value = injuries.value + log
+    }
+
+    override suspend fun delete(log: InjuryLog) {
+        injuries.value = injuries.value.filter { it.id != log.id }
+    }
+
+    override fun getAllLogs(): Flow<List<InjuryLog>> =
+        injuries.map { list -> list.sortedByDescending { it.loggedAt } }
+
+    /** Bulk-set injuries for test setup. */
+    fun setInjuries(logs: List<InjuryLog>) {
+        injuries.value = logs
     }
 }
 

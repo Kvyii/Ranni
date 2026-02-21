@@ -12,6 +12,7 @@ import com.ranni.app.data.db.AppDatabase
 import com.ranni.app.data.repository.ClimbRepository
 import com.ranni.app.data.repository.ExerciseRepository
 import com.ranni.app.data.repository.MetricsRepository
+import com.ranni.app.data.repository.InjuryRepository
 import com.ranni.app.data.repository.SessionRepository
 import com.ranni.app.ui.exercises.EditExerciseScreen
 import com.ranni.app.ui.exercises.EditExerciseViewModel
@@ -32,6 +33,7 @@ fun RanniNavGraph() {
     val sessionRepo = remember { SessionRepository(db.sessionLogDao()) }
     val climbRepo = remember { ClimbRepository(db.climbLogDao()) }
     val metricsRepo = remember { MetricsRepository(db.metricsConfigDao()) }
+    val injuryRepo = remember { InjuryRepository(db.injuryLogDao()) }
 
     NavHost(navController = navController, startDestination = "exercises") {
         composable("exercises") {
@@ -64,7 +66,7 @@ fun RanniNavGraph() {
             SessionScreen(vm, id, onBack = { navController.popBackStack() })
         }
         composable("history") {
-            val vm = remember { HistoryViewModel(sessionRepo, climbRepo, metricsRepo) }
+            val vm = remember { HistoryViewModel(sessionRepo, climbRepo, metricsRepo, injuryRepo) }
             HistoryScreen(vm)
         }
     }

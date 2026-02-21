@@ -12,17 +12,22 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ranni.app.R
+import com.ranni.app.data.model.InjurySeverity
 import com.ranni.app.data.model.climbColorMap
 import com.ranni.app.data.model.climbGymMap
 import com.ranni.app.data.model.outlineRoutes
@@ -61,6 +66,13 @@ fun MetricsGraph(
         val outlineStrokeColor = MaterialTheme.colorScheme.onSurfaceVariant // for outline-only dots
         val labelStyle = TextStyle(fontSize = 10.sp, color = labelColor)
         val textMeasurer = rememberTextMeasurer()
+
+        // Pre-colored skull painters resolved once in Composable scope for use inside Canvas
+        val skullPainters = mapOf(
+            InjurySeverity.MILD to painterResource(R.drawable.skull_mild),
+            InjurySeverity.MODERATE to painterResource(R.drawable.skull_moderate),
+            InjurySeverity.SEVERE to painterResource(R.drawable.skull_severe),
+        )
 
         Canvas(modifier = Modifier.fillMaxSize()) {
             val leftPadding = 52.dp.toPx()
@@ -154,6 +166,7 @@ fun MetricsGraph(
                 // Determine which columns to draw and their offsets
                 val hasExercises = showExercises && week.exerciseCount > 0
                 val hasClimbs = showClimbs && week.climbColors.isNotEmpty()
+                val hasInjuries = week.injuries.isNotEmpty()
 
                 // Position columns side by side centered on centerX
                 val exerciseColumnX: Float
@@ -172,7 +185,11 @@ fun MetricsGraph(
                         exerciseColumnX = 0f // unused
                         climbColumnX = centerX
                     }
-                    else -> return@forEach
+                    !hasInjuries -> return@forEach
+                    else -> {
+                        exerciseColumnX = 0f // unused
+                        climbColumnX = 0f   // unused
+                    }
                 }
 
                 // Draw exercise dots — gray, stacking upward
@@ -188,7 +205,9 @@ fun MetricsGraph(
                     }
                 }
 
-                // Draw climb dots — grouped by gym with separator bars between groups
+                // Draw climb dots — grouped by gym with separator bars between groups.
+                // Track currentY so skulls can sit above the top-most dot.
+                var climbTopY = baseY
                 if (hasClimbs) {
                     var currentY = baseY
                     var prevGym: String? = null
@@ -197,11 +216,8 @@ fun MetricsGraph(
                         val gym = climbGymMap[colorName] ?: ""
 
                         // Insert a gap + gray bar between different gym groups.
-                        // currentY is one dotStep above the last drawn dot center.
                         if (prevGym != null && gym != prevGym) {
-                            // Push the next dot up by separatorGap to create room
                             currentY -= separatorGap
-                            // Draw separator at 3dp into the 5dp gap (3dp above next dot, 2dp below prev)
                             val sepY = currentY + dotRadius + 3.dp.toPx()
                             if (sepY < topPadding) return@forEach
                             val halfWidth = dotRadius * 0.8f
@@ -229,6 +245,33 @@ fun MetricsGraph(
                                 radius = dotRadius,
                                 center = Offset(climbColumnX, currentY)
                             )
+                        }
+                        currentY -= dotStep
+                    }
+                    // Record where the top-most dot ended up
+                    climbTopY = currentY + dotStep
+                }
+
+                // Draw skull icons above the climb dots (no separator).
+                if (hasInjuries) {
+                    val skullSize = 7.dp.toPx()
+                    // X position: use climbColumnX if climbs exist, otherwise centerX
+                    val skullX = if (hasClimbs) climbColumnX else centerX
+
+                    // Start above the top-most dot's top edge (center - radius), then step up
+                    var currentY = (climbTopY - dotRadius) - dotStep
+
+                    // Draw worst severity first (top-most), then milder below it.
+                    // Reverse so worst ends up at the top after upward stacking.
+                    week.injuries.asReversed().forEach { severity ->
+                        val skullTop = currentY - skullSize / 2f
+                        if (skullTop < topPadding) return@forEach // don't overflow
+                        val skullLeft = skullX - skullSize / 2f
+                        val painter = skullPainters[severity] ?: return@forEach
+                        translate(left = skullLeft, top = skullTop) {
+                            with(painter) {
+                                draw(size = Size(skullSize, skullSize))
+                            }
                         }
                         currentY -= dotStep
                     }

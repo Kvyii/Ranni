@@ -15,23 +15,33 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.foundation.Image
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ranni.app.R
 import com.ranni.app.data.model.ClimbType
+import com.ranni.app.data.model.InjurySeverity
 import com.ranni.app.data.model.RouteColor
 import com.ranni.app.data.model.gyms
 import com.ranni.app.data.model.outlineRoutes
 
+// Sentinel key used to identify the injury card in the expandedCard state
+private const val INJURY_CARD_KEY = "__injury__"
+
 @Composable
 fun ClimbScreen(viewModel: ClimbViewModel) {
-    var expandedGym by remember { mutableStateOf<String?>(null) }
+    // Tracks which card is expanded (gym name or INJURY_CARD_KEY); null = all collapsed
+    var expandedCard by remember { mutableStateOf<String?>(null) }
     var selectedColor by remember { mutableStateOf<RouteColor?>(null) }
     // Holds the RouteColor that triggered the liar dialog (null = hidden)
     var liarRoute by remember { mutableStateOf<RouteColor?>(null) }
+    // Holds the injury severity pending confirmation (null = dialog hidden)
+    var pendingInjurySeverity by remember { mutableStateOf<InjurySeverity?>(null) }
 
     // "Liar" dialog for V12 routes — dismissing proceeds to the log confirmation
     if (liarRoute != null) {
@@ -105,6 +115,39 @@ fun ClimbScreen(viewModel: ClimbViewModel) {
         )
     }
 
+    // Injury confirmation dialog — shown after tapping a severity row
+    if (pendingInjurySeverity != null) {
+        val severity = pendingInjurySeverity!!
+        AlertDialog(
+            onDismissRequest = { pendingInjurySeverity = null },
+            text = {
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Text(
+                        "Log ${severity.name.lowercase().replaceFirstChar { it.uppercase() }} injury?",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                }
+            },
+            confirmButton = {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    TextButton(onClick = { pendingInjurySeverity = null }) {
+                        Text("Cancel")
+                    }
+                    TextButton(onClick = {
+                        viewModel.logInjury(severity)
+                        pendingInjurySeverity = null
+                        expandedCard = null  // Collapse injury card after logging
+                    }) {
+                        Text("Log")
+                    }
+                }
+            }
+        )
+    }
+
     Scaffold(
         contentWindowInsets = WindowInsets(0)
     ) { padding ->
@@ -142,7 +185,7 @@ fun ClimbScreen(viewModel: ClimbViewModel) {
                         }
                     }
                 } else {
-                    val isExpanded = expandedGym == gym.name
+                    val isExpanded = expandedCard == gym.name
                     Surface(
                         shape = RoundedCornerShape(12.dp),
                         tonalElevation = 2.dp,
@@ -153,8 +196,8 @@ fun ClimbScreen(viewModel: ClimbViewModel) {
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable {
-                                        expandedGym = if (isExpanded) null else gym.name
-                                        // Clear route selection when switching gyms
+                                        expandedCard = if (isExpanded) null else gym.name
+                                        // Clear route selection when switching cards
                                         selectedColor = null
                                     }
                                     .padding(horizontal = 16.dp, vertical = 14.dp),
@@ -187,7 +230,73 @@ fun ClimbScreen(viewModel: ClimbViewModel) {
                 }
             }
 
+            // Injury card — same expandable card pattern as gym cards
+            val isInjuryExpanded = expandedCard == INJURY_CARD_KEY
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                tonalElevation = 2.dp,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                expandedCard = if (isInjuryExpanded) null else INJURY_CARD_KEY
+                            }
+                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Injury", style = MaterialTheme.typography.titleMedium)
+                        Icon(
+                            if (isInjuryExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                            contentDescription = null
+                        )
+                    }
+
+                    AnimatedVisibility(visible = isInjuryExpanded) {
+                        Column {
+                            // One row per severity level
+                            InjurySeverity.entries.forEach { severity ->
+                                InjuryRow(
+                                    severity = severity,
+                                    onClick = { pendingInjurySeverity = severity }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
         }
+    }
+}
+
+/** A tappable row showing the skull icon tinted for the given severity, mirroring ColorRow layout. */
+@Composable
+private fun InjuryRow(
+    severity: InjurySeverity,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        // Skull icon colored per severity, same size as the climb color swatch
+        Image(
+            painter = painterResource(severity.skullRes),
+            contentDescription = null,
+            modifier = Modifier.size(32.dp)
+        )
+        Text(
+            severity.name.lowercase().replaceFirstChar { it.uppercase() },
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.weight(1f)
+        )
     }
 }
 

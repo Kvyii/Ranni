@@ -2,9 +2,12 @@ package com.ranni.app.ui.history
 
 import com.ranni.app.data.model.ClimbLog
 import com.ranni.app.data.model.ClimbType
+import com.ranni.app.data.model.InjuryLog
+import com.ranni.app.data.model.InjurySeverity
 import com.ranni.app.data.model.MetricsConfig
 import com.ranni.app.data.model.SessionLog
 import com.ranni.app.data.repository.ClimbRepository
+import com.ranni.app.data.repository.InjuryRepository
 import com.ranni.app.data.repository.MetricsRepository
 import com.ranni.app.data.repository.SessionRepository
 import kotlinx.coroutines.Dispatchers
@@ -30,6 +33,7 @@ class HistoryViewModelTest {
     private lateinit var climbDao: FakeClimbLogDao
     private lateinit var sessionDao: FakeSessionLogDao
     private lateinit var metricsDao: FakeMetricsConfigDao
+    private lateinit var injuryDao: FakeInjuryLogDao
     private lateinit var viewModel: HistoryViewModel
 
     private val testDispatcher = UnconfinedTestDispatcher()
@@ -42,11 +46,13 @@ class HistoryViewModelTest {
         climbDao = FakeClimbLogDao()
         sessionDao = FakeSessionLogDao()
         metricsDao = FakeMetricsConfigDao()
+        injuryDao = FakeInjuryLogDao()
 
         viewModel = HistoryViewModel(
             sessionRepo = SessionRepository(sessionDao),
             climbRepo = ClimbRepository(climbDao),
-            metricsRepo = MetricsRepository(metricsDao)
+            metricsRepo = MetricsRepository(metricsDao),
+            injuryRepo = InjuryRepository(injuryDao)
         )
     }
 
@@ -381,5 +387,91 @@ class HistoryViewModelTest {
         val targetWeek = weeks.find { it.weekStart == expectedMonday }
         assertTrue("Wednesday climb grouped into its Monday", targetWeek != null)
         assertTrue("Climb present in week", targetWeek!!.climbColors.contains("Green"))
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    //  weeklyActivity injury tests
+    // ────────────────────────────────────────────────────────────────────────
+
+    @Test
+    fun `weeklyActivity includes injury in correct week`() = runTest {
+        val today = LocalDate.now()
+        val monday = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+
+        injuryDao.setInjuries(listOf(
+            InjuryLog(id = 1, severity = InjurySeverity.MODERATE.name, loggedAt = monday.toEpochMillis())
+        ))
+        metricsDao.setConfig(MetricsConfig(timelineMonths = 1, topK = 5))
+
+        val weeks = viewModel.weeklyActivity.first()
+        val targetWeek = weeks.find { it.weekStart == monday }
+        assertTrue("Week found", targetWeek != null)
+        assertEquals("One injury in week", 1, targetWeek!!.injuries.size)
+        assertEquals("Correct severity", InjurySeverity.MODERATE, targetWeek.injuries.first())
+    }
+
+    @Test
+    fun `weeklyActivity sorts injuries worst first`() = runTest {
+        val today = LocalDate.now()
+        val monday = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+        val ts = monday.toEpochMillis()
+
+        // Log Mild first, then Severe — output should be Severe first
+        injuryDao.setInjuries(listOf(
+            InjuryLog(id = 1, severity = InjurySeverity.MILD.name, loggedAt = ts),
+            InjuryLog(id = 2, severity = InjurySeverity.SEVERE.name, loggedAt = ts + 1000),
+            InjuryLog(id = 3, severity = InjurySeverity.MODERATE.name, loggedAt = ts + 2000),
+        ))
+        metricsDao.setConfig(MetricsConfig(timelineMonths = 1, topK = 5))
+
+        val weeks = viewModel.weeklyActivity.first()
+        val targetWeek = weeks.find { it.weekStart == monday }
+        assertTrue("Week found", targetWeek != null)
+        val injuries = targetWeek!!.injuries
+        assertEquals("Severe first", InjurySeverity.SEVERE, injuries[0])
+        assertEquals("Moderate second", InjurySeverity.MODERATE, injuries[1])
+        assertEquals("Mild last", InjurySeverity.MILD, injuries[2])
+    }
+
+    @Test
+    fun `weeklyActivity caps injuries at 3`() = runTest {
+        val today = LocalDate.now()
+        val monday = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+        val ts = monday.toEpochMillis()
+
+        // Log 5 injuries — only 3 should appear (worst first)
+        injuryDao.setInjuries(listOf(
+            InjuryLog(id = 1, severity = InjurySeverity.MILD.name, loggedAt = ts),
+            InjuryLog(id = 2, severity = InjurySeverity.MILD.name, loggedAt = ts + 1000),
+            InjuryLog(id = 3, severity = InjurySeverity.SEVERE.name, loggedAt = ts + 2000),
+            InjuryLog(id = 4, severity = InjurySeverity.MODERATE.name, loggedAt = ts + 3000),
+            InjuryLog(id = 5, severity = InjurySeverity.SEVERE.name, loggedAt = ts + 4000),
+        ))
+        metricsDao.setConfig(MetricsConfig(timelineMonths = 1, topK = 5))
+
+        val weeks = viewModel.weeklyActivity.first()
+        val targetWeek = weeks.find { it.weekStart == monday }
+        assertTrue("Week found", targetWeek != null)
+        assertEquals("Injuries capped at 3", 3, targetWeek!!.injuries.size)
+        // Worst 3: Severe, Severe, Moderate
+        assertEquals("First is Severe", InjurySeverity.SEVERE, targetWeek.injuries[0])
+        assertEquals("Second is Severe", InjurySeverity.SEVERE, targetWeek.injuries[1])
+        assertEquals("Third is Moderate", InjurySeverity.MODERATE, targetWeek.injuries[2])
+    }
+
+    @Test
+    fun `weeklyActivity excludes injuries outside the timeline`() = runTest {
+        val today = LocalDate.now()
+        val old = today.minusMonths(6)
+
+        injuryDao.setInjuries(listOf(
+            InjuryLog(id = 1, severity = InjurySeverity.SEVERE.name, loggedAt = old.toEpochMillis())
+        ))
+        // 1-month timeline — the old injury should not appear
+        metricsDao.setConfig(MetricsConfig(timelineMonths = 1, topK = 5))
+
+        val weeks = viewModel.weeklyActivity.first()
+        val totalInjuries = weeks.sumOf { it.injuries.size }
+        assertEquals("Old injury excluded from all weeks", 0, totalInjuries)
     }
 }
