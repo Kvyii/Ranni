@@ -3,11 +3,14 @@ package com.ranni.app.ui.history
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ranni.app.data.model.ClimbLog
+import com.ranni.app.data.model.InjuryLog
+import com.ranni.app.data.model.InjurySeverity
 import com.ranni.app.data.model.MetricsConfig
 import com.ranni.app.data.model.SessionLog
 import com.ranni.app.data.model.climbGymMap
 import com.ranni.app.data.model.gyms
 import com.ranni.app.data.repository.ClimbRepository
+import com.ranni.app.data.repository.InjuryRepository
 import com.ranni.app.data.repository.MetricsRepository
 import com.ranni.app.data.repository.SessionRepository
 import kotlinx.coroutines.flow.SharingStarted
@@ -25,15 +28,17 @@ data class GraphPoint(val date: LocalDate, val value: Float)
 
 /** Weekly activity summary for the Progress tab dot tally. */
 data class WeekActivity(
-    val weekStart: LocalDate,       // Monday of the week
-    val climbColors: List<String>,  // Top-k climb color names (sorted by score desc)
-    val exerciseCount: Int          // Number of exercise sessions (capped at 25)
+    val weekStart: LocalDate,           // Monday of the week
+    val climbColors: List<String>,      // Top-k climb color names (sorted by score desc)
+    val exerciseCount: Int,             // Number of exercise sessions (capped at 25)
+    val injuries: List<InjurySeverity>  // Injuries this week, sorted worst-first, capped at 3
 )
 
 class HistoryViewModel(
     private val sessionRepo: SessionRepository,
     private val climbRepo: ClimbRepository,
-    private val metricsRepo: MetricsRepository
+    private val metricsRepo: MetricsRepository,
+    private val injuryRepo: InjuryRepository
 ) : ViewModel() {
 
     val logs: StateFlow<List<SessionLog>> = sessionRepo.getAllLogs()
@@ -44,6 +49,9 @@ class HistoryViewModel(
 
     val metricsConfig: StateFlow<MetricsConfig> = metricsRepo.getConfig()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), MetricsConfig())
+
+    val injuryLogs: StateFlow<List<InjuryLog>> = injuryRepo.getAllLogs()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val graphData: StateFlow<List<GraphPoint>> = combine(climbLogs, metricsConfig) { climbs, config ->
         computeGraphPoints(climbs, config.months, config.topK, config.timelineMonths)
@@ -60,10 +68,10 @@ class HistoryViewModel(
             .take(MAX_DISPLAY_CLIMBS)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    /** Weekly activity dots: combines climbs + sessions, grouped by Mon-Sun weeks. */
+    /** Weekly activity dots: combines climbs + sessions + injuries, grouped by Mon-Sun weeks. */
     val weeklyActivity: StateFlow<List<WeekActivity>> =
-        combine(climbLogs, logs, metricsConfig) { climbs, sessions, config ->
-            computeWeeklyActivity(climbs, sessions, config.topK, config.timelineMonths)
+        combine(climbLogs, logs, injuryLogs, metricsConfig) { climbs, sessions, injuries, config ->
+            computeWeeklyActivity(climbs, sessions, injuries, config.topK, config.timelineMonths)
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun deleteLog(log: SessionLog) {
@@ -72,6 +80,10 @@ class HistoryViewModel(
 
     fun deleteClimb(log: ClimbLog) {
         viewModelScope.launch { climbRepo.deleteLog(log) }
+    }
+
+    fun deleteInjury(log: InjuryLog) {
+        viewModelScope.launch { injuryRepo.deleteLog(log) }
     }
 }
 
@@ -139,13 +151,17 @@ private const val MAX_EXERCISE_DOTS = 25
 /** Hard cap on climb dots per week in the Progress tab tally. */
 private const val MAX_CLIMB_DOTS = 25
 
+/** Max skull icons shown per week in the Progress tab (sorted worst-first). */
+private const val MAX_INJURY_SKULLS = 3
+
 /**
- * Groups climbs and sessions into Mon-Sun weeks over the timeline range.
- * Each week keeps the top-k climb colors (by score desc) and a capped exercise count.
+ * Groups climbs, sessions, and injuries into Mon-Sun weeks over the timeline range.
+ * Each week keeps the top-k climb colors, a capped exercise count, and up to 3 injuries (worst first).
  */
 private fun computeWeeklyActivity(
     climbs: List<ClimbLog>,
     sessions: List<SessionLog>,
+    injuries: List<InjuryLog>,
     topK: Int,
     timelineMonths: Int
 ): List<WeekActivity> {
@@ -172,8 +188,20 @@ private fun computeWeeklyActivity(
         weekMon to session
     }.groupBy({ it.first }, { it.second })
 
+    // Group injuries by their week's Monday
+    val injuriesByWeek = injuries.mapNotNull { injury ->
+        val date = Instant.ofEpochMilli(injury.loggedAt).atZone(zone).toLocalDate()
+        if (date.isBefore(firstMonday) || date.isAfter(today)) return@mapNotNull null
+        val weekMon = date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+        weekMon to injury
+    }.groupBy({ it.first }, { it.second })
+
     // Build a WeekActivity for each week in range
     val gymOrder = gyms.mapIndexed { i, g -> g.name to i }.toMap()
+    // Severity ordinal: SEVERE=2 > MODERATE=1 > MILD=0
+    val severityOrder = InjurySeverity.entries.reversed()
+        .mapIndexed { i, s -> s to i }.toMap()
+
     val weeks = mutableListOf<WeekActivity>()
     var weekStart = firstMonday
     while (!weekStart.isAfter(today)) {
@@ -191,7 +219,13 @@ private fun computeWeeklyActivity(
         val exerciseCount = (sessionsByWeek[weekStart]?.size ?: 0)
             .coerceAtMost(MAX_EXERCISE_DOTS)
 
-        weeks.add(WeekActivity(weekStart, colors, exerciseCount))
+        // Injuries sorted worst-first (SEVERE → MODERATE → MILD), capped at MAX_INJURY_SKULLS
+        val weekInjuries = (injuriesByWeek[weekStart] ?: emptyList())
+            .map { it.severityEnum }
+            .sortedWith(compareBy { severityOrder[it] ?: Int.MAX_VALUE })
+            .take(MAX_INJURY_SKULLS)
+
+        weeks.add(WeekActivity(weekStart, colors, exerciseCount, weekInjuries))
         weekStart = weekStart.plusWeeks(1)
     }
 

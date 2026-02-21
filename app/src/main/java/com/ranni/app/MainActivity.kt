@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import com.ranni.app.data.db.AppDatabase
 import com.ranni.app.data.repository.ClimbRepository
 import com.ranni.app.data.repository.ExerciseRepository
+import com.ranni.app.data.repository.InjuryRepository
 import com.ranni.app.data.repository.MetricsRepository
 import com.ranni.app.data.repository.SessionRepository
 import com.ranni.app.ui.about.AboutContent
@@ -63,6 +64,7 @@ import com.ranni.app.ui.settings.DeveloperScreen
 import com.ranni.app.ui.settings.MetricsViewModel
 import com.ranni.app.ui.settings.SoundsScreen
 import com.ranni.app.data.AlarmPreferences
+import com.ranni.app.data.GymOrderPreferences
 import com.ranni.app.ui.theme.RanniTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -126,7 +128,9 @@ fun MainContent(
     val sessionRepo = remember { SessionRepository(db.sessionLogDao()) }
     val climbRepo = remember { ClimbRepository(db.climbLogDao()) }
     val metricsRepo = remember { MetricsRepository(db.metricsConfigDao()) }
+    val injuryRepo = remember { InjuryRepository(db.injuryLogDao()) }
     val alarmPrefs = remember { AlarmPreferences(context) }
+    val gymOrderPrefs = remember { GymOrderPreferences(context) }
 
     // Track the display name of the custom rest alarm (null = default)
     var customRestAlarmName by remember { mutableStateOf(getAlarmDisplayName(context, alarmPrefs)) }
@@ -306,11 +310,11 @@ fun MainContent(
                     )
                 }
                 is ScreenState.Climb -> {
-                    val vm = remember { ClimbViewModel(climbRepo) }
+                    val vm = remember { ClimbViewModel(climbRepo, injuryRepo, gymOrderPrefs) }
                     ClimbScreen(vm)
                 }
                 is ScreenState.History -> {
-                    val vm = remember { HistoryViewModel(sessionRepo, climbRepo, metricsRepo) }
+                    val vm = remember { HistoryViewModel(sessionRepo, climbRepo, metricsRepo, injuryRepo) }
                     HistoryScreen(vm)
                 }
                 is ScreenState.About -> {

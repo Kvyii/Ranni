@@ -15,23 +15,37 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.foundation.Image
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ranni.app.R
 import com.ranni.app.data.model.ClimbType
+import com.ranni.app.data.model.InjurySeverity
 import com.ranni.app.data.model.RouteColor
-import com.ranni.app.data.model.gyms
 import com.ranni.app.data.model.outlineRoutes
+
+// Sentinel key used to identify the injury card in the expandedCard state
+private const val INJURY_CARD_KEY = "__injury__"
 
 @Composable
 fun ClimbScreen(viewModel: ClimbViewModel) {
-    var expandedGym by remember { mutableStateOf<String?>(null) }
+    // Tracks which card is expanded (gym name or INJURY_CARD_KEY); null = all collapsed
+    var expandedCard by remember { mutableStateOf<String?>(null) }
     var selectedColor by remember { mutableStateOf<RouteColor?>(null) }
     // Holds the RouteColor that triggered the liar dialog (null = hidden)
     var liarRoute by remember { mutableStateOf<RouteColor?>(null) }
+    // Holds the injury severity pending confirmation (null = dialog hidden)
+    var pendingInjurySeverity by remember { mutableStateOf<InjurySeverity?>(null) }
 
     // "Liar" dialog for V12 routes — dismissing proceeds to the log confirmation
     if (liarRoute != null) {
@@ -105,6 +119,39 @@ fun ClimbScreen(viewModel: ClimbViewModel) {
         )
     }
 
+    // Injury confirmation dialog — shown after tapping a severity row
+    if (pendingInjurySeverity != null) {
+        val severity = pendingInjurySeverity!!
+        AlertDialog(
+            onDismissRequest = { pendingInjurySeverity = null },
+            text = {
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Text(
+                        "Log ${severity.name.lowercase().replaceFirstChar { it.uppercase() }} injury?",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                }
+            },
+            confirmButton = {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    TextButton(onClick = { pendingInjurySeverity = null }) {
+                        Text("Cancel")
+                    }
+                    TextButton(onClick = {
+                        viewModel.logInjury(severity)
+                        pendingInjurySeverity = null
+                        expandedCard = null  // Collapse injury card after logging
+                    }) {
+                        Text("Log")
+                    }
+                }
+            }
+        )
+    }
+
     Scaffold(
         contentWindowInsets = WindowInsets(0)
     ) { padding ->
@@ -123,63 +170,90 @@ fun ClimbScreen(viewModel: ClimbViewModel) {
                 fontWeight = FontWeight.Bold
             )
 
-            gyms.forEach { gym ->
-                if (gym.comingSoon) {
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        tonalElevation = 2.dp,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
+            // Collect the user-ordered active gyms from the ViewModel
+            val activeGyms by viewModel.orderedActiveGyms.collectAsState()
+
+            // Drag state — which active gym index is being dragged, its pixel offset, and card height
+            var dragIndex by remember { mutableIntStateOf(-1) }
+            var dragOffsetY by remember { mutableFloatStateOf(0f) }
+            var cardHeightPx by remember { mutableFloatStateOf(0f) }
+
+            // Active (draggable) gym cards
+            activeGyms.forEachIndexed { index, gym ->
+                val isExpanded = expandedCard == gym.name
+                val isBeingDragged = dragIndex == index
+                val yOffset = if (isBeingDragged) dragOffsetY else 0f
+
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    // Raise elevation while dragging to give a "lifted" visual cue
+                    tonalElevation = if (isBeingDragged) 8.dp else 2.dp,
+                    shadowElevation = if (isBeingDragged) 8.dp else 0.dp,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        // graphicsLayer translates the card visually without affecting layout of siblings
+                        .graphicsLayer { translationY = yOffset }
+                        // Capture card height from the first card (all cards are the same height)
+                        .onGloballyPositioned { coords ->
+                            if (index == 0) cardHeightPx = coords.size.height.toFloat()
+                        }
+                        // Long-press initiates drag; keyed on index so closure is never stale after a swap
+                        .pointerInput(index) {
+                            detectDragGesturesAfterLongPress(
+                                onDragStart = {
+                                    dragIndex = index
+                                    dragOffsetY = 0f
+                                },
+                                onDrag = { _, dragAmount ->
+                                    dragOffsetY += dragAmount.y
+                                    // Compute target slot from accumulated offset — swap when crossing 50% of a card
+                                    if (cardHeightPx > 0f) {
+                                        val targetIndex = (dragIndex + (dragOffsetY / cardHeightPx).toInt())
+                                            .coerceIn(0, activeGyms.lastIndex)
+                                        if (targetIndex != dragIndex) {
+                                            // Subtract the pixels consumed by the completed swap before updating dragIndex
+                                            dragOffsetY -= (targetIndex - dragIndex) * cardHeightPx
+                                            viewModel.moveGym(dragIndex, targetIndex)
+                                            dragIndex = targetIndex
+                                        }
+                                    }
+                                },
+                                onDragEnd = { dragIndex = -1; dragOffsetY = 0f },
+                                onDragCancel = { dragIndex = -1; dragOffsetY = 0f }
+                            )
+                        }
+                ) {
+                    Column {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .clickable {
+                                    expandedCard = if (isExpanded) null else gym.name
+                                    // Clear route selection when switching cards
+                                    selectedColor = null
+                                }
                                 .padding(horizontal = 16.dp, vertical = 14.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(gym.name, style = MaterialTheme.typography.titleMedium)
-                            Text("Coming soon", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Icon(
+                                if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                contentDescription = null
+                            )
                         }
-                    }
-                } else {
-                    val isExpanded = expandedGym == gym.name
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        tonalElevation = 2.dp,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        expandedGym = if (isExpanded) null else gym.name
-                                        // Clear route selection when switching gyms
-                                        selectedColor = null
-                                    }
-                                    .padding(horizontal = 16.dp, vertical = 14.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(gym.name, style = MaterialTheme.typography.titleMedium)
-                                Icon(
-                                    if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                                    contentDescription = null
-                                )
-                            }
 
-                            AnimatedVisibility(visible = isExpanded) {
-                                Column {
-                                    gym.routes.forEach { rc ->
-                                        ColorRow(
-                                            routeColor = rc,
-                                            onClick = {
-                                                // Show liar dialog for V12, otherwise show log confirmation
-                                                if (rc.grade == "V12") liarRoute = rc
-                                                else selectedColor = rc
-                                            }
-                                        )
-                                    }
+                        AnimatedVisibility(visible = isExpanded) {
+                            Column {
+                                gym.routes.forEach { rc ->
+                                    ColorRow(
+                                        routeColor = rc,
+                                        onClick = {
+                                            // Show liar dialog for V12, otherwise show log confirmation
+                                            if (rc.grade == "V12") liarRoute = rc
+                                            else selectedColor = rc
+                                        }
+                                    )
                                 }
                             }
                         }
@@ -187,7 +261,117 @@ fun ClimbScreen(viewModel: ClimbViewModel) {
                 }
             }
 
+            // Coming-soon gym cards — locked below active gyms, no drag gesture
+            viewModel.comingSoonGyms.forEach { gym ->
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    tonalElevation = 2.dp,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(gym.name, style = MaterialTheme.typography.titleMedium)
+                        Text("Coming soon", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+
+            // Extra spacing to visually separate the "Other" section from the climb cards
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Section title for non-climb actions, styled to match "Select climb"
+            Text(
+                "Other",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+            )
+
+            // Injury card — same expandable card pattern as gym cards
+            val isInjuryExpanded = expandedCard == INJURY_CARD_KEY
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                tonalElevation = 2.dp,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                expandedCard = if (isInjuryExpanded) null else INJURY_CARD_KEY
+                            }
+                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Injury", style = MaterialTheme.typography.titleMedium)
+                        Icon(
+                            if (isInjuryExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                            contentDescription = null
+                        )
+                    }
+
+                    AnimatedVisibility(visible = isInjuryExpanded) {
+                        Column {
+                            // One row per severity level
+                            InjurySeverity.entries.forEach { severity ->
+                                InjuryRow(
+                                    severity = severity,
+                                    onClick = { pendingInjurySeverity = severity }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
         }
+    }
+}
+
+/** A tappable row showing the skull icon tinted for the given severity, mirroring ColorRow layout. */
+@Composable
+private fun InjuryRow(
+    severity: InjurySeverity,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        // Skull icon colored per severity
+        Image(
+            painter = painterResource(severity.skullRes),
+            contentDescription = null,
+            modifier = Modifier.size(25.dp)
+        )
+        // Severity label
+        Text(
+            severity.name.lowercase().replaceFirstChar { it.uppercase() },
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.weight(1f)
+        )
+        // Right-aligned hint text describing what this severity feels like, forced single line
+        Text(
+            text = when (severity) {
+                InjurySeverity.MILD     -> "Hurts but could keep climbing"
+                InjurySeverity.MODERATE -> "Hurts a lot. Impedes climbing"
+                InjurySeverity.SEVERE   -> "Welp. No climbing for a while"
+            },
+            style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.End,
+            maxLines = 1,
+            modifier = Modifier.weight(1.5f)
+        )
     }
 }
 

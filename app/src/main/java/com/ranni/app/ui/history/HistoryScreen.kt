@@ -10,8 +10,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,8 +27,12 @@ import com.kizitonwose.calendar.compose.rememberCalendarState
 import com.kizitonwose.calendar.core.CalendarDay
 import com.kizitonwose.calendar.core.DayPosition
 import com.kizitonwose.calendar.core.firstDayOfWeekFromLocale
+import androidx.compose.foundation.Image
+import com.ranni.app.R
 import com.ranni.app.data.model.ClimbLog
 import com.ranni.app.data.model.ClimbType
+import com.ranni.app.data.model.InjuryLog
+import com.ranni.app.data.model.InjurySeverity
 import com.ranni.app.data.model.SessionLog
 import com.ranni.app.data.model.climbColorMap
 import com.ranni.app.data.model.climbGradeMap
@@ -72,9 +76,11 @@ fun HistoryScreen(viewModel: HistoryViewModel) {
 private fun CalendarTab(viewModel: HistoryViewModel) {
     val logs by viewModel.logs.collectAsState()
     val climbLogs by viewModel.climbLogs.collectAsState()
+    val injuryLogs by viewModel.injuryLogs.collectAsState()
     var selectedDate by remember { mutableStateOf<LocalDate?>(LocalDate.now()) }
     var logToDelete by remember { mutableStateOf<SessionLog?>(null) }
     var climbToDelete by remember { mutableStateOf<ClimbLog?>(null) }
+    var injuryToDelete by remember { mutableStateOf<InjuryLog?>(null) }
 
     val sessionsByDate: Map<LocalDate, List<SessionLog>> = remember(logs) {
         logs.groupBy { log ->
@@ -87,6 +93,15 @@ private fun CalendarTab(viewModel: HistoryViewModel) {
 
     val climbsByDate: Map<LocalDate, List<ClimbLog>> = remember(climbLogs) {
         climbLogs.groupBy { log ->
+            LocalDate.ofInstant(
+                java.time.Instant.ofEpochMilli(log.loggedAt),
+                ZoneId.systemDefault()
+            )
+        }
+    }
+
+    val injuriesByDate: Map<LocalDate, List<InjuryLog>> = remember(injuryLogs) {
+        injuryLogs.groupBy { log ->
             LocalDate.ofInstant(
                 java.time.Instant.ofEpochMilli(log.loggedAt),
                 ZoneId.systemDefault()
@@ -141,6 +156,24 @@ private fun CalendarTab(viewModel: HistoryViewModel) {
         )
     }
 
+    if (injuryToDelete != null) {
+        val severity = injuryToDelete!!.severityEnum.name.lowercase().replaceFirstChar { it.uppercase() }
+        AlertDialog(
+            onDismissRequest = { injuryToDelete = null },
+            title = { Text("Delete entry?") },
+            text = { Text("Remove $severity injury from your history?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.deleteInjury(injuryToDelete!!)
+                    injuryToDelete = null
+                }) { Text("Delete") }
+            },
+            dismissButton = {
+                TextButton(onClick = { injuryToDelete = null }) { Text("Cancel") }
+            }
+        )
+    }
+
     Column(modifier = Modifier.fillMaxSize()) {
         HorizontalCalendar(
             state = calendarState,
@@ -149,6 +182,7 @@ private fun CalendarTab(viewModel: HistoryViewModel) {
                     day = day,
                     sessionLogs = sessionsByDate[day.date].orEmpty(),
                     climbLogs = climbsByDate[day.date].orEmpty(),
+                    injuryLogs = injuriesByDate[day.date].orEmpty(),
                     isSelected = day.date == selectedDate
                 ) {
                     selectedDate = if (selectedDate == day.date) null else day.date
@@ -165,7 +199,9 @@ private fun CalendarTab(viewModel: HistoryViewModel) {
             val dayLogs = sessionsByDate[date].orEmpty()
             val dayClimbs = climbsByDate[date].orEmpty()
                 .sortedWith(compareByDescending<ClimbLog> { it.score }.thenByDescending { it.loggedAt })
-            if (dayLogs.isEmpty() && dayClimbs.isEmpty()) {
+            val dayInjuries = injuriesByDate[date].orEmpty()
+                .sortedByDescending { it.severityEnum.ordinal }
+            if (dayLogs.isEmpty() && dayClimbs.isEmpty() && dayInjuries.isEmpty()) {
                 Box(modifier = Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
                     Text("Nothing logged on this day", style = MaterialTheme.typography.bodyMedium)
                 }
@@ -175,6 +211,53 @@ private fun CalendarTab(viewModel: HistoryViewModel) {
                     contentPadding = PaddingValues(bottom = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    if (dayInjuries.isNotEmpty()) {
+                        item {
+                            Text(
+                                "Injuries",
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        items(dayInjuries, key = { "injury-${it.id}" }) { injury ->
+                            val time = Instant.ofEpochMilli(injury.loggedAt)
+                                .atZone(ZoneId.systemDefault())
+                                .format(timeFormatter)
+                            val severity = injury.severityEnum
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp)
+                                    .clickable { injuryToDelete = injury }
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        // Skull icon colored per severity
+                                        Image(
+                                            painter = androidx.compose.ui.res.painterResource(severity.skullRes),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Text(
+                                            severity.name.lowercase().replaceFirstChar { it.uppercase() },
+                                            style = MaterialTheme.typography.bodyLarge
+                                        )
+                                    }
+                                    Text(time, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                        }
+                    }
                     if (dayClimbs.isNotEmpty()) {
                         item {
                             Text(
@@ -413,6 +496,7 @@ private fun Day(
     day: CalendarDay,
     sessionLogs: List<SessionLog>,
     climbLogs: List<ClimbLog>,
+    injuryLogs: List<InjuryLog>,
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
@@ -421,6 +505,11 @@ private fun Day(
     val primaryColor = MaterialTheme.colorScheme.primary
     val tertiaryColor = MaterialTheme.colorScheme.tertiary
     val onSurface = MaterialTheme.colorScheme.onSurface
+
+    // Worst severity for this day, or null if no injuries
+    val worstInjury: InjurySeverity? = remember(injuryLogs) {
+        injuryLogs.maxByOrNull { it.severityEnum.ordinal }?.severityEnum
+    }
 
     Column(
         modifier = Modifier
@@ -434,11 +523,12 @@ private fun Day(
         val cappedClimbs = climbLogs
             .sortedWith(compareByDescending<ClimbLog> { it.score }.thenByDescending { it.loggedAt })
             .take(4)
-        if (cappedSessions.isNotEmpty() || cappedClimbs.isNotEmpty()) {
+        if (cappedSessions.isNotEmpty() || cappedClimbs.isNotEmpty() || worstInjury != null) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(2.dp),
                 verticalAlignment = Alignment.Bottom
             ) {
+                // Exercise dots — left column
                 Column(
                     verticalArrangement = Arrangement.spacedBy(2.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
@@ -452,10 +542,19 @@ private fun Day(
                         )
                     }
                 }
+                // Climb dots — right column, with skull above
                 Column(
                     verticalArrangement = Arrangement.spacedBy(2.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
+                    // Skull icon for the worst injury sits above the climb dots
+                    if (worstInjury != null) {
+                        Image(
+                            painter = androidx.compose.ui.res.painterResource(worstInjury.skullRes),
+                            contentDescription = null,
+                            modifier = Modifier.size(8.dp)
+                        )
+                    }
                     var prevGym: String? = null
                     cappedClimbs.forEach { climb ->
                         val gym = climbGymMap[climb.color] ?: ""
@@ -514,7 +613,7 @@ private fun MonthHeader(yearMonth: YearMonth, calendarState: CalendarState) {
         IconButton(onClick = {
             scope.launch { calendarState.animateScrollToMonth(yearMonth.minusMonths(1)) }
         }) {
-            Icon(Icons.Default.KeyboardArrowLeft, contentDescription = "Previous month")
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Previous month")
         }
         Text(
             text = "${yearMonth.month.getDisplayName(TextStyle.FULL, Locale.getDefault())} ${yearMonth.year}",
@@ -523,7 +622,7 @@ private fun MonthHeader(yearMonth: YearMonth, calendarState: CalendarState) {
         IconButton(onClick = {
             scope.launch { calendarState.animateScrollToMonth(yearMonth.plusMonths(1)) }
         }) {
-            Icon(Icons.Default.KeyboardArrowRight, contentDescription = "Next month")
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Next month")
         }
     }
 }
