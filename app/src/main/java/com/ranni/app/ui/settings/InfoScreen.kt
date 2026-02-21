@@ -21,7 +21,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.ranni.app.data.model.gyms
-import com.ranni.app.data.model.outlineRoutes
+import com.ranni.app.data.model.outlineGyms
 
 @Composable
 fun ScoresScreen() {
@@ -101,14 +101,14 @@ fun ScoresScreen() {
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.spacedBy(14.dp)
                                     ) {
-                                        // Color swatch — hollow outline for Custom gym routes
-                                        val isOutline = route.name in outlineRoutes
+                                        // Color swatch — hollow outline for gyms in outlineGyms (gym is already in scope)
+                                        val isOutline = gym.name in outlineGyms
                                         Box(
                                             modifier = Modifier
                                                 .size(28.dp)
                                                 .clip(CircleShape)
                                                 .then(
-                                                    if (isOutline) Modifier.border(2.dp, MaterialTheme.colorScheme.onSurfaceVariant, CircleShape)
+                                                    if (isOutline) Modifier.border(2.dp, route.color, CircleShape)
                                                     else Modifier
                                                         .background(route.color)
                                                         .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)

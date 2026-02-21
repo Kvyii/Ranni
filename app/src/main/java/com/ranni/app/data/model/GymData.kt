@@ -47,6 +47,43 @@ val gyms = listOf(
             RouteColor("V12", "V12", Color(0xFFEDEDED), 2000),
         )
     ),
+    Gym(
+        name = "Outdoor V-Grade",
+        routes = listOf(
+            RouteColor("V0",  "V0",  Color(0xFF2447E3),  110),
+            RouteColor("V1",  "V1",  Color(0xFF2447E3),  195),
+            RouteColor("V2",  "V2",  Color(0xFF2447E3),  300),
+            RouteColor("V3",  "V3",  Color(0xFF2447E3),  440),
+            RouteColor("V4",  "V4",  Color(0xFF2447E3),  605),
+            RouteColor("V5",  "V5",  Color(0xFF2447E3),  800),
+            RouteColor("V6",  "V6",  Color(0xFF2447E3),  990),
+            RouteColor("V7",  "V7",  Color(0xFF2447E3), 1210),
+            RouteColor("V8",  "V8",  Color(0xFF2447E3), 1430),
+            RouteColor("V9",  "V9",  Color(0xFF2447E3), 1650),
+            RouteColor("V10", "V10", Color(0xFF2447E3), 1870),
+            RouteColor("V11", "V11", Color(0xFF2447E3), 2035),
+            RouteColor("V12", "V12", Color(0xFF2447E3), 2200),
+        )
+    ),
+    Gym(
+        name = "Outdoor YDS Grade",
+        routes = listOf(
+            RouteColor("5.9",   "5.9",   Color(0xFF7a4ce6),  110),
+            RouteColor("5.10c", "5.10c", Color(0xFF7a4ce6),  195),
+            RouteColor("5.10d", "5.10d", Color(0xFF7a4ce6),  300),
+            RouteColor("5.11a", "5.11a", Color(0xFF7a4ce6),  440),
+            RouteColor("5.11c", "5.11c", Color(0xFF7a4ce6),  605),
+            RouteColor("5.12a", "5.12a", Color(0xFF7a4ce6),  800),
+            RouteColor("5.12b", "5.12b", Color(0xFF7a4ce6),  990),
+            RouteColor("5.12c", "5.12c", Color(0xFF7a4ce6), 1210),
+            RouteColor("5.12d", "5.12d", Color(0xFF7a4ce6), 1430),
+            RouteColor("5.13a", "5.13a", Color(0xFF7a4ce6), 1650),
+            RouteColor("5.13c", "5.13c", Color(0xFF7a4ce6), 1870),
+            RouteColor("5.13d", "5.13d", Color(0xFF7a4ce6), 2035),
+            RouteColor("5.14a", "5.14a", Color(0xFF7a4ce6), 2200),
+            RouteColor("5.14b", "5.14b", Color(0xFF7a4ce6), 2420),
+        )
+    ),
     Gym(name = "Nomad", routes = emptyList(), comingSoon = true),
     Gym(name = "Blochaus", routes = emptyList(), comingSoon = true),
 )
@@ -64,8 +101,6 @@ val climbGymMap: Map<String, String> = gyms
     .flatMap { gym -> gym.routes.map { it.name to gym.name } }
     .toMap()
 
-// Route names belonging to the Custom gym — dots render as outlines instead of filled circles
-val outlineRoutes: Set<String> = gyms
-    .first { it.name == "Custom" }
-    .routes.map { it.name }
-    .toSet()
+// Gyms whose dots render as hollow/outline circles instead of filled dots.
+// Determined per gym so that route name collisions across gyms don't affect rendering.
+val outlineGyms: Set<String> = setOf("Custom", "Outdoor V-Grade", "Outdoor YDS Grade")

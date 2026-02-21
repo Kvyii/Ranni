@@ -30,7 +30,7 @@ import com.ranni.app.R
 import com.ranni.app.data.model.InjurySeverity
 import com.ranni.app.data.model.climbColorMap
 import com.ranni.app.data.model.climbGymMap
-import com.ranni.app.data.model.outlineRoutes
+import com.ranni.app.data.model.outlineGyms
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 
@@ -231,10 +231,10 @@ fun MetricsGraph(
                         prevGym = gym
 
                         if (currentY - dotRadius < topPadding) return@forEach // don't overflow
-                        if (colorName in outlineRoutes) {
-                            // Outline-only for Custom gym routes
+                        if (climbGymMap[colorName] in outlineGyms) {
+                            // Outline-only for gyms in outlineGyms — stroke uses the route's own color
                             drawCircle(
-                                color = outlineStrokeColor,
+                                color = climbColorMap[colorName] ?: outlineStrokeColor,
                                 radius = dotRadius,
                                 center = Offset(climbColumnX, currentY),
                                 style = Stroke(width = 1.dp.toPx())

@@ -32,7 +32,8 @@ import com.ranni.app.R
 import com.ranni.app.data.model.ClimbType
 import com.ranni.app.data.model.InjurySeverity
 import com.ranni.app.data.model.RouteColor
-import com.ranni.app.data.model.outlineRoutes
+import com.ranni.app.data.model.climbGymMap
+import com.ranni.app.data.model.outlineGyms
 
 // Sentinel key used to identify the injury card in the expandedCard state
 private const val INJURY_CARD_KEY = "__injury__"
@@ -388,14 +389,14 @@ private fun ColorRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // Color swatch circle — hollow outline for Custom gym routes, filled for others
-        val isOutline = routeColor.name in outlineRoutes
+        // Color swatch circle — hollow outline for gyms in outlineGyms (looked up by route name → gym)
+        val isOutline = climbGymMap[routeColor.name] in outlineGyms
         Box(
             modifier = Modifier
                 .size(32.dp)
                 .clip(CircleShape)
                 .then(
-                    if (isOutline) Modifier.border(2.dp, MaterialTheme.colorScheme.onSurfaceVariant, CircleShape)
+                    if (isOutline) Modifier.border(2.dp, routeColor.color, CircleShape)
                     else Modifier
                         .background(routeColor.color)
                         .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)

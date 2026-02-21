@@ -37,7 +37,7 @@ import com.ranni.app.data.model.SessionLog
 import com.ranni.app.data.model.climbColorMap
 import com.ranni.app.data.model.climbGradeMap
 import com.ranni.app.data.model.climbGymMap
-import com.ranni.app.data.model.outlineRoutes
+import com.ranni.app.data.model.outlineGyms
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
@@ -272,8 +272,8 @@ private fun CalendarTab(viewModel: HistoryViewModel) {
                                 .atZone(ZoneId.systemDefault())
                                 .format(timeFormatter)
                             val dotColor = climbColorMap[climb.color] ?: Color.White
-                            // Outline-only for Custom gym routes
-                            val isOutline = climb.color in outlineRoutes
+                            // Outline-only for gyms in outlineGyms (looked up by route name → gym)
+                            val isOutline = climbGymMap[climb.color] in outlineGyms
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -296,7 +296,7 @@ private fun CalendarTab(viewModel: HistoryViewModel) {
                                                 .size(12.dp)
                                                 .clip(CircleShape)
                                                 .then(
-                                                    if (isOutline) Modifier.border(1.5.dp, MaterialTheme.colorScheme.onSurfaceVariant, CircleShape)
+                                                    if (isOutline) Modifier.border(1.5.dp, dotColor, CircleShape)
                                                     else Modifier.background(dotColor)
                                                 )
                                         )
@@ -437,8 +437,8 @@ private fun ProgressTab(viewModel: HistoryViewModel) {
                     val isCounted = index < config.topK
                     val alpha = if (isCounted) 1f else 0.4f
                     val dotColor = climbColorMap[climb.color] ?: Color.White
-                    // Outline-only for Custom gym routes
-                    val isOutline = climb.color in outlineRoutes
+                    // Outline-only for gyms in outlineGyms (looked up by route name → gym)
+                    val isOutline = climbGymMap[climb.color] in outlineGyms
                     val climbDate = Instant.ofEpochMilli(climb.loggedAt)
                         .atZone(ZoneId.systemDefault())
                         .toLocalDate()
@@ -468,7 +468,7 @@ private fun ProgressTab(viewModel: HistoryViewModel) {
                                         .size(12.dp)
                                         .clip(CircleShape)
                                         .then(
-                                            if (isOutline) Modifier.border(1.5.dp, MaterialTheme.colorScheme.onSurfaceVariant, CircleShape)
+                                            if (isOutline) Modifier.border(1.5.dp, dotColor, CircleShape)
                                             else Modifier.background(dotColor)
                                         )
                                 )
@@ -574,8 +574,8 @@ private fun Day(
                                 .size(5.5.dp)
                                 .clip(CircleShape)
                                 .then(
-                                    // Outline-only for Custom gym routes
-                                    if (climb.color in outlineRoutes) Modifier.border(1.dp, MaterialTheme.colorScheme.onSurfaceVariant, CircleShape)
+                                    // Outline-only for gyms in outlineGyms (looked up by route name → gym)
+                                    if (climbGymMap[climb.color] in outlineGyms) Modifier.border(1.dp, dotColor, CircleShape)
                                     else Modifier.background(dotColor)
                                 )
                         )
