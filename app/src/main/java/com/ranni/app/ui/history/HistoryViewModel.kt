@@ -7,7 +7,6 @@ import com.ranni.app.data.model.InjuryLog
 import com.ranni.app.data.model.InjurySeverity
 import com.ranni.app.data.model.MetricsConfig
 import com.ranni.app.data.model.SessionLog
-import com.ranni.app.data.model.climbGymMap
 import com.ranni.app.data.model.gyms
 import com.ranni.app.data.repository.ClimbRepository
 import com.ranni.app.data.repository.InjuryRepository
@@ -28,8 +27,9 @@ data class GraphPoint(val date: LocalDate, val value: Float)
 
 /** Weekly activity summary for the Progress tab dot tally. */
 data class WeekActivity(
-    val weekStart: LocalDate,           // Monday of the week
-    val climbColors: List<String>,      // Top-k climb color names (sorted by score desc)
+    val weekStart: LocalDate,
+    // Each entry is (gymName, routeName) — both needed to look up color and outline status unambiguously
+    val climbColors: List<Pair<String, String>>,
     val exerciseCount: Int,             // Number of exercise sessions (capped at 25)
     val injuries: List<InjurySeverity>  // Injuries this week, sorted worst-first, capped at 3
 )
@@ -211,9 +211,9 @@ private fun computeWeeklyActivity(
         val colors = (climbsByWeek[weekStart] ?: emptyList())
             .sortedByDescending { it.score }
             .take(MAX_CLIMB_DOTS)
-            .groupBy { climbGymMap[it.color] ?: "" }
+            .groupBy { it.gymName }
             .toSortedMap(compareBy { gymOrder[it] ?: Int.MAX_VALUE })
-            .flatMap { (_, climbs) -> climbs.sortedBy { it.score }.map { it.color } }
+            .flatMap { (_, climbs) -> climbs.sortedBy { it.score }.map { it.gymName to it.color } }
 
         // Exercise count capped at MAX_EXERCISE_DOTS
         val exerciseCount = (sessionsByWeek[weekStart]?.size ?: 0)

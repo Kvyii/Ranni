@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.Flow
 class ClimbRepository(private val dao: ClimbLogDao) {
     fun getAllLogs(): Flow<List<ClimbLog>> = dao.getAllLogs()
     // Log a climb with the given type (New/Flash/Repeat) — score is already multiplied by caller
-    suspend fun logClimb(color: String, score: Int, climbType: ClimbType = ClimbType.NEW) =
-        dao.insert(ClimbLog(color = color, score = score, climbType = climbType.name))
+    suspend fun logClimb(color: String, gymName: String, score: Int, climbType: ClimbType = ClimbType.NEW) =
+        dao.insert(ClimbLog(color = color, gymName = gymName, score = score, climbType = climbType.name))
     suspend fun deleteLog(log: ClimbLog) = dao.delete(log)
 }

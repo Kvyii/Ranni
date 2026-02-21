@@ -88,19 +88,20 @@ val gyms = listOf(
     Gym(name = "Blochaus", routes = emptyList(), comingSoon = true),
 )
 
-val climbColorMap: Map<String, Color> = gyms
-    .flatMap { it.routes }
-    .associate { it.name to it.color }
-
-val climbGradeMap: Map<String, String> = gyms
-    .flatMap { it.routes }
-    .associate { it.name to it.grade }
-
-// Maps a route color name to the gym it belongs to (e.g. "Green" -> "9 Degrees", "V3" -> "Custom")
-val climbGymMap: Map<String, String> = gyms
-    .flatMap { gym -> gym.routes.map { it.name to gym.name } }
+// Unambiguous route lookup keyed by (gymName, routeName) pair.
+// Route names are NOT globally unique (e.g. "V3" appears in Custom, Outdoor V-Grade, etc.),
+// so a single-string key would cause collisions. Always use gymName + routeName together.
+val routeMap: Map<Pair<String, String>, RouteColor> = gyms
+    .flatMap { gym -> gym.routes.map { (gym.name to it.name) to it } }
     .toMap()
 
+// Convenience: look up a route's display color given gym + route name
+fun routeColor(gymName: String, routeName: String): Color =
+    routeMap[gymName to routeName]?.color ?: Color.White
+
+// Convenience: look up a route's grade string given gym + route name
+fun routeGrade(gymName: String, routeName: String): String =
+    routeMap[gymName to routeName]?.grade ?: routeName
+
 // Gyms whose dots render as hollow/outline circles instead of filled dots.
-// Determined per gym so that route name collisions across gyms don't affect rendering.
 val outlineGyms: Set<String> = setOf("Custom", "Outdoor V-Grade", "Outdoor YDS Grade")

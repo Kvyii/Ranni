@@ -1,14 +1,11 @@
 package com.ranni.app.ui.climb
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -32,8 +29,7 @@ import com.ranni.app.R
 import com.ranni.app.data.model.ClimbType
 import com.ranni.app.data.model.InjurySeverity
 import com.ranni.app.data.model.RouteColor
-import com.ranni.app.data.model.climbGymMap
-import com.ranni.app.data.model.outlineGyms
+import com.ranni.app.ui.components.ClimbDot
 
 // Sentinel key used to identify the injury card in the expandedCard state
 private const val INJURY_CARD_KEY = "__injury__"
@@ -43,8 +39,10 @@ fun ClimbScreen(viewModel: ClimbViewModel) {
     // Tracks which card is expanded (gym name or INJURY_CARD_KEY); null = all collapsed
     var expandedCard by remember { mutableStateOf<String?>(null) }
     var selectedColor by remember { mutableStateOf<RouteColor?>(null) }
+    var selectedGym by remember { mutableStateOf<String?>(null) }   // Gym name for the selected route
     // Holds the RouteColor that triggered the liar dialog (null = hidden)
     var liarRoute by remember { mutableStateOf<RouteColor?>(null) }
+    var liarGym by remember { mutableStateOf<String?>(null) }       // Gym name for the liar route
     // Holds the injury severity pending confirmation (null = dialog hidden)
     var pendingInjurySeverity by remember { mutableStateOf<InjurySeverity?>(null) }
 
@@ -54,7 +52,8 @@ fun ClimbScreen(viewModel: ClimbViewModel) {
             onDismissRequest = {
                 // Proceed to log confirmation with the V12 route
                 selectedColor = liarRoute
-                liarRoute = null
+                selectedGym = liarGym
+                liarRoute = null; liarGym = null
             },
             text = {
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
@@ -67,7 +66,8 @@ fun ClimbScreen(viewModel: ClimbViewModel) {
                     TextButton(onClick = {
                         // Proceed to log confirmation with the V12 route
                         selectedColor = liarRoute
-                        liarRoute = null
+                        selectedGym = liarGym
+                        liarRoute = null; liarGym = null
                     }) {
                         Text("Okay I lied")
                     }
@@ -79,8 +79,9 @@ fun ClimbScreen(viewModel: ClimbViewModel) {
     // Log confirmation dialog with climb type options (New / Flash / Repeat)
     if (selectedColor != null) {
         val color = selectedColor!!
+        val gym = selectedGym ?: ""
         AlertDialog(
-            onDismissRequest = { selectedColor = null },
+            onDismissRequest = { selectedColor = null; selectedGym = null },
             text = {
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     Text("Log climb?", style = MaterialTheme.typography.titleMedium)
@@ -94,24 +95,24 @@ fun ClimbScreen(viewModel: ClimbViewModel) {
                 ) {
                     TextButton(onClick = {
                         // New: base score (1x multiplier)
-                        viewModel.logClimb(color.name, color.score, ClimbType.NEW)
-                        selectedColor = null
+                        viewModel.logClimb(color.name, gym, color.score, ClimbType.NEW)
+                        selectedColor = null; selectedGym = null
                     }) {
                         Text("New")
                     }
                     TextButton(onClick = {
                         // Flash: 1.25x score multiplier for first-try sends
                         val flashScore = (color.score * 1.25).toInt()
-                        viewModel.logClimb(color.name, flashScore, ClimbType.FLASH)
-                        selectedColor = null
+                        viewModel.logClimb(color.name, gym, flashScore, ClimbType.FLASH)
+                        selectedColor = null; selectedGym = null
                     }) {
                         Text("Flash")
                     }
                     TextButton(onClick = {
                         // Repeat: 0.75x score multiplier for re-climbed routes
                         val repeatScore = (color.score * 0.75).toInt()
-                        viewModel.logClimb(color.name, repeatScore, ClimbType.REPEAT)
-                        selectedColor = null
+                        viewModel.logClimb(color.name, gym, repeatScore, ClimbType.REPEAT)
+                        selectedColor = null; selectedGym = null
                     }) {
                         Text("Repeat")
                     }
@@ -248,11 +249,12 @@ fun ClimbScreen(viewModel: ClimbViewModel) {
                             Column {
                                 gym.routes.forEach { rc ->
                                     ColorRow(
+                                        gymName = gym.name,
                                         routeColor = rc,
                                         onClick = {
                                             // Show liar dialog for V12, otherwise show log confirmation
-                                            if (rc.grade == "V12") liarRoute = rc
-                                            else selectedColor = rc
+                                            if (rc.grade == "V12") { liarRoute = rc; liarGym = gym.name }
+                                            else { selectedColor = rc; selectedGym = gym.name }
                                         }
                                     )
                                 }
@@ -378,6 +380,7 @@ private fun InjuryRow(
 
 @Composable
 private fun ColorRow(
+    gymName: String,
     routeColor: RouteColor,
     onClick: () -> Unit
 ) {
@@ -389,19 +392,8 @@ private fun ColorRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // Color swatch circle — hollow outline for gyms in outlineGyms (looked up by route name → gym)
-        val isOutline = climbGymMap[routeColor.name] in outlineGyms
-        Box(
-            modifier = Modifier
-                .size(32.dp)
-                .clip(CircleShape)
-                .then(
-                    if (isOutline) Modifier.border(2.dp, routeColor.color, CircleShape)
-                    else Modifier
-                        .background(routeColor.color)
-                        .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
-                )
-        )
+        // Color swatch circle — hollow or filled based on gym, via ClimbDot
+        ClimbDot(gymName = gymName, routeName = routeColor.name, size = 32.dp, strokeWidth = 2.dp, showFilledBorder = true)
         Text(
             routeColor.name,
             style = MaterialTheme.typography.bodyLarge,

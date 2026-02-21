@@ -34,10 +34,8 @@ import com.ranni.app.data.model.ClimbType
 import com.ranni.app.data.model.InjuryLog
 import com.ranni.app.data.model.InjurySeverity
 import com.ranni.app.data.model.SessionLog
-import com.ranni.app.data.model.climbColorMap
-import com.ranni.app.data.model.climbGradeMap
-import com.ranni.app.data.model.climbGymMap
-import com.ranni.app.data.model.outlineGyms
+import com.ranni.app.data.model.routeGrade
+import com.ranni.app.ui.components.ClimbDot
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
@@ -139,7 +137,7 @@ private fun CalendarTab(viewModel: HistoryViewModel) {
     }
 
     if (climbToDelete != null) {
-        val grade = climbGradeMap[climbToDelete!!.color] ?: climbToDelete!!.color
+        val grade = routeGrade(climbToDelete!!.gymName, climbToDelete!!.color)
         AlertDialog(
             onDismissRequest = { climbToDelete = null },
             title = { Text("Delete entry?") },
@@ -271,9 +269,6 @@ private fun CalendarTab(viewModel: HistoryViewModel) {
                             val time = Instant.ofEpochMilli(climb.loggedAt)
                                 .atZone(ZoneId.systemDefault())
                                 .format(timeFormatter)
-                            val dotColor = climbColorMap[climb.color] ?: Color.White
-                            // Outline-only for gyms in outlineGyms (looked up by route name → gym)
-                            val isOutline = climbGymMap[climb.color] in outlineGyms
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -291,18 +286,10 @@ private fun CalendarTab(viewModel: HistoryViewModel) {
                                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(12.dp)
-                                                .clip(CircleShape)
-                                                .then(
-                                                    if (isOutline) Modifier.border(1.5.dp, dotColor, CircleShape)
-                                                    else Modifier.background(dotColor)
-                                                )
-                                        )
-                                        Text(climbGradeMap[climb.color] ?: climb.color, style = MaterialTheme.typography.bodyLarge)
+                                        ClimbDot(gymName = climb.gymName, routeName = climb.color, size = 12.dp)
+                                        Text(routeGrade(climb.gymName, climb.color), style = MaterialTheme.typography.bodyLarge)
                                         // Gym name + climb type label combined to avoid extra spacing
-                                        val gymName = climbGymMap[climb.color] ?: "Unknown"
+                                        val gymName = climb.gymName.ifEmpty { "Unknown" }
                                         val typeLabel = when (climb.climbType) {
                                             ClimbType.FLASH.name -> " - Flash"
                                             ClimbType.REPEAT.name -> " - Repeat"
@@ -436,9 +423,6 @@ private fun ProgressTab(viewModel: HistoryViewModel) {
                     // Climbs beyond topK are greyed out to show they aren't counted
                     val isCounted = index < config.topK
                     val alpha = if (isCounted) 1f else 0.4f
-                    val dotColor = climbColorMap[climb.color] ?: Color.White
-                    // Outline-only for gyms in outlineGyms (looked up by route name → gym)
-                    val isOutline = climbGymMap[climb.color] in outlineGyms
                     val climbDate = Instant.ofEpochMilli(climb.loggedAt)
                         .atZone(ZoneId.systemDefault())
                         .toLocalDate()
@@ -463,18 +447,10 @@ private fun ProgressTab(viewModel: HistoryViewModel) {
                                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(12.dp)
-                                        .clip(CircleShape)
-                                        .then(
-                                            if (isOutline) Modifier.border(1.5.dp, dotColor, CircleShape)
-                                            else Modifier.background(dotColor)
-                                        )
-                                )
-                                Text(climbGradeMap[climb.color] ?: climb.color, style = MaterialTheme.typography.bodyLarge)
+                                ClimbDot(gymName = climb.gymName, routeName = climb.color, size = 12.dp)
+                                Text(routeGrade(climb.gymName, climb.color), style = MaterialTheme.typography.bodyLarge)
                                 // Gym name + climb type label combined to avoid extra spacing
-                                val gymName = climbGymMap[climb.color] ?: "Unknown"
+                                val gymName = climb.gymName.ifEmpty { "Unknown" }
                                 val typeLabel = when (climb.climbType) {
                                     ClimbType.FLASH.name -> " - Flash"
                                     ClimbType.REPEAT.name -> " - Repeat"
@@ -557,7 +533,7 @@ private fun Day(
                     }
                     var prevGym: String? = null
                     cappedClimbs.forEach { climb ->
-                        val gym = climbGymMap[climb.color] ?: ""
+                        val gym = climb.gymName
                         // Thin gray separator bar between different gym groups
                         if (prevGym != null && gym != prevGym) {
                             Box(
@@ -568,17 +544,7 @@ private fun Day(
                             )
                         }
                         prevGym = gym
-                        val dotColor = climbColorMap[climb.color] ?: Color.White
-                        Box(
-                            modifier = Modifier
-                                .size(5.5.dp)
-                                .clip(CircleShape)
-                                .then(
-                                    // Outline-only for gyms in outlineGyms (looked up by route name → gym)
-                                    if (climbGymMap[climb.color] in outlineGyms) Modifier.border(1.dp, dotColor, CircleShape)
-                                    else Modifier.background(dotColor)
-                                )
-                        )
+                        ClimbDot(gymName = climb.gymName, routeName = climb.color, size = 5.5.dp, strokeWidth = 1.dp)
                     }
                 }
             }
