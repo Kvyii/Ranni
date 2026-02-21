@@ -583,8 +583,8 @@ private fun Day(
     }
 }
 
-// Short date format for the max card first-logged label (e.g. "Feb 3")
-private val statsDateFormatter = DateTimeFormatter.ofPattern("MMM d")
+// Date format for the max card first-logged label (e.g. "3 Jan 2026")
+private val statsDateFormatter = DateTimeFormatter.ofPattern("d MMM yyyy")
 
 // Period options: months value (null = Lifetime) paired with display label
 private val statsPeriodOptions: List<Pair<Int?, String>> = listOf(
@@ -754,26 +754,25 @@ private fun StatsTab(viewModel: HistoryViewModel) {
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
-                                // Colored/hollow dot matching the climb screen
-                                ClimbDot(
-                                    gymName = data.statsGymName,
-                                    routeName = data.maxRouteName,
-                                    size = 14.dp
-                                )
+                                // Dot on the left, grade to the right — inline in a row
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    ClimbDot(
+                                        gymName = data.statsGymName,
+                                        routeName = data.maxRouteName,
+                                        size = 14.dp
+                                    )
+                                    Text(
+                                        text = data.maxGrade,
+                                        style = MaterialTheme.typography.headlineSmall,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                // Label + date of when the max grade was first climbed in the period
                                 Text(
-                                    text = data.maxGrade,
-                                    style = MaterialTheme.typography.headlineSmall,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                // Route color name as subtitle (e.g. "Orange")
-                                Text(
-                                    text = data.maxRouteName,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                // Earliest date in the period this grade was climbed
-                                Text(
-                                    text = "First: ${data.maxFirstDate.format(statsDateFormatter)}",
+                                    text = "Best Climb: ${data.maxFirstDate.format(statsDateFormatter)}",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
