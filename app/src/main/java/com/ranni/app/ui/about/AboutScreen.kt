@@ -104,7 +104,8 @@ fun AboutContent() {
             Text("22/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
             Text(
                 """
-                • TBD
+                • Big UI rehaul. Added Themes
+                • Changed default theme from Android Dark to Ranni Dark
                 """.trimIndent(),
                 style = MaterialTheme.typography.bodyMedium
             )
