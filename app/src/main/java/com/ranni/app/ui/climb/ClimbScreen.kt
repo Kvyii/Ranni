@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ranni.app.R
@@ -286,16 +287,30 @@ private fun InjuryRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // Skull icon colored per severity, same size as the climb color swatch
+        // Skull icon colored per severity
         Image(
             painter = painterResource(severity.skullRes),
             contentDescription = null,
-            modifier = Modifier.size(32.dp)
+            modifier = Modifier.size(25.dp)
         )
+        // Severity label
         Text(
             severity.name.lowercase().replaceFirstChar { it.uppercase() },
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.weight(1f)
+        )
+        // Right-aligned hint text describing what this severity feels like, forced single line
+        Text(
+            text = when (severity) {
+                InjurySeverity.MILD     -> "Hurts but could keep climbing"
+                InjurySeverity.MODERATE -> "Hurts a lot. Impedes climbing"
+                InjurySeverity.SEVERE   -> "Welp. No climbing for a while"
+            },
+            style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.End,
+            maxLines = 1,
+            modifier = Modifier.weight(1.5f)
         )
     }
 }
