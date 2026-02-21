@@ -18,13 +18,15 @@
 
 ## Features
 
-**Climb Logging** — Tap to log boulder routes by colour and grade. Supports gym-specific route systems (9 Degrees) and a generic V-scale option.
+**Climb Logging** — Tap to log boulder routes by colour and grade. Supports gym-specific route systems (9 Degrees), outdoor gyms with YDS and V grading, and a generic V-scale option.
 
 **Exercise Timer** — Create custom exercises with configurable sets, set duration, and rest timers. Audio cues signal when intervals end.
 
 **History & Progress** — Calendar view of past sessions and a progress graph with configurable metrics (top climbs, time range).
 
 **Scoring** — Each route grade has a point value; track your climbing score over time.
+
+**Injury Tracking** — Log and monitor injuries alongside your sessions.
 
 ## Tech Stack
 
@@ -36,6 +38,15 @@
 | Architecture | MVVM, sealed-class navigation |
 
 ## Recent Releases
+
+**v1.4.0** — 21/02/2026
+- Added outdoor gyms with YDS and V grading
+- Bumped DB schema to v13 with one-time migration
+
+**v1.3.0** — 21/02/2026
+- Added injury tracking
+- Added reordering for gyms and exercises
+- Bumped DB schema to v12
 
 **v1.2.1** — 21/02/2026
 - Added database migration to preserve data between versions
