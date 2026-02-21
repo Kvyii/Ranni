@@ -101,7 +101,6 @@ fun AboutContent() {
             Text(
                 """
                 • Added Stats page with histogram
-                • WARNING: DB will be deprecated by v1.7.0+. Users below 1.4.0+ will lose their data if upgrading to v1.7.0+
                 """.trimIndent(),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
