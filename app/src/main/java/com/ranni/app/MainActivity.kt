@@ -321,7 +321,7 @@ fun MainContent(
                     ClimbScreen(vm)
                 }
                 is ScreenState.History -> {
-                    val vm = remember { HistoryViewModel(sessionRepo, climbRepo, metricsRepo, injuryRepo) }
+                    val vm = remember { HistoryViewModel(sessionRepo, climbRepo, metricsRepo, injuryRepo, context) }
                     HistoryScreen(vm)
                 }
                 is ScreenState.About -> {

@@ -22,8 +22,20 @@ class GymOrderPreferences(context: Context) {
         prefs.edit().putString(KEY_GYM_ORDER, names.joinToString(",")).apply()
     }
 
+    /** Returns the gym name last selected in the Stats tab, or null if never set. */
+    fun getLastStatsGym(): String? = prefs.getString(KEY_STATS_GYM, null)
+
+    /** Persists the gym name selected in the Stats tab; null clears the saved value. */
+    fun setLastStatsGym(gymName: String?) {
+        val edit = prefs.edit()
+        if (gymName != null) edit.putString(KEY_STATS_GYM, gymName)
+        else edit.remove(KEY_STATS_GYM)
+        edit.apply()
+    }
+
     companion object {
         private const val PREFS_NAME = "gym_order_prefs"
         private const val KEY_GYM_ORDER = "gym_order"
+        private const val KEY_STATS_GYM = "stats_gym"
     }
 }

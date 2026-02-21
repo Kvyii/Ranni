@@ -18,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -29,11 +30,13 @@ import com.kizitonwose.calendar.core.DayPosition
 import com.kizitonwose.calendar.core.firstDayOfWeekFromLocale
 import androidx.compose.foundation.Image
 import com.ranni.app.R
+import com.ranni.app.data.GymOrderPreferences
 import com.ranni.app.data.model.ClimbLog
 import com.ranni.app.data.model.ClimbType
 import com.ranni.app.data.model.InjuryLog
 import com.ranni.app.data.model.InjurySeverity
 import com.ranni.app.data.model.SessionLog
+import com.ranni.app.data.model.gyms
 import com.ranni.app.data.model.routeGrade
 import com.ranni.app.ui.components.ClimbDot
 import kotlinx.coroutines.launch
@@ -61,11 +64,15 @@ fun HistoryScreen(viewModel: HistoryViewModel) {
             Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }) {
                 Text("Progress", modifier = Modifier.padding(vertical = 12.dp))
             }
+            Tab(selected = selectedTab == 2, onClick = { selectedTab = 2 }) {
+                Text("Stats", modifier = Modifier.padding(vertical = 12.dp))
+            }
         }
 
         when (selectedTab) {
             0 -> CalendarTab(viewModel)
             1 -> ProgressTab(viewModel)
+            2 -> StatsTab(viewModel)
         }
     }
 }
@@ -563,6 +570,279 @@ private fun Day(
             textAlign = TextAlign.Center,
             style = MaterialTheme.typography.bodySmall
         )
+    }
+}
+
+// Period options: months value (null = Lifetime) paired with display label
+private val statsPeriodOptions: List<Pair<Int?, String>> = listOf(
+    1 to "1 month",
+    2 to "2 months",
+    3 to "3 months",
+    6 to "6 months",
+    12 to "12 months",
+    null to "Lifetime"
+)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun StatsTab(viewModel: HistoryViewModel) {
+    val context = LocalContext.current
+    val gymPrefs = remember { GymOrderPreferences(context) }
+
+    // Build the ordered list of active gyms to populate the gym dropdown.
+    // Uses the user's saved gym order, falling back to the global gyms list order.
+    val orderedGymNames: List<String> = remember {
+        val saved = gymPrefs.getOrder()
+        val activeGymNames = gyms.filter { !it.comingSoon }.map { it.name }
+        if (saved.isEmpty()) activeGymNames
+        else saved.filter { it in activeGymNames.toSet() } +
+            activeGymNames.filter { it !in saved.toSet() }
+    }
+
+    val selectedGym by viewModel.statsGym.collectAsState()
+    val selectedPeriod by viewModel.statsPeriodMonths.collectAsState()
+    val statsData by viewModel.statsData.collectAsState()
+
+    // Dropdown expanded state
+    var gymDropdownExpanded by remember { mutableStateOf(false) }
+    var periodDropdownExpanded by remember { mutableStateOf(false) }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        // Filter row: gym selector + period selector side by side
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Gym dropdown
+            Box(modifier = Modifier.weight(1f)) {
+                OutlinedButton(
+                    onClick = { gymDropdownExpanded = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = selectedGym ?: "Select gym",
+                        maxLines = 1,
+                        modifier = Modifier.weight(1f),
+                        textAlign = TextAlign.Start
+                    )
+                }
+                DropdownMenu(
+                    expanded = gymDropdownExpanded,
+                    onDismissRequest = { gymDropdownExpanded = false }
+                ) {
+                    orderedGymNames.forEach { gymName ->
+                        DropdownMenuItem(
+                            text = { Text(gymName) },
+                            onClick = {
+                                viewModel.setStatsGym(gymName)
+                                gymDropdownExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+
+            // Period dropdown
+            Box(modifier = Modifier.weight(1f)) {
+                val periodLabel = statsPeriodOptions.find { it.first == selectedPeriod }?.second
+                    ?: "2 months"
+                OutlinedButton(
+                    onClick = { periodDropdownExpanded = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = periodLabel,
+                        maxLines = 1,
+                        modifier = Modifier.weight(1f),
+                        textAlign = TextAlign.Start
+                    )
+                }
+                DropdownMenu(
+                    expanded = periodDropdownExpanded,
+                    onDismissRequest = { periodDropdownExpanded = false }
+                ) {
+                    statsPeriodOptions.forEach { (months, label) ->
+                        DropdownMenuItem(
+                            text = { Text(label) },
+                            onClick = {
+                                viewModel.statsPeriodMonths.value = months
+                                periodDropdownExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+        }
+
+        HorizontalDivider()
+
+        // Body: empty state if no gym selected, otherwise stats content
+        if (selectedGym == null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(24.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    "Select a gym to view stats",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        } else if (statsData == null) {
+            // Gym selected but no climbs in the window
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(24.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    "No climbs logged for this gym in the selected period",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+            }
+        } else {
+            val data = statsData!!
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Summary row: total climbs + current max grade
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // Total climbs card
+                    Card(modifier = Modifier.weight(1f)) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = data.totalClimbs.toString(),
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "Total climbs",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    // Current max grade card
+                    Card(modifier = Modifier.weight(1f)) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = data.maxGrade,
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "Current max",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+
+                // Grade breakdown table header
+                Text(
+                    text = "Grade breakdown",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                // Table header row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Grade column takes most of the space
+                    Text(
+                        text = "Grade",
+                        modifier = Modifier.weight(2f),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "Climbs",
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center
+                    )
+                    Text(
+                        text = "Flash %",
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.End
+                    )
+                }
+
+                HorizontalDivider()
+
+                // Grade data rows — max 4, hardest first
+                data.gradeRows.forEach { row ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Grade column: colored dot + grade string
+                        Row(
+                            modifier = Modifier.weight(2f),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            ClimbDot(gymName = row.gymName, routeName = row.routeName, size = 12.dp)
+                            Text(
+                                text = row.grade,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                        // Climbs count column
+                        Text(
+                            text = row.totalClimbs.toString(),
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.bodyMedium,
+                            textAlign = TextAlign.Center
+                        )
+                        // Flash % column: show "—" when no first-attempt climbs exist
+                        Text(
+                            text = if (row.flashRate != null) {
+                                "${(row.flashRate * 100).toInt()}%"
+                            } else "—",
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.bodyMedium,
+                            textAlign = TextAlign.End
+                        )
+                    }
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                }
+            }
+        }
     }
 }
 
