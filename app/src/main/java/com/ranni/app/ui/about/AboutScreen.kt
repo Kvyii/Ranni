@@ -99,26 +99,13 @@ fun AboutContent() {
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
 
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text("v1.6.0", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            Text("v1.5.0", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
             // Release date
             Text("22/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
             Text(
                 """
                 • Big UI rehaul. Added Themes
                 • Changed default theme from Android Dark to Ranni Dark
-                • Added Stats page with histogram
-                """.trimIndent(),
-                style = MaterialTheme.typography.bodyMedium
-            )
-        }        
-
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text("v1.5.0", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-            // Release date
-            Text("22/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
-            Text(
-                """
-                • Added outdoor gyms with YDS and V grading
                 • WARNING: DB will be deprecated by v1.7.0+. Users below 1.4.0+ will lose their data if upgrading to v1.7.0+
                 """.trimIndent(),
                 style = MaterialTheme.typography.bodyMedium
