@@ -23,6 +23,7 @@ fun SettingsScreen(
     onNavigateMetrics: () -> Unit,
     onNavigateSounds: () -> Unit,
     onNavigateAbout: () -> Unit,
+    onNavigateTheme: () -> Unit,
     onNavigateDev: () -> Unit = {},
     showDevTools: Boolean = false
 ) {
@@ -32,6 +33,9 @@ fun SettingsScreen(
         SettingsRow("Configure Metrics", onClick = onNavigateMetrics)
         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
         SettingsRow("Sounds", onClick = onNavigateSounds)
+        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+        // UI Theme picker — lets the user swap the app colour scheme
+        SettingsRow("UI Theme", onClick = onNavigateTheme)
         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
         SettingsRow("About", onClick = onNavigateAbout)
         if (showDevTools) {

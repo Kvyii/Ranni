@@ -66,6 +66,8 @@ import com.ranni.app.ui.settings.MetricsViewModel
 import com.ranni.app.ui.settings.SoundsScreen
 import com.ranni.app.data.AlarmPreferences
 import com.ranni.app.data.GymOrderPreferences
+import com.ranni.app.ui.settings.ThemeScreen
+import com.ranni.app.ui.theme.AppTheme
 import com.ranni.app.ui.theme.RanniTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -96,37 +98,52 @@ fun MainScaffold() {
     // DB reference, initialized during splash loading
     var db by remember { mutableStateOf<AppDatabase?>(null) }
 
-    if (screenState is ScreenState.Loading) {
-        // Initialize DB while the system splash screen is shown
-        LaunchedEffect(Unit) {
-            db = async(Dispatchers.IO) {
-                val instance = AppDatabase.getInstance(context)
-                // Backfill gymName for rows migrated from schema v12 (gymName = '').
-                // No-op on subsequent launches once all rows are populated.
-                backfillLegacyGymNames(instance)
-                instance
-            }.await()
-            screenState = ScreenState.Climb
+    // Hoist metricsRepo here so the theme can be read before MainContent is composed.
+    // remember(db) recreates it once DB is ready; null while still loading.
+    val metricsRepo = remember(db) { db?.let { MetricsRepository(it.metricsConfigDao()) } }
+
+    // Collect the persisted theme; fall back to ORIGINAL until DB is ready
+    val config by (metricsRepo?.getConfig() ?: kotlinx.coroutines.flow.flowOf(com.ranni.app.data.model.MetricsConfig()))
+        .collectAsState(initial = com.ranni.app.data.model.MetricsConfig())
+    val activeTheme = try { AppTheme.valueOf(config.uiTheme) } catch (_: IllegalArgumentException) { AppTheme.ORIGINAL }
+
+    // Wrap everything in the live theme so swapping it recomposes the whole tree
+    RanniTheme(theme = activeTheme) {
+        if (screenState is ScreenState.Loading) {
+            // Initialize DB while the system splash screen is shown
+            LaunchedEffect(Unit) {
+                db = async(Dispatchers.IO) {
+                    val instance = AppDatabase.getInstance(context)
+                    // Backfill gymName for rows migrated from schema v12 (gymName = '').
+                    // No-op on subsequent launches once all rows are populated.
+                    backfillLegacyGymNames(instance)
+                    instance
+                }.await()
+                screenState = ScreenState.Climb
+            }
+        } else {
+            // DB and metricsRepo are guaranteed non-null after loading completes
+            MainContent(
+                db = db!!,
+                metricsRepo = metricsRepo!!,
+                context = context,
+                screenState = screenState,
+                onScreenStateChange = { screenState = it }
+            )
         }
-    } else {
-        // DB is guaranteed non-null after loading completes
-        MainContent(
-            db = db!!,
-            context = context,
-            screenState = screenState,
-            onScreenStateChange = { screenState = it }
-        )
     }
 }
 
 /**
  * Main app content with bottom nav, top bar, and all screen routing.
  * Shown after the splash/loading screen completes.
+ * [metricsRepo] is passed in from MainScaffold (already hoisted for theme collection).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainContent(
     db: AppDatabase,
+    metricsRepo: MetricsRepository,
     context: android.content.Context,
     screenState: ScreenState,
     onScreenStateChange: (ScreenState) -> Unit
@@ -134,7 +151,6 @@ fun MainContent(
     val exerciseRepo = remember { ExerciseRepository(db.exerciseDao()) }
     val sessionRepo = remember { SessionRepository(db.sessionLogDao()) }
     val climbRepo = remember { ClimbRepository(db.climbLogDao()) }
-    val metricsRepo = remember { MetricsRepository(db.metricsConfigDao()) }
     val injuryRepo = remember { InjuryRepository(db.injuryLogDao()) }
     val alarmPrefs = remember { AlarmPreferences(context) }
     val gymOrderPrefs = remember { GymOrderPreferences(context) }
@@ -179,7 +195,8 @@ fun MainContent(
             is ScreenState.SettingsMetrics,
             is ScreenState.SettingsSounds,
             is ScreenState.SettingsAbout,
-            is ScreenState.SettingsDev -> ScreenState.About
+            is ScreenState.SettingsDev,
+            is ScreenState.SettingsTheme -> ScreenState.About
 
             is ScreenState.About -> when (selectedTab) {
                 0 -> ScreenState.Climb
@@ -219,6 +236,7 @@ fun MainContent(
                             is ScreenState.SettingsSounds -> "Sounds"
                             is ScreenState.SettingsAbout -> "About"
                             is ScreenState.SettingsDev -> "Developer"
+                            is ScreenState.SettingsTheme -> "UI Theme"
                             else -> ""
                         })
                     },
@@ -235,7 +253,8 @@ fun MainContent(
                                 is ScreenState.SettingsMetrics,
                                 is ScreenState.SettingsSounds,
                                 is ScreenState.SettingsAbout,
-                                is ScreenState.SettingsDev -> ScreenState.About
+                                is ScreenState.SettingsDev,
+                                is ScreenState.SettingsTheme -> ScreenState.About
                                 else -> ScreenState.ExerciseList
                             })
                         }) {
@@ -329,6 +348,7 @@ fun MainContent(
                         onNavigateScores = { onScreenStateChange(ScreenState.SettingsScores) },
                         onNavigateMetrics = { onScreenStateChange(ScreenState.SettingsMetrics) },
                         onNavigateSounds = { onScreenStateChange(ScreenState.SettingsSounds) },
+                        onNavigateTheme = { onScreenStateChange(ScreenState.SettingsTheme) },
                         onNavigateAbout = { onScreenStateChange(ScreenState.SettingsAbout) },
                         onNavigateDev = { onScreenStateChange(ScreenState.SettingsDev) },
                         showDevTools = BuildConfig.SHOW_DEV_TOOLS
@@ -350,6 +370,11 @@ fun MainContent(
                 is ScreenState.SettingsMetrics -> {
                     val vm = remember { MetricsViewModel(metricsRepo) }
                     MetricsScreen(vm)
+                }
+                is ScreenState.SettingsTheme -> {
+                    // Reuse MetricsViewModel since uiTheme lives in MetricsConfig
+                    val vm = remember { MetricsViewModel(metricsRepo) }
+                    ThemeScreen(vm)
                 }
                 is ScreenState.SettingsAbout -> {
                     AboutContent()
@@ -396,11 +421,12 @@ sealed class ScreenState {
     object SettingsSounds : ScreenState()
     object SettingsAbout : ScreenState()
     object SettingsDev : ScreenState()
+    object SettingsTheme : ScreenState()
 
     // Navigation depth used to determine slide direction for transitions
     val depth: Int get() = when (this) {
         is Loading, is Climb, is ExerciseList, is History -> 0
         is About, is EditExercise, is Session -> 1
-        is SettingsScores, is SettingsMetrics, is SettingsSounds, is SettingsAbout, is SettingsDev -> 2
+        is SettingsScores, is SettingsMetrics, is SettingsSounds, is SettingsAbout, is SettingsDev, is SettingsTheme -> 2
     }
 }

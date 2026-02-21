@@ -512,7 +512,7 @@ private fun Day(
                             modifier = Modifier
                                 .size(5.5.dp)
                                 .clip(CircleShape)
-                                .background(Color.Gray)
+                                .background(MaterialTheme.colorScheme.onSurfaceVariant)
                         )
                     }
                 }
@@ -532,13 +532,13 @@ private fun Day(
                     var prevGym: String? = null
                     cappedClimbs.forEach { climb ->
                         val gym = climb.gymName
-                        // Thin gray separator bar between different gym groups
+                        // Thin separator bar between different gym groups
                         if (prevGym != null && gym != prevGym) {
                             Box(
                                 modifier = Modifier
                                     .width(4.dp)
                                     .height(1.dp)
-                                    .background(Color.LightGray)
+                                    .background(MaterialTheme.colorScheme.outlineVariant)
                             )
                         }
                         prevGym = gym

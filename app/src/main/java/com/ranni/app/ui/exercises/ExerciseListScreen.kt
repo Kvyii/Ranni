@@ -23,7 +23,6 @@ import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -80,18 +79,18 @@ fun ExerciseListScreen(
                         state = dismissState,
                         enableDismissFromStartToEnd = false, // only left-swipe (end-to-start)
                         backgroundContent = {
-                            // Red background with delete icon revealed on swipe
+                            // Error-coloured background with delete icon revealed on swipe
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .background(Color.Red, shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+                                    .background(MaterialTheme.colorScheme.error, shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
                                     .padding(horizontal = 20.dp),
                                 contentAlignment = Alignment.CenterEnd
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Delete,
                                     contentDescription = "Delete",
-                                    tint = Color.White
+                                    tint = MaterialTheme.colorScheme.onError
                                 )
                             }
                         },
