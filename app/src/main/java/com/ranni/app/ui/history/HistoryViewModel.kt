@@ -268,7 +268,7 @@ private fun computeGraphPoints(climbs: List<ClimbLog>, n: Int, k: Int, timelineM
 }
 
 /** Max climbs shown in the Progress tab list (beyond topK they are greyed out). */
-private const val MAX_DISPLAY_CLIMBS = 50
+private const val MAX_DISPLAY_CLIMBS = 200
 
 /** Hard cap on exercise dots per week in the Progress tab tally. */
 private const val MAX_EXERCISE_DOTS = 25

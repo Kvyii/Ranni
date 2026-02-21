@@ -241,6 +241,9 @@ private fun CalendarTab(viewModel: HistoryViewModel) {
                                 .format(timeFormatter)
                             val severity = injury.severityEnum
                             Card(
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                                ),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 16.dp)
@@ -287,6 +290,9 @@ private fun CalendarTab(viewModel: HistoryViewModel) {
                                 .atZone(ZoneId.systemDefault())
                                 .format(timeFormatter)
                             Card(
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                                ),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 16.dp)
@@ -333,6 +339,9 @@ private fun CalendarTab(viewModel: HistoryViewModel) {
                                 .atZone(ZoneId.systemDefault())
                                 .format(timeFormatter)
                             Card(
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                                ),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 16.dp)
@@ -369,73 +378,40 @@ private fun ProgressTab(viewModel: HistoryViewModel) {
     val weeklyActivity by viewModel.weeklyActivity.collectAsState()
     val config by viewModel.metricsConfig.collectAsState()
 
-    // Toggle state for showing/hiding climb and exercise dots on the graph
-    var showClimbs by remember(config.showClimbDots) { mutableStateOf(config.showClimbDots) }
-    var showExercises by remember(config.showExerciseDots) { mutableStateOf(config.showExerciseDots) }
-
     // Dots only shown on short timelines (3m/6m), too dense on 12m/24m
     val dotsEnabled = config.timelineMonths <= 6
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // Toggle chips for show/hide of dot overlays (only when dots are enabled)
-        if (dotsEnabled) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
-            ) {
-                FilterChip(
-                    selected = showClimbs,
-                    onClick = { showClimbs = !showClimbs },
-                    label = { Text("Climbs") }
-                )
-                FilterChip(
-                    selected = showExercises,
-                    onClick = { showExercises = !showExercises },
-                    label = { Text("Exercises") }
-                )
-            }
-        }
-
-        // Graph with weekly dot overlay — top half
+        // Graph with weekly dot overlay — top 2/5 of available space
         MetricsGraph(
             data = graphData,
             title = "Average of Top ${config.topK} climbs over the Last ${config.months} months",
             weeklyActivity = if (dotsEnabled) weeklyActivity else emptyList(),
-            showClimbs = showClimbs,
-            showExercises = showExercises,
+            showClimbs = config.showClimbDots,
+            showExercises = config.showExerciseDots,
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f)
+                .weight(2f)
                 .padding(horizontal = 16.dp)
-                .padding(bottom = 16.dp)
+                .padding(top = 16.dp, bottom = 16.dp)
         )
 
         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
 
-        // Top k climbs list — bottom half
+        // Top k climbs list — bottom 3/5 of available space
         if (topClimbs.isEmpty()) {
             Box(
-                modifier = Modifier.weight(1f).fillMaxWidth().padding(24.dp),
+                modifier = Modifier.weight(3f).fillMaxWidth().padding(24.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text("No climbs yet", style = MaterialTheme.typography.bodyMedium)
             }
         } else {
             LazyColumn(
-                modifier = Modifier.weight(1f).fillMaxWidth(),
+                modifier = Modifier.weight(3f).fillMaxWidth(),
                 contentPadding = PaddingValues(vertical = 8.dp, horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                item {
-                    Text(
-                        "Top ${config.topK} Climbs",
-                        modifier = Modifier.padding(vertical = 4.dp),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
                 itemsIndexed(topClimbs, key = { _, climb -> climb.id }) { index, climb ->
                     // Climbs beyond topK are greyed out to show they aren't counted
                     val isCounted = index < config.topK
@@ -449,6 +425,9 @@ private fun ProgressTab(viewModel: HistoryViewModel) {
                         .coerceAtLeast(0)
                     val date = "${climbDate.format(dateFormatter)} (${daysRemaining}d)"
                     Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                        ),
                         modifier = Modifier
                             .fillMaxWidth()
                             .alpha(alpha)
@@ -456,7 +435,7 @@ private fun ProgressTab(viewModel: HistoryViewModel) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -477,6 +456,20 @@ private fun ProgressTab(viewModel: HistoryViewModel) {
                             }
                             Text(date, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
+                    }
+                }
+                // Show a cap notice if the list hit the 200-climb limit
+                if (topClimbs.size >= 200) {
+                    item {
+                        Text(
+                            "Max 200 climbs shown",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }
@@ -531,7 +524,7 @@ private fun Day(
                             modifier = Modifier
                                 .size(5.5.dp)
                                 .clip(CircleShape)
-                                .background(Color.Gray)
+                                .background(MaterialTheme.colorScheme.onSurfaceVariant)
                         )
                     }
                 }
@@ -551,13 +544,13 @@ private fun Day(
                     var prevGym: String? = null
                     cappedClimbs.forEach { climb ->
                         val gym = climb.gymName
-                        // Thin gray separator bar between different gym groups
+                        // Thin separator bar between different gym groups
                         if (prevGym != null && gym != prevGym) {
                             Box(
                                 modifier = Modifier
                                     .width(4.dp)
                                     .height(1.dp)
-                                    .background(Color.LightGray)
+                                    .background(MaterialTheme.colorScheme.outlineVariant)
                             )
                         }
                         prevGym = gym
@@ -729,7 +722,12 @@ private fun StatsTab(viewModel: HistoryViewModel) {
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         // Total climbs card
-                        Card(modifier = Modifier.weight(1f)) {
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                            ),
+                            modifier = Modifier.weight(1f)
+                        ) {
                             Column(
                                 modifier = Modifier.fillMaxWidth().padding(16.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
@@ -748,7 +746,12 @@ private fun StatsTab(viewModel: HistoryViewModel) {
                         }
 
                         // Current max card: dot + grade + route name + first-logged date
-                        Card(modifier = Modifier.weight(1f)) {
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                            ),
+                            modifier = Modifier.weight(1f)
+                        ) {
                             Column(
                                 modifier = Modifier.fillMaxWidth().padding(16.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally,

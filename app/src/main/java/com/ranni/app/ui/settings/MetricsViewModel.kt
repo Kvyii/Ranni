@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ranni.app.data.model.MetricsConfig
 import com.ranni.app.data.repository.MetricsRepository
+import com.ranni.app.ui.theme.AppTheme
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -36,5 +37,11 @@ class MetricsViewModel(private val repo: MetricsRepository) : ViewModel() {
     fun updateShowExerciseDots(show: Boolean) {
         val c = config.value
         viewModelScope.launch { repo.updateConfig(c.copy(showExerciseDots = show)) }
+    }
+
+    // Persists the selected UI theme name so it survives app restarts.
+    fun updateTheme(theme: AppTheme) {
+        val c = config.value
+        viewModelScope.launch { repo.updateConfig(c.copy(uiTheme = theme.name)) }
     }
 }

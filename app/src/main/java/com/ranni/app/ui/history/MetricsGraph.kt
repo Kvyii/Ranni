@@ -62,6 +62,9 @@ fun MetricsGraph(
         val lineColor = MaterialTheme.colorScheme.primary
         val axisColor = MaterialTheme.colorScheme.outlineVariant
         val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+        // Captured here so they are accessible inside the Canvas DrawScope
+        val exerciseDotColor = MaterialTheme.colorScheme.onSurfaceVariant
+        val gymSeparatorColor = MaterialTheme.colorScheme.outlineVariant
         val labelStyle = TextStyle(fontSize = 10.sp, color = labelColor)
         val textMeasurer = rememberTextMeasurer()
 
@@ -73,7 +76,7 @@ fun MetricsGraph(
         )
 
         Canvas(modifier = Modifier.fillMaxSize()) {
-            val leftPadding = 52.dp.toPx()
+            val leftPadding = 26.dp.toPx()
             val bottomPadding = 28.dp.toPx()
             val topPadding = 8.dp.toPx()
             val rightPadding = 8.dp.toPx()
@@ -190,13 +193,13 @@ fun MetricsGraph(
                     }
                 }
 
-                // Draw exercise dots — gray, stacking upward
+                // Draw exercise dots — stacking upward
                 if (hasExercises) {
                     for (i in 0 until week.exerciseCount) {
                         val dotY = baseY - i * dotStep
                         if (dotY - dotRadius < topPadding) break // don't overflow above plot
                         drawCircle(
-                            color = Color.Gray,
+                            color = exerciseDotColor,
                             radius = dotRadius,
                             center = Offset(exerciseColumnX, dotY)
                         )
@@ -211,14 +214,14 @@ fun MetricsGraph(
                     var prevGym: String? = null
 
                     week.climbColors.forEach { (gymName, colorName) ->
-                        // Insert a gap + gray bar between different gym groups.
+                        // Insert a gap + separator bar between different gym groups.
                         if (prevGym != null && gymName != prevGym) {
                             currentY -= separatorGap
                             val sepY = currentY + dotRadius + 3.dp.toPx()
                             if (sepY < topPadding) return@forEach
                             val halfWidth = dotRadius * 0.8f
                             drawLine(
-                                color = Color.LightGray,
+                                color = gymSeparatorColor,
                                 start = Offset(climbColumnX - halfWidth, sepY),
                                 end = Offset(climbColumnX + halfWidth, sepY),
                                 strokeWidth = separatorHeight

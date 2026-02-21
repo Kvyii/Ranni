@@ -23,6 +23,7 @@ fun SettingsScreen(
     onNavigateMetrics: () -> Unit,
     onNavigateSounds: () -> Unit,
     onNavigateAbout: () -> Unit,
+    onNavigateTheme: () -> Unit,
     onNavigateDev: () -> Unit = {},
     showDevTools: Boolean = false
 ) {
@@ -32,6 +33,9 @@ fun SettingsScreen(
         SettingsRow("Configure Metrics", onClick = onNavigateMetrics)
         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
         SettingsRow("Sounds", onClick = onNavigateSounds)
+        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+        // Theme picker — lets the user swap the app colour scheme
+        SettingsRow("Theme", onClick = onNavigateTheme)
         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
         SettingsRow("About", onClick = onNavigateAbout)
         if (showDevTools) {
@@ -95,29 +99,16 @@ fun AboutContent() {
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
 
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text("v1.6.0", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-            // Release date
-            Text("22/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
-            Text(
-                """
-                • Added Stats page with histogram
-                """.trimIndent(),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }        
-
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("v1.5.0", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
             // Release date
             Text("22/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
             Text(
                 """
-                • Added outdoor gyms with YDS and V grading
+                • Big UI rehaul. Added Themes
+                • Changed default theme from Android Dark to Ranni Dark
                 • WARNING: DB will be deprecated by v1.7.0+. Users below 1.4.0+ will lose their data if upgrading to v1.7.0+
                 """.trimIndent(),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                style = MaterialTheme.typography.bodyMedium
             )
         }        
 
@@ -130,8 +121,7 @@ fun AboutContent() {
                 • Added outdoor gyms with YDS and V grading
                 • Bumped DB schema to v13 with one time migration. All older DBs will need to be updated to work with 1.4.0+
                 """.trimIndent(),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                style = MaterialTheme.typography.bodyMedium
             )
         }            
 
@@ -145,8 +135,7 @@ fun AboutContent() {
                 • Added reordering for gyms and exercises
                 • Bumped DB schema to v12
                 """.trimIndent(),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                style = MaterialTheme.typography.bodyMedium
             )
         }
 
@@ -160,8 +149,7 @@ fun AboutContent() {
                 • Redesigned 'About' page
                 • Added EasterEgg
                 """.trimIndent(),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                style = MaterialTheme.typography.bodyMedium
             )
         }
 
@@ -174,8 +162,7 @@ fun AboutContent() {
                 • Fix alarm bug
                 • Update icons
                 """.trimIndent(),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                style = MaterialTheme.typography.bodyMedium
             )
         }
 
@@ -190,8 +177,7 @@ fun AboutContent() {
                 • Fixed text indentations for scores
                 • New logo
                 """.trimIndent(),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                style = MaterialTheme.typography.bodyMedium
             )
         }
 
@@ -204,8 +190,7 @@ fun AboutContent() {
                 • More UI fixes.
                 • Gym dots separation.
                 """.trimIndent(),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                style = MaterialTheme.typography.bodyMedium
             )
         }
 
@@ -215,8 +200,7 @@ fun AboutContent() {
             Text("20/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
             Text(
                 "• Small UI fixes",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                style = MaterialTheme.typography.bodyMedium
             )
         }
 
@@ -230,8 +214,7 @@ fun AboutContent() {
                 • Exercise sessions with set/rest timers and alarm sounds
                 • History calendar showing completed sessions by day
                 """.trimIndent(),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                style = MaterialTheme.typography.bodyMedium
             )
         }
 
