@@ -18,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -27,13 +28,25 @@ import com.kizitonwose.calendar.compose.rememberCalendarState
 import com.kizitonwose.calendar.core.CalendarDay
 import com.kizitonwose.calendar.core.DayPosition
 import com.kizitonwose.calendar.core.firstDayOfWeekFromLocale
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.TextStyle as TextStyleUI
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.sp
 import com.ranni.app.R
+import com.ranni.app.data.GymOrderPreferences
 import com.ranni.app.data.model.ClimbLog
 import com.ranni.app.data.model.ClimbType
 import com.ranni.app.data.model.InjuryLog
 import com.ranni.app.data.model.InjurySeverity
 import com.ranni.app.data.model.SessionLog
+import com.ranni.app.data.model.gyms
+import com.ranni.app.data.model.outlineGyms
+import com.ranni.app.data.model.routeColor
 import com.ranni.app.data.model.routeGrade
 import com.ranni.app.ui.components.ClimbDot
 import kotlinx.coroutines.launch
@@ -61,11 +74,15 @@ fun HistoryScreen(viewModel: HistoryViewModel) {
             Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }) {
                 Text("Progress", modifier = Modifier.padding(vertical = 12.dp))
             }
+            Tab(selected = selectedTab == 2, onClick = { selectedTab = 2 }) {
+                Text("Stats", modifier = Modifier.padding(vertical = 12.dp))
+            }
         }
 
         when (selectedTab) {
             0 -> CalendarTab(viewModel)
             1 -> ProgressTab(viewModel)
+            2 -> StatsTab(viewModel)
         }
     }
 }
@@ -191,7 +208,7 @@ private fun CalendarTab(viewModel: HistoryViewModel) {
             }
         )
 
-        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+        HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))
 
         Box(modifier = Modifier.weight(1f)) { selectedDate?.let { date ->
             val dayLogs = sessionsByDate[date].orEmpty()
@@ -563,6 +580,389 @@ private fun Day(
             textAlign = TextAlign.Center,
             style = MaterialTheme.typography.bodySmall
         )
+    }
+}
+
+// Date format for the max card first-logged label (e.g. "3 Jan 2026")
+private val statsDateFormatter = DateTimeFormatter.ofPattern("d MMM yyyy")
+
+// Period options: months value (null = Lifetime) paired with display label
+private val statsPeriodOptions: List<Pair<Int?, String>> = listOf(
+    1 to "1 month",
+    2 to "2 months",
+    3 to "3 months",
+    6 to "6 months",
+    12 to "12 months",
+    null to "Lifetime"
+)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun StatsTab(viewModel: HistoryViewModel) {
+    val context = LocalContext.current
+    val gymPrefs = remember { GymOrderPreferences(context) }
+
+    // Build the ordered list of active gyms using the user's saved drag order.
+    // Falls back to the global gyms list order if no saved order exists.
+    val orderedGymNames: List<String> = remember {
+        val saved = gymPrefs.getOrder()
+        val activeGymNames = gyms.filter { !it.comingSoon }.map { it.name }
+        if (saved.isEmpty()) activeGymNames
+        else saved.filter { it in activeGymNames.toSet() } +
+            activeGymNames.filter { it !in saved.toSet() }
+    }
+
+    val selectedGym by viewModel.statsGym.collectAsState()
+    val selectedPeriod by viewModel.statsPeriodMonths.collectAsState()
+    val statsData by viewModel.statsData.collectAsState()
+
+    var gymDropdownExpanded by remember { mutableStateOf(false) }
+    var periodDropdownExpanded by remember { mutableStateOf(false) }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        // Filter row: gym selector + period selector side by side
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Gym dropdown
+            Box(modifier = Modifier.weight(1f)) {
+                OutlinedButton(
+                    onClick = { gymDropdownExpanded = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = selectedGym ?: "Select gym",
+                        maxLines = 1,
+                        modifier = Modifier.weight(1f),
+                        textAlign = TextAlign.Start
+                    )
+                }
+                DropdownMenu(
+                    expanded = gymDropdownExpanded,
+                    onDismissRequest = { gymDropdownExpanded = false }
+                ) {
+                    orderedGymNames.forEach { gymName ->
+                        DropdownMenuItem(
+                            text = { Text(gymName) },
+                            onClick = {
+                                viewModel.setStatsGym(gymName)
+                                gymDropdownExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+
+            // Period dropdown
+            Box(modifier = Modifier.weight(1f)) {
+                val periodLabel = statsPeriodOptions.find { it.first == selectedPeriod }?.second ?: "2 months"
+                OutlinedButton(
+                    onClick = { periodDropdownExpanded = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = periodLabel,
+                        maxLines = 1,
+                        modifier = Modifier.weight(1f),
+                        textAlign = TextAlign.Start
+                    )
+                }
+                DropdownMenu(
+                    expanded = periodDropdownExpanded,
+                    onDismissRequest = { periodDropdownExpanded = false }
+                ) {
+                    statsPeriodOptions.forEach { (months, label) ->
+                        DropdownMenuItem(
+                            text = { Text(label) },
+                            onClick = {
+                                viewModel.statsPeriodMonths.value = months
+                                periodDropdownExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+        }
+
+        HorizontalDivider()
+
+        // Body: empty state if no gym selected, otherwise stats content
+        if (selectedGym == null) {
+            Box(
+                modifier = Modifier.fillMaxSize().padding(24.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    "Select a gym to view stats",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        } else if (statsData == null) {
+            // Gym selected but no climbs found in the window
+            Box(
+                modifier = Modifier.fillMaxSize().padding(24.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    "No climbs logged for this gym in the selected period",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+            }
+        } else {
+            val data = statsData!!
+            // Scrollable column so the histogram is fully accessible on small screens
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Summary row: total climbs card + current max card
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        // Total climbs card
+                        Card(modifier = Modifier.weight(1f)) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = data.totalClimbs.toString(),
+                                    style = MaterialTheme.typography.headlineMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "Total climbs",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        // Current max card: dot + grade + route name + first-logged date
+                        Card(modifier = Modifier.weight(1f)) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                // Dot on the left, grade to the right — inline in a row
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    ClimbDot(
+                                        gymName = data.statsGymName,
+                                        routeName = data.maxRouteName,
+                                        size = 14.dp
+                                    )
+                                    Text(
+                                        text = data.maxGrade,
+                                        style = MaterialTheme.typography.headlineSmall,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                // Label + date of when the max grade was first climbed in the period
+                                Text(
+                                    text = "Best Climb: ${data.maxFirstDate.format(statsDateFormatter)}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Section header for the histogram
+                item {
+                    // Header row: title on left, legend on right
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Bottom
+                    ) {
+                        Text(
+                            text = "Grade Histogram",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        // Legend: explains the count label format used in each bar row
+                        Text(
+                            text = "count (flash %)",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                        )
+                    }
+                }
+
+                // Horizontal bar histogram — one row per grade, hardest at top
+                item {
+                    GradeHistogram(
+                        rows = data.gradeRows,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Horizontal bar histogram showing NEW and FLASH climb counts per grade.
+ *
+ * Each bar is a single solid fill (route color at reduced alpha).
+ * The FLASH portion is separated from the NEW portion by a narrow transparent
+ * vertical cut — no hatching, no dot.
+ *
+ * Label format: "25 (15%)" where 15% = flashClimbs / firstAttempts.
+ *
+ * For gyms in [outlineGyms] (e.g. Custom, Outdoor V-Grade), bars are drawn as outlines
+ * to match the hollow dot style used elsewhere in the app.
+ */
+@Composable
+private fun GradeHistogram(
+    rows: List<GradeStats>,
+    modifier: Modifier = Modifier
+) {
+    val textMeasurer = rememberTextMeasurer()
+    val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val axisColor = MaterialTheme.colorScheme.outlineVariant
+    val onSurface = MaterialTheme.colorScheme.onSurface
+
+    // Per-row height and fixed layout constants (converted to pixels inside the Canvas)
+    val rowHeightDp = 44.dp
+    val labelWidthDp = 56.dp    // space reserved for grade text on the left (no dot)
+    val barPaddingDp = 6.dp     // vertical inset so bar doesn't fill full row height
+    val countPaddingDp = 6.dp   // gap between end of bar and count label
+    val dividerWidthDp = 4.dp   // gap width between FLASH and NEW bar segments
+    val cornerRadiusDp = 3.dp   // rounded corners on each bar segment
+    val countReserveDp = 80.dp  // right-side space always reserved for the count label
+
+    // Max first-attempt count across all rows — determines bar width scaling
+    val maxCount = rows.maxOf { it.newClimbs + it.flashClimbs }.coerceAtLeast(1)
+
+    val totalHeight = rowHeightDp * rows.size + 8.dp  // 8dp bottom margin
+
+    Canvas(
+        modifier = modifier.height(totalHeight)
+    ) {
+        val rowHeightPx = rowHeightDp.toPx()
+        val labelWidthPx = labelWidthDp.toPx()
+        val barPaddingPx = barPaddingDp.toPx()
+        val countPaddingPx = countPaddingDp.toPx()
+        val dividerWidthPx = dividerWidthDp.toPx()
+        val cornerRadiusPx = cornerRadiusDp.toPx()
+        val countReservePx = countReserveDp.toPx()
+
+        // Available plot area — right side reserved for the count label
+        val plotWidth = size.width - labelWidthPx - countReservePx
+
+        rows.forEachIndexed { index, row ->
+            val rowTop = index * rowHeightPx
+            val rowCenterY = rowTop + rowHeightPx / 2f
+            val barTop = rowTop + barPaddingPx
+            val barBottom = rowTop + rowHeightPx - barPaddingPx
+            val barHeight = barBottom - barTop
+
+            val barColor = routeColor(row.gymName, row.routeName)
+            val isOutline = row.gymName in outlineGyms
+
+            val firstAttempts = row.newClimbs + row.flashClimbs
+            val totalBarWidth = if (maxCount > 0) (firstAttempts.toFloat() / maxCount) * plotWidth else 0f
+            val flashBarWidth = if (maxCount > 0) (row.flashClimbs.toFloat() / maxCount) * plotWidth else 0f
+
+            // --- Label area: grade text only (no dot) ---
+
+            val gradeText = textMeasurer.measure(
+                row.grade,
+                style = TextStyleUI(color = onSurface, fontSize = 11.sp)
+            )
+            drawText(
+                gradeText,
+                topLeft = Offset(
+                    x = 0f,
+                    y = rowCenterY - gradeText.size.height / 2f
+                )
+            )
+
+            // --- Bar area (starts at labelWidthPx) ---
+
+            if (totalBarWidth > 0f) {
+                val barLeft = labelWidthPx
+
+                if (isOutline) {
+                    // Outline-only rounded bar for hollow-dot gyms
+                    drawRoundRect(
+                        color = barColor,
+                        topLeft = Offset(barLeft, barTop),
+                        size = Size(totalBarWidth, barHeight),
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerRadiusPx),
+                        style = Stroke(width = 1.5.dp.toPx())
+                    )
+                } else {
+                    val hasFlash = flashBarWidth > 0f
+                    val hasNew = flashBarWidth < totalBarWidth
+
+                    // FLASH segment — left side, rounded bar
+                    if (hasFlash) {
+                        val segWidth = if (hasNew) flashBarWidth - dividerWidthPx / 2f else totalBarWidth
+                        drawRoundRect(
+                            color = barColor.copy(alpha = 0.8f),
+                            topLeft = Offset(barLeft, barTop),
+                            size = Size(segWidth.coerceAtLeast(0f), barHeight),
+                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerRadiusPx)
+                        )
+                    }
+
+                    // NEW segment — right side, rounded bar
+                    // Starts after the gap; gap is centered on the flash/new boundary
+                    if (hasNew) {
+                        val newLeft = if (hasFlash) barLeft + flashBarWidth + dividerWidthPx / 2f else barLeft
+                        val newWidth = totalBarWidth - (newLeft - barLeft)
+                        drawRoundRect(
+                            color = barColor.copy(alpha = 0.8f),
+                            topLeft = Offset(newLeft, barTop),
+                            size = Size(newWidth.coerceAtLeast(0f), barHeight),
+                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerRadiusPx)
+                        )
+                    }
+                }
+            }
+
+            // Count label: "25 (15%)" — always drawn in the reserved right margin
+            if (firstAttempts > 0) {
+                val flashPct = row.flashClimbs * 100 / firstAttempts
+                val countLabel = "$firstAttempts (${flashPct}%)"
+                val countText = textMeasurer.measure(
+                    countLabel,
+                    style = TextStyleUI(color = labelColor, fontSize = 10.sp)
+                )
+                val countX = labelWidthPx + totalBarWidth + countPaddingPx
+                drawText(
+                    countText,
+                    topLeft = Offset(
+                        x = countX,
+                        y = rowCenterY - countText.size.height / 2f
+                    )
+                )
+            }
+
+            // Light horizontal separator between rows
+            drawLine(
+                color = axisColor,
+                start = Offset(0f, rowTop + rowHeightPx),
+                end = Offset(size.width, rowTop + rowHeightPx),
+                strokeWidth = 0.5.dp.toPx()
+            )
+        }
     }
 }
 

@@ -1,17 +1,22 @@
 package com.ranni.app.ui.history
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ranni.app.data.GymOrderPreferences
 import com.ranni.app.data.model.ClimbLog
+import com.ranni.app.data.model.ClimbType
 import com.ranni.app.data.model.InjuryLog
 import com.ranni.app.data.model.InjurySeverity
 import com.ranni.app.data.model.MetricsConfig
 import com.ranni.app.data.model.SessionLog
 import com.ranni.app.data.model.gyms
+import com.ranni.app.data.model.routeGrade
 import com.ranni.app.data.repository.ClimbRepository
 import com.ranni.app.data.repository.InjuryRepository
 import com.ranni.app.data.repository.MetricsRepository
 import com.ranni.app.data.repository.SessionRepository
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -24,6 +29,26 @@ import java.time.ZoneId
 import java.time.temporal.TemporalAdjusters
 
 data class GraphPoint(val date: LocalDate, val value: Float)
+
+/** Per-grade stats row for the Stats tab histogram. */
+data class GradeStats(
+    val routeName: String,  // Route color name (e.g. "Orange") — used for dot/bar color lookup
+    val grade: String,      // Display grade string (e.g. "V3 - V4")
+    val gymName: String,    // Gym name — needed to unambiguously resolve color/outline style
+    val newClimbs: Int,     // NEW climb count — drawn as solid bar fill
+    val flashClimbs: Int,   // FLASH climb count — drawn as hatched overlay on bar
+    val totalClimbs: Int    // NEW + FLASH + REPEAT — shown in the summary card
+)
+
+/** Aggregated stats for the Stats tab, computed for a specific gym + time window. */
+data class StatsData(
+    val totalClimbs: Int,
+    val statsGymName: String,   // Gym name — needed to resolve dot color/outline for the max card
+    val maxGrade: String,       // Grade string of the highest-scored route climbed in window
+    val maxRouteName: String,   // Route color name of the max grade (for the ClimbDot)
+    val maxFirstDate: LocalDate,// Earliest date the max grade was climbed within the period
+    val gradeRows: List<GradeStats>  // Hardest first, all grades up to the current max
+)
 
 /** Weekly activity summary for the Progress tab dot tally. */
 data class WeekActivity(
@@ -38,8 +63,12 @@ class HistoryViewModel(
     private val sessionRepo: SessionRepository,
     private val climbRepo: ClimbRepository,
     private val metricsRepo: MetricsRepository,
-    private val injuryRepo: InjuryRepository
+    private val injuryRepo: InjuryRepository,
+    context: Context
 ) : ViewModel() {
+
+    // SharedPreferences for persisting the last-selected Stats tab gym across sessions
+    private val gymOrderPrefs = GymOrderPreferences(context)
 
     val logs: StateFlow<List<SessionLog>> = sessionRepo.getAllLogs()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -74,6 +103,27 @@ class HistoryViewModel(
             computeWeeklyActivity(climbs, sessions, injuries, config.topK, config.timelineMonths)
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    // --- Stats tab state ---
+
+    /** Currently selected gym in the Stats tab; persists across sessions. */
+    val statsGym: MutableStateFlow<String?> = MutableStateFlow(
+        gymOrderPrefs.getLastStatsGym()
+    )
+
+    /** Selected time period in months; null = Lifetime. Defaults to 2 months. */
+    val statsPeriodMonths: MutableStateFlow<Int?> = MutableStateFlow(2)
+
+    /** Computed stats for the Stats tab; null when no gym is selected or no data. */
+    val statsData: StateFlow<StatsData?> = combine(climbLogs, statsGym, statsPeriodMonths) { climbs, gym, months ->
+        if (gym == null) null else computeStats(climbs, gym, months)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    /** Updates the selected Stats gym and persists the choice. */
+    fun setStatsGym(gymName: String?) {
+        statsGym.value = gymName
+        gymOrderPrefs.setLastStatsGym(gymName)
+    }
+
     fun deleteLog(log: SessionLog) {
         viewModelScope.launch { sessionRepo.deleteLog(log) }
     }
@@ -85,6 +135,81 @@ class HistoryViewModel(
     fun deleteInjury(log: InjuryLog) {
         viewModelScope.launch { injuryRepo.deleteLog(log) }
     }
+}
+
+/**
+ * Computes grade-breakdown stats for the Stats tab.
+ *
+ * Logic:
+ * 1. Filter climbLogs to the selected gym and time window.
+ * 2. Find the highest-score route climbed in the window to determine the "current max".
+ * 3. Build grade rows from all climbed routes, ordered hardest-first by the gym's route list.
+ * 5. For each row: count NEW, FLASH, and total (NEW+FLASH+REPEAT) separately.
+ * 6. Find the earliest log date for the max route within the window.
+ */
+private fun computeStats(
+    climbs: List<ClimbLog>,
+    gymName: String,
+    periodMonths: Int?  // null = Lifetime
+): StatsData? {
+    val gym = gyms.find { it.name == gymName } ?: return null
+    val zone = ZoneId.systemDefault()
+
+    // Apply time window filter
+    val cutoff = if (periodMonths != null) {
+        System.currentTimeMillis() - periodMonths * 30L * 24 * 60 * 60 * 1000
+    } else {
+        0L  // Lifetime: no cutoff
+    }
+    val windowClimbs = climbs.filter { it.gymName == gymName && it.loggedAt > cutoff }
+
+    if (windowClimbs.isEmpty()) return null
+
+    // Find the route with the highest base score that was climbed in the window.
+    // Use the gym's route list score (ignores the climb-type multiplier stored in the log).
+    val climbedRouteNames = windowClimbs.map { it.color }.toSet()
+    val maxRoute = gym.routes
+        .filter { it.name in climbedRouteNames }
+        .maxByOrNull { it.score }
+        ?: return null
+
+    // Find the earliest date the max grade was logged within the period
+    val maxFirstDate = windowClimbs
+        .filter { it.color == maxRoute.name }
+        .minOf { it.loggedAt }
+        .let { Instant.ofEpochMilli(it).atZone(zone).toLocalDate() }
+
+    // Build a lookup: routeName → list of climbs in window for that route
+    val climbsByRoute = windowClimbs.groupBy { it.color }
+
+    // Only include routes that were actually climbed, ordered by the gym's route list
+    // (easiest → hardest), then reversed so hardest is first.
+    val gradeRows = gym.routes
+        .filter { it.name in climbsByRoute }
+        .reversed()
+        .map { route ->
+            val routeClimbs = climbsByRoute[route.name].orEmpty()
+            val newClimbs = routeClimbs.count { it.climbType == ClimbType.NEW.name }
+            val flashClimbs = routeClimbs.count { it.climbType == ClimbType.FLASH.name }
+
+            GradeStats(
+                routeName = route.name,
+                grade = routeGrade(gymName, route.name),
+                gymName = gymName,
+                newClimbs = newClimbs,
+                flashClimbs = flashClimbs,
+                totalClimbs = routeClimbs.size   // includes REPEAT
+            )
+        }
+
+    return StatsData(
+        totalClimbs = windowClimbs.size,
+        statsGymName = gymName,
+        maxGrade = routeGrade(gymName, maxRoute.name),
+        maxRouteName = maxRoute.name,
+        maxFirstDate = maxFirstDate,
+        gradeRows = gradeRows
+    )
 }
 
 private fun computeGraphPoints(climbs: List<ClimbLog>, n: Int, k: Int, timelineMonths: Int): List<GraphPoint> {

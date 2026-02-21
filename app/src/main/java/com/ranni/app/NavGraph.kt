@@ -66,7 +66,7 @@ fun RanniNavGraph() {
             SessionScreen(vm, id, onBack = { navController.popBackStack() })
         }
         composable("history") {
-            val vm = remember { HistoryViewModel(sessionRepo, climbRepo, metricsRepo, injuryRepo) }
+            val vm = remember { HistoryViewModel(sessionRepo, climbRepo, metricsRepo, injuryRepo, context) }
             HistoryScreen(vm)
         }
     }
