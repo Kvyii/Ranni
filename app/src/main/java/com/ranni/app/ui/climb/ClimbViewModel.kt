@@ -29,8 +29,8 @@ class ClimbViewModel(
     val orderedActiveGyms: StateFlow<List<Gym>> = _orderedActiveGyms.asStateFlow()
 
     // Log a climb with the specified type — score should already have the multiplier applied
-    fun logClimb(color: String, score: Int, climbType: ClimbType = ClimbType.NEW) {
-        viewModelScope.launch { repo.logClimb(color, score, climbType) }
+    fun logClimb(color: String, gymName: String, score: Int, climbType: ClimbType = ClimbType.NEW) {
+        viewModelScope.launch { repo.logClimb(color, gymName, score, climbType) }
     }
 
     // Log an injury marker for today with the given severity

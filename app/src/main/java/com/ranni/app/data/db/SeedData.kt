@@ -3,6 +3,7 @@ package com.ranni.app.data.db
 import com.ranni.app.data.model.ClimbLog
 import com.ranni.app.data.model.Exercise
 import com.ranni.app.data.model.SessionLog
+import com.ranni.app.data.model.gyms
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
@@ -110,6 +111,7 @@ suspend fun seedDatabase(db: AppDatabase) {
             climbDao.insert(
                 ClimbLog(
                     color = color,
+                    gymName = "9 Degrees",  // Seed data uses 9 Degrees routes
                     score = score,
                     loggedAt = toEpochMs(date, time)
                 )
@@ -144,4 +146,20 @@ suspend fun seedDatabase(db: AppDatabase) {
  */
 suspend fun clearDatabase(db: AppDatabase) {
     db.clearAllTables()
+}
+
+/**
+ * One-time backfill for climb_logs rows migrated from schema v12, where gymName = ''.
+ * Infers the correct gym from the route name using the static gym definitions.
+ * Safe to call on every launch — the WHERE gymName = '' clause makes it a no-op
+ * once all rows have been populated.
+ */
+suspend fun backfillLegacyGymNames(db: AppDatabase) {
+    val dao = db.climbLogDao()
+    // Build route name → gym name mapping from static gym definitions (pre-collision era)
+    gyms.forEach { gym ->
+        gym.routes.forEach { route ->
+            dao.backfillGymName(routeName = route.name, gymName = gym.name)
+        }
+    }
 }

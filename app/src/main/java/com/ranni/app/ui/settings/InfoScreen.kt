@@ -1,12 +1,9 @@
 package com.ranni.app.ui.settings
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -21,7 +18,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.ranni.app.data.model.gyms
-import com.ranni.app.data.model.outlineRoutes
+import com.ranni.app.ui.components.ClimbDot
 
 @Composable
 fun ScoresScreen() {
@@ -101,19 +98,8 @@ fun ScoresScreen() {
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.spacedBy(14.dp)
                                     ) {
-                                        // Color swatch — hollow outline for Custom gym routes
-                                        val isOutline = route.name in outlineRoutes
-                                        Box(
-                                            modifier = Modifier
-                                                .size(28.dp)
-                                                .clip(CircleShape)
-                                                .then(
-                                                    if (isOutline) Modifier.border(2.dp, MaterialTheme.colorScheme.onSurfaceVariant, CircleShape)
-                                                    else Modifier
-                                                        .background(route.color)
-                                                        .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
-                                                )
-                                        )
+                                        // Color swatch — hollow or filled based on gym, via ClimbDot
+                                        ClimbDot(gymName = gym.name, routeName = route.name, size = 28.dp, strokeWidth = 2.dp, showFilledBorder = true)
                                         // Route name — takes up available space
                                         Text(
                                             route.name,

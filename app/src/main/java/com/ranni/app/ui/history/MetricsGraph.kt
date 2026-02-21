@@ -28,9 +28,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ranni.app.R
 import com.ranni.app.data.model.InjurySeverity
-import com.ranni.app.data.model.climbColorMap
-import com.ranni.app.data.model.climbGymMap
-import com.ranni.app.data.model.outlineRoutes
+import com.ranni.app.data.model.outlineGyms
+import com.ranni.app.data.model.routeColor
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 
@@ -63,7 +62,6 @@ fun MetricsGraph(
         val lineColor = MaterialTheme.colorScheme.primary
         val axisColor = MaterialTheme.colorScheme.outlineVariant
         val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
-        val outlineStrokeColor = MaterialTheme.colorScheme.onSurfaceVariant // for outline-only dots
         val labelStyle = TextStyle(fontSize = 10.sp, color = labelColor)
         val textMeasurer = rememberTextMeasurer()
 
@@ -212,11 +210,9 @@ fun MetricsGraph(
                     var currentY = baseY
                     var prevGym: String? = null
 
-                    week.climbColors.forEach { colorName ->
-                        val gym = climbGymMap[colorName] ?: ""
-
+                    week.climbColors.forEach { (gymName, colorName) ->
                         // Insert a gap + gray bar between different gym groups.
-                        if (prevGym != null && gym != prevGym) {
+                        if (prevGym != null && gymName != prevGym) {
                             currentY -= separatorGap
                             val sepY = currentY + dotRadius + 3.dp.toPx()
                             if (sepY < topPadding) return@forEach
@@ -228,20 +224,22 @@ fun MetricsGraph(
                                 strokeWidth = separatorHeight
                             )
                         }
-                        prevGym = gym
+                        prevGym = gymName
 
                         if (currentY - dotRadius < topPadding) return@forEach // don't overflow
-                        if (colorName in outlineRoutes) {
-                            // Outline-only for Custom gym routes
+                        // Resolve color using (gymName, routeName) — unambiguous across all gyms
+                        val dotColor = routeColor(gymName, colorName)
+                        if (gymName in outlineGyms) {
+                            // Hollow ring — stroke uses the route's own color
                             drawCircle(
-                                color = outlineStrokeColor,
+                                color = dotColor,
                                 radius = dotRadius,
                                 center = Offset(climbColumnX, currentY),
                                 style = Stroke(width = 1.dp.toPx())
                             )
                         } else {
                             drawCircle(
-                                color = climbColorMap[colorName] ?: Color.White,
+                                color = dotColor,
                                 radius = dotRadius,
                                 center = Offset(climbColumnX, currentY)
                             )

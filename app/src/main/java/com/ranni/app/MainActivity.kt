@@ -41,6 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.ranni.app.data.db.AppDatabase
+import com.ranni.app.data.db.backfillLegacyGymNames
 import com.ranni.app.data.repository.ClimbRepository
 import com.ranni.app.data.repository.ExerciseRepository
 import com.ranni.app.data.repository.InjuryRepository
@@ -98,7 +99,13 @@ fun MainScaffold() {
     if (screenState is ScreenState.Loading) {
         // Initialize DB while the system splash screen is shown
         LaunchedEffect(Unit) {
-            db = async(Dispatchers.IO) { AppDatabase.getInstance(context) }.await()
+            db = async(Dispatchers.IO) {
+                val instance = AppDatabase.getInstance(context)
+                // Backfill gymName for rows migrated from schema v12 (gymName = '').
+                // No-op on subsequent launches once all rows are populated.
+                backfillLegacyGymNames(instance)
+                instance
+            }.await()
             screenState = ScreenState.Climb
         }
     } else {
