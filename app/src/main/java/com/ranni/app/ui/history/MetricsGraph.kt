@@ -73,7 +73,7 @@ fun MetricsGraph(
         )
 
         Canvas(modifier = Modifier.fillMaxSize()) {
-            val leftPadding = 52.dp.toPx()
+            val leftPadding = 26.dp.toPx()
             val bottomPadding = 28.dp.toPx()
             val topPadding = 8.dp.toPx()
             val rightPadding = 8.dp.toPx()

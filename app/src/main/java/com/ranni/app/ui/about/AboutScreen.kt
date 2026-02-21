@@ -100,7 +100,7 @@ fun AboutContent() {
             Text("22/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
             Text(
                 """
-                • Added Stats page with histogram
+                • TBD
                 """.trimIndent(),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -113,7 +113,7 @@ fun AboutContent() {
             Text("22/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
             Text(
                 """
-                • Added outdoor gyms with YDS and V grading
+                • Added Stats page with histogram
                 • WARNING: DB will be deprecated by v1.7.0+. Users below 1.4.0+ will lose their data if upgrading to v1.7.0+
                 """.trimIndent(),
                 style = MaterialTheme.typography.bodyMedium,
