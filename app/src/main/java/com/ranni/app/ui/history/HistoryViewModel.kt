@@ -30,20 +30,24 @@ import java.time.temporal.TemporalAdjusters
 
 data class GraphPoint(val date: LocalDate, val value: Float)
 
-/** Per-grade stats row for the Stats tab. */
+/** Per-grade stats row for the Stats tab histogram. */
 data class GradeStats(
-    val routeName: String,      // Route color name (e.g. "Orange") — used for dot lookup
-    val grade: String,          // Display grade string (e.g. "V3 - V4")
-    val gymName: String,        // Gym name — needed to unambiguously resolve color/dot
-    val totalClimbs: Int,       // NEW + FLASH + REPEAT within the window
-    val flashRate: Float?       // FLASH / (NEW + FLASH); null when no first-attempt climbs
+    val routeName: String,  // Route color name (e.g. "Orange") — used for dot/bar color lookup
+    val grade: String,      // Display grade string (e.g. "V3 - V4")
+    val gymName: String,    // Gym name — needed to unambiguously resolve color/outline style
+    val newClimbs: Int,     // NEW climb count — drawn as solid bar fill
+    val flashClimbs: Int,   // FLASH climb count — drawn as hatched overlay on bar
+    val totalClimbs: Int    // NEW + FLASH + REPEAT — shown in the summary card
 )
 
 /** Aggregated stats for the Stats tab, computed for a specific gym + time window. */
 data class StatsData(
     val totalClimbs: Int,
+    val statsGymName: String,   // Gym name — needed to resolve dot color/outline for the max card
     val maxGrade: String,       // Grade string of the highest-scored route climbed in window
-    val gradeRows: List<GradeStats>  // Hardest first, max 4 rows
+    val maxRouteName: String,   // Route color name of the max grade (for the ClimbDot)
+    val maxFirstDate: LocalDate,// Earliest date the max grade was climbed within the period
+    val gradeRows: List<GradeStats>  // Hardest first, all grades up to the current max
 )
 
 /** Weekly activity summary for the Progress tab dot tally. */
@@ -139,9 +143,9 @@ class HistoryViewModel(
  * Logic:
  * 1. Filter climbLogs to the selected gym and time window.
  * 2. Find the highest-score route climbed in the window to determine the "current max".
- * 3. Look up that route's index in the gym's ordered route list (easiest → hardest).
- * 4. Take that index and up to 3 below it (i.e. max 4 rows), reversed to hardest-first.
- * 5. For each row: count total climbs (NEW+FLASH+REPEAT) and compute flash rate.
+ * 3. Build grade rows from all climbed routes, ordered hardest-first by the gym's route list.
+ * 5. For each row: count NEW, FLASH, and total (NEW+FLASH+REPEAT) separately.
+ * 6. Find the earliest log date for the max route within the window.
  */
 private fun computeStats(
     climbs: List<ClimbLog>,
@@ -149,6 +153,7 @@ private fun computeStats(
     periodMonths: Int?  // null = Lifetime
 ): StatsData? {
     val gym = gyms.find { it.name == gymName } ?: return null
+    val zone = ZoneId.systemDefault()
 
     // Apply time window filter
     val cutoff = if (periodMonths != null) {
@@ -161,43 +166,48 @@ private fun computeStats(
     if (windowClimbs.isEmpty()) return null
 
     // Find the route with the highest base score that was climbed in the window.
-    // We derive base score by looking up the route in the gym list (ignores climb-type multiplier).
+    // Use the gym's route list score (ignores the climb-type multiplier stored in the log).
     val climbedRouteNames = windowClimbs.map { it.color }.toSet()
     val maxRoute = gym.routes
         .filter { it.name in climbedRouteNames }
         .maxByOrNull { it.score }
         ?: return null
 
-    val maxRouteIndex = gym.routes.indexOfFirst { it.name == maxRoute.name }
-
-    // Take the grade at maxRouteIndex and up to 3 grades below (indices maxRouteIndex-3..maxRouteIndex),
-    // then reverse so hardest is first in the list.
-    val startIndex = (maxRouteIndex - 3).coerceAtLeast(0)
-    val gradeRoutes = gym.routes.subList(startIndex, maxRouteIndex + 1).reversed()
+    // Find the earliest date the max grade was logged within the period
+    val maxFirstDate = windowClimbs
+        .filter { it.color == maxRoute.name }
+        .minOf { it.loggedAt }
+        .let { Instant.ofEpochMilli(it).atZone(zone).toLocalDate() }
 
     // Build a lookup: routeName → list of climbs in window for that route
     val climbsByRoute = windowClimbs.groupBy { it.color }
 
-    val gradeRows = gradeRoutes.map { route ->
-        val routeClimbs = climbsByRoute[route.name].orEmpty()
-        val totalClimbs = routeClimbs.size
-        // Flash rate = FLASH / (NEW + FLASH); REPEAT is excluded (not a first attempt)
-        val firstAttempts = routeClimbs.count { it.climbType == ClimbType.NEW.name || it.climbType == ClimbType.FLASH.name }
-        val flashes = routeClimbs.count { it.climbType == ClimbType.FLASH.name }
-        val flashRate = if (firstAttempts > 0) flashes.toFloat() / firstAttempts else null
+    // Only include routes that were actually climbed, ordered by the gym's route list
+    // (easiest → hardest), then reversed so hardest is first.
+    val gradeRows = gym.routes
+        .filter { it.name in climbsByRoute }
+        .reversed()
+        .map { route ->
+            val routeClimbs = climbsByRoute[route.name].orEmpty()
+            val newClimbs = routeClimbs.count { it.climbType == ClimbType.NEW.name }
+            val flashClimbs = routeClimbs.count { it.climbType == ClimbType.FLASH.name }
 
-        GradeStats(
-            routeName = route.name,
-            grade = routeGrade(gymName, route.name),
-            gymName = gymName,
-            totalClimbs = totalClimbs,
-            flashRate = flashRate
-        )
-    }
+            GradeStats(
+                routeName = route.name,
+                grade = routeGrade(gymName, route.name),
+                gymName = gymName,
+                newClimbs = newClimbs,
+                flashClimbs = flashClimbs,
+                totalClimbs = routeClimbs.size   // includes REPEAT
+            )
+        }
 
     return StatsData(
         totalClimbs = windowClimbs.size,
+        statsGymName = gymName,
         maxGrade = routeGrade(gymName, maxRoute.name),
+        maxRouteName = maxRoute.name,
+        maxFirstDate = maxFirstDate,
         gradeRows = gradeRows
     )
 }
