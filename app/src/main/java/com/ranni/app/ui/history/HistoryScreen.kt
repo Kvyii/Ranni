@@ -241,6 +241,9 @@ private fun CalendarTab(viewModel: HistoryViewModel) {
                                 .format(timeFormatter)
                             val severity = injury.severityEnum
                             Card(
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                                ),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 16.dp)
@@ -287,6 +290,9 @@ private fun CalendarTab(viewModel: HistoryViewModel) {
                                 .atZone(ZoneId.systemDefault())
                                 .format(timeFormatter)
                             Card(
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                                ),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 16.dp)
@@ -333,6 +339,9 @@ private fun CalendarTab(viewModel: HistoryViewModel) {
                                 .atZone(ZoneId.systemDefault())
                                 .format(timeFormatter)
                             Card(
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                                ),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 16.dp)
@@ -416,6 +425,9 @@ private fun ProgressTab(viewModel: HistoryViewModel) {
                         .coerceAtLeast(0)
                     val date = "${climbDate.format(dateFormatter)} (${daysRemaining}d)"
                     Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                        ),
                         modifier = Modifier
                             .fillMaxWidth()
                             .alpha(alpha)
@@ -710,7 +722,12 @@ private fun StatsTab(viewModel: HistoryViewModel) {
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         // Total climbs card
-                        Card(modifier = Modifier.weight(1f)) {
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                            ),
+                            modifier = Modifier.weight(1f)
+                        ) {
                             Column(
                                 modifier = Modifier.fillMaxWidth().padding(16.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
@@ -729,7 +746,12 @@ private fun StatsTab(viewModel: HistoryViewModel) {
                         }
 
                         // Current max card: dot + grade + route name + first-logged date
-                        Card(modifier = Modifier.weight(1f)) {
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                            ),
+                            modifier = Modifier.weight(1f)
+                        ) {
                             Column(
                                 modifier = Modifier.fillMaxWidth().padding(16.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally,

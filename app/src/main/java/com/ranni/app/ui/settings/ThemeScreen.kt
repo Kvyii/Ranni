@@ -1,18 +1,13 @@
 package com.ranni.app.ui.settings
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import com.ranni.app.ui.theme.AppTheme
 
@@ -26,7 +21,7 @@ import com.ranni.app.ui.theme.AppTheme
 fun ThemeScreen(viewModel: MetricsViewModel) {
     val config by viewModel.config.collectAsState()
     // Resolve the current theme safely, defaulting to ORIGINAL on unknown values
-    val selected = try { AppTheme.valueOf(config.uiTheme) } catch (_: IllegalArgumentException) { AppTheme.ORIGINAL }
+    val selected = try { AppTheme.valueOf(config.uiTheme) } catch (_: IllegalArgumentException) { AppTheme.RANNI_DARK }
 
     Column(modifier = Modifier.fillMaxSize()) {
         AppTheme.entries.forEachIndexed { index, theme ->
@@ -45,8 +40,7 @@ fun ThemeScreen(viewModel: MetricsViewModel) {
 
 /**
  * A single row representing one theme preset.
- * Shows the theme display name, a strip of key colour swatches, and a
- * checkmark when this theme is currently active.
+ * Shows the theme display name and a checkmark when this theme is currently active.
  */
 @Composable
 private fun ThemeRow(
@@ -62,12 +56,8 @@ private fun ThemeRow(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            // Theme display name
-            Text(theme.displayName, style = MaterialTheme.typography.bodyLarge)
-            // Small swatch strip showing primary / background / surface colours
-            ThemeSwatchStrip(theme)
-        }
+        // Theme display name
+        Text(theme.displayName, style = MaterialTheme.typography.bodyLarge)
 
         // Checkmark shown for the active theme
         if (isSelected) {
@@ -75,36 +65,6 @@ private fun ThemeRow(
                 imageVector = Icons.Default.Check,
                 contentDescription = "Selected",
                 tint = MaterialTheme.colorScheme.primary
-            )
-        }
-    }
-}
-
-/**
- * Three small colour dots showing the theme's primary, background,
- * and surface colours at a glance.
- */
-@Composable
-private fun ThemeSwatchStrip(theme: AppTheme) {
-    val scheme = theme.colorScheme
-    val swatches = listOf(
-        scheme.primary,
-        scheme.background,
-        scheme.surface,
-        scheme.onSurfaceVariant
-    )
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        swatches.forEach { color ->
-            Box(
-                modifier = Modifier
-                    .size(16.dp)
-                    .clip(CircleShape)
-                    .background(color)
-                    // Subtle border so light swatches are visible on light backgrounds
-                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
             )
         }
     }

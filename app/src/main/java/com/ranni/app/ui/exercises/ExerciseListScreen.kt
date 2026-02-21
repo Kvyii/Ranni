@@ -142,7 +142,9 @@ fun ExerciseListScreen(
             onClick = onAddExercise,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(16.dp)
+                .padding(16.dp),
+            // Lock FAB background to surfaceContainerLow instead of tonal elevation default
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
         ) {
             Icon(Icons.Default.Add, contentDescription = "Add Exercise")
         }
@@ -174,7 +176,11 @@ private fun ExerciseCard(
     onEdit: () -> Unit,
     isBeingDragged: Boolean
 ) {
+    // Explicitly set containerColor so the theme's surfaceContainerLow token controls card colour
     Card(
+        colors = androidx.compose.material3.CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        ),
         modifier = Modifier
             .fillMaxWidth()
             // Raise elevation slightly while dragging for a "lifted" cue

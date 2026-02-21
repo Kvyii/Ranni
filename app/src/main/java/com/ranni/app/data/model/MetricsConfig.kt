@@ -16,6 +16,6 @@ data class MetricsConfig(
     // Stored as the enum name string to avoid a Room TypeConverter.
     // Resolved to AppTheme via AppTheme.valueOf(uiTheme) at the call site.
     // @ColumnInfo defaultValue is required by Room's AutoMigration to generate the ALTER TABLE SQL.
-    @ColumnInfo(defaultValue = "ORIGINAL")
-    val uiTheme: String = AppTheme.ORIGINAL.name
+    @ColumnInfo(defaultValue = "RANNI_DARK")
+    val uiTheme: String = AppTheme.RANNI_DARK.name
 )

@@ -105,7 +105,7 @@ fun MainScaffold() {
     // Collect the persisted theme; fall back to ORIGINAL until DB is ready
     val config by (metricsRepo?.getConfig() ?: kotlinx.coroutines.flow.flowOf(com.ranni.app.data.model.MetricsConfig()))
         .collectAsState(initial = com.ranni.app.data.model.MetricsConfig())
-    val activeTheme = try { AppTheme.valueOf(config.uiTheme) } catch (_: IllegalArgumentException) { AppTheme.ORIGINAL }
+    val activeTheme = try { AppTheme.valueOf(config.uiTheme) } catch (_: IllegalArgumentException) { AppTheme.RANNI_DARK }
 
     // Wrap everything in the live theme so swapping it recomposes the whole tree
     RanniTheme(theme = activeTheme) {
