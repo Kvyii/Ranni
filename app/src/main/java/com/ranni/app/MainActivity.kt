@@ -200,15 +200,15 @@ fun MainContent(
 
             is ScreenState.About -> when (selectedTab) {
                 0 -> ScreenState.Climb
-                1 -> ScreenState.ExerciseList
-                2 -> ScreenState.History
-                else -> ScreenState.ExerciseList
+                1 -> ScreenState.History
+                2 -> ScreenState.ExerciseList
+                else -> ScreenState.Climb
             }
 
             is ScreenState.EditExercise,
             is ScreenState.Session -> ScreenState.ExerciseList
 
-            else -> ScreenState.ExerciseList
+            else -> ScreenState.Climb
         })
     }
 
@@ -245,9 +245,9 @@ fun MainContent(
                             onScreenStateChange(when (screenState) {
                                 is ScreenState.About -> when (selectedTab) {
                                     0 -> ScreenState.Climb
-                                    1 -> ScreenState.ExerciseList
-                                    2 -> ScreenState.History
-                                    else -> ScreenState.ExerciseList
+                                    1 -> ScreenState.History
+                                    2 -> ScreenState.ExerciseList
+                                    else -> ScreenState.Climb
                                 }
                                 is ScreenState.SettingsScores,
                                 is ScreenState.SettingsMetrics,
@@ -255,7 +255,7 @@ fun MainContent(
                                 is ScreenState.SettingsAbout,
                                 is ScreenState.SettingsDev,
                                 is ScreenState.SettingsTheme -> ScreenState.About
-                                else -> ScreenState.ExerciseList
+                                else -> ScreenState.Climb
                             })
                         }) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -275,15 +275,15 @@ fun MainContent(
                     )
                     NavigationBarItem(
                         selected = selectedTab == 1,
-                        onClick = { selectedTab = 1; onScreenStateChange(ScreenState.ExerciseList) },
-                        icon = { Icon(Icons.Default.List, null) },
-                        label = { Text("Exercises") }
+                        onClick = { selectedTab = 1; onScreenStateChange(ScreenState.History) },
+                        icon = { Icon(Icons.Default.DateRange, null) },
+                        label = { Text("History") }
                     )
                     NavigationBarItem(
                         selected = selectedTab == 2,
-                        onClick = { selectedTab = 2; onScreenStateChange(ScreenState.History) },
-                        icon = { Icon(Icons.Default.DateRange, null) },
-                        label = { Text("History") }
+                        onClick = { selectedTab = 2; onScreenStateChange(ScreenState.ExerciseList) },
+                        icon = { Icon(Icons.Default.List, null) },
+                        label = { Text("Exercises") }
                     )
                 }
             }

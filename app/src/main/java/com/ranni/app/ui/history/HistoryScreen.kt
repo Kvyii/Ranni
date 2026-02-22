@@ -892,7 +892,7 @@ private fun GradeHistogram(
     val labelWidthDp = 56.dp    // space reserved for grade text on the left (no dot)
     val barPaddingDp = 6.dp     // vertical inset so bar doesn't fill full row height
     val countPaddingDp = 6.dp   // gap between end of bar and count label
-    val dividerWidthDp = 4.dp   // gap width between FLASH and NEW bar segments
+    val dividerWidthDp = 2.dp   // gap width between FLASH and NEW bar segments
     val cornerRadiusDp = 3.dp   // rounded corners on each bar segment
     val countReserveDp = 80.dp  // right-side space always reserved for the count label
 
@@ -953,29 +953,42 @@ private fun GradeHistogram(
                 val barLeft = labelWidthPx
 
                 if (isOutline) {
-                    // Outline-only rounded bar for hollow-dot gyms
-                    drawRoundRect(
-                        color = barColor,
-                        topLeft = Offset(barLeft, barTop),
-                        size = Size(totalBarWidth, barHeight),
-                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerRadiusPx),
-                        style = Stroke(width = 1.5.dp.toPx())
-                    )
-                    // If any flashes exist, overlay hatch in the route colour over the bar interior
-                    // (hollow bar has no fill, so hatch lines are the visual indicator)
-                    if (row.flashClimbs > 0) {
-                        val flashSegWidth = if (flashBarWidth < totalBarWidth)
-                            flashBarWidth - dividerWidthPx / 2f
-                        else
-                            totalBarWidth
+                    val hasFlash = flashBarWidth > 0f
+                    val hasNew = flashBarWidth < totalBarWidth
+                    val outlineStroke = Stroke(width = 1.5.dp.toPx())
+
+                    // FLASH segment — outline rect, left side
+                    if (hasFlash) {
+                        val segWidth = if (hasNew) flashBarWidth - dividerWidthPx / 2f else totalBarWidth
+                        drawRoundRect(
+                            color = barColor,
+                            topLeft = Offset(barLeft, barTop),
+                            size = Size(segWidth.coerceAtLeast(0f), barHeight),
+                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerRadiusPx),
+                            style = outlineStroke
+                        )
+                        // Hatch with route colour inside the hollow flash segment
                         drawHatch(
                             left       = barLeft,
                             top        = barTop,
-                            right      = barLeft + flashSegWidth.coerceAtLeast(0f),
+                            right      = barLeft + segWidth.coerceAtLeast(0f),
                             bottom     = barBottom,
                             hatchColor = barColor.copy(alpha = 0.7f),
                             spacing    = hatchSpacingPx,
                             lineWidth  = hatchLineWidthPx
+                        )
+                    }
+
+                    // NEW segment — outline rect, right side
+                    if (hasNew) {
+                        val newLeft = if (hasFlash) barLeft + flashBarWidth + dividerWidthPx / 2f else barLeft
+                        val newWidth = totalBarWidth - (newLeft - barLeft)
+                        drawRoundRect(
+                            color = barColor,
+                            topLeft = Offset(newLeft, barTop),
+                            size = Size(newWidth.coerceAtLeast(0f), barHeight),
+                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerRadiusPx),
+                            style = outlineStroke
                         )
                     }
                 } else {
