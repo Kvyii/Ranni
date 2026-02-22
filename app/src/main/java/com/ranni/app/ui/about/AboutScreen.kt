@@ -134,6 +134,18 @@ fun AboutContent() {
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
 
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text("v1.2.1", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            // Release date
+            Text("23/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+            Text(
+                """
+                • Fix clipping UI bug
+                """.trimIndent(),
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }       
+
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("v1.2.0", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
             // Release date
             Text("22/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
