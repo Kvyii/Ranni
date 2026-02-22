@@ -22,6 +22,7 @@ fun SettingsScreen(
     onNavigateScores: () -> Unit,
     onNavigateMetrics: () -> Unit,
     onNavigateSounds: () -> Unit,
+    onNavigateHelp: () -> Unit,
     onNavigateAbout: () -> Unit,
     onNavigateTheme: () -> Unit,
     onNavigateDev: () -> Unit = {},
@@ -36,6 +37,9 @@ fun SettingsScreen(
         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
         // Theme picker — lets the user swap the app colour scheme
         SettingsRow("Theme", onClick = onNavigateTheme)
+        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+        // Help page with FAQ
+        SettingsRow("Help", onClick = onNavigateHelp)
         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
         SettingsRow("About", onClick = onNavigateAbout)
         if (showDevTools) {
@@ -57,6 +61,48 @@ private fun SettingsRow(label: String, onClick: () -> Unit) {
     ) {
         Text(label, style = MaterialTheme.typography.bodyLarge)
         Icon(Icons.Default.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+fun HelpContent() {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp)
+            .padding(bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        // App logo header — same layout as About page
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            // Crop top-aligned to trim the transparent padding at the bottom of the PNG
+            Image(
+                painter = painterResource(R.drawable.ranni_transp),
+                contentDescription = "Ranni logo",
+                contentScale = ContentScale.FillWidth,
+                alignment = Alignment.TopCenter,
+                modifier = Modifier
+                    .fillMaxWidth(0.6f)
+                    .height(170.dp)
+                    .align(Alignment.CenterHorizontally)
+            )
+            Text("FAQ", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            Text("By w_kvib", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
+        }
+
+        HorizontalDivider()
+
+        // FAQ entries
+        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("Q: How do I use this app?", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                Text("A: As w_kvib", style = MaterialTheme.typography.bodyMedium)
+            }
+        }
     }
 }
 
@@ -99,6 +145,18 @@ fun AboutContent() {
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
 
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text("v1.6.1", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            // Release date
+            Text("22/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+            Text(
+                """
+                • Added done button to exercises
+                """.trimIndent(),
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }    
+
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("v1.6.0", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
             // Release date
             Text("22/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
@@ -106,6 +164,7 @@ fun AboutContent() {
                 """
                 • Added Stats page
                 • Added ability to filter repeat climbs from display
+                • Repeated climbs are now displayed faded in Calendar
                 """.trimIndent(),
                 style = MaterialTheme.typography.bodyMedium
             )

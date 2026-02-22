@@ -49,6 +49,7 @@ import com.ranni.app.data.repository.InjuryRepository
 import com.ranni.app.data.repository.MetricsRepository
 import com.ranni.app.data.repository.SessionRepository
 import com.ranni.app.ui.about.AboutContent
+import com.ranni.app.ui.about.HelpContent
 import com.ranni.app.ui.about.SettingsScreen
 import com.ranni.app.ui.climb.ClimbScreen
 import com.ranni.app.ui.climb.ClimbViewModel
@@ -198,7 +199,8 @@ fun MainContent(
             is ScreenState.SettingsSounds,
             is ScreenState.SettingsAbout,
             is ScreenState.SettingsDev,
-            is ScreenState.SettingsTheme -> ScreenState.About
+            is ScreenState.SettingsTheme,
+            is ScreenState.SettingsHelp -> ScreenState.About
 
             is ScreenState.About -> when (selectedTab) {
                 0 -> ScreenState.Climb
@@ -239,6 +241,7 @@ fun MainContent(
                             is ScreenState.SettingsAbout -> "About"
                             is ScreenState.SettingsDev -> "Developer"
                             is ScreenState.SettingsTheme -> "UI Theme"
+                            is ScreenState.SettingsHelp -> "Help"
                             else -> ""
                         })
                     },
@@ -351,6 +354,7 @@ fun MainContent(
                         onNavigateMetrics = { onScreenStateChange(ScreenState.SettingsMetrics) },
                         onNavigateSounds = { onScreenStateChange(ScreenState.SettingsSounds) },
                         onNavigateTheme = { onScreenStateChange(ScreenState.SettingsTheme) },
+                        onNavigateHelp = { onScreenStateChange(ScreenState.SettingsHelp) },
                         onNavigateAbout = { onScreenStateChange(ScreenState.SettingsAbout) },
                         onNavigateDev = { onScreenStateChange(ScreenState.SettingsDev) },
                         showDevTools = BuildConfig.SHOW_DEV_TOOLS
@@ -377,6 +381,9 @@ fun MainContent(
                     // Reuse MetricsViewModel since uiTheme lives in MetricsConfig
                     val vm = remember { MetricsViewModel(metricsRepo) }
                     ThemeScreen(vm)
+                }
+                is ScreenState.SettingsHelp -> {
+                    HelpContent()
                 }
                 is ScreenState.SettingsAbout -> {
                     AboutContent()
@@ -424,11 +431,12 @@ sealed class ScreenState {
     object SettingsAbout : ScreenState()
     object SettingsDev : ScreenState()
     object SettingsTheme : ScreenState()
+    object SettingsHelp : ScreenState()
 
     // Navigation depth used to determine slide direction for transitions
     val depth: Int get() = when (this) {
         is Loading, is Climb, is ExerciseList, is History -> 0
         is About, is EditExercise, is Session -> 1
-        is SettingsScores, is SettingsMetrics, is SettingsSounds, is SettingsAbout, is SettingsDev, is SettingsTheme -> 2
+        is SettingsScores, is SettingsMetrics, is SettingsSounds, is SettingsAbout, is SettingsDev, is SettingsTheme, is SettingsHelp -> 2
     }
 }
