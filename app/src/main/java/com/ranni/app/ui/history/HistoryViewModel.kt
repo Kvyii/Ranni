@@ -108,8 +108,10 @@ class HistoryViewModel(
         gymOrderPrefs.getLastStatsGym()
     )
 
-    /** Selected time period in months; null = Lifetime. Defaults to 2 months. */
-    val statsPeriodMonths: MutableStateFlow<Int?> = MutableStateFlow(2)
+    /** Selected time period in months; null = Lifetime. Loaded from prefs, defaults to 2 months on first launch. */
+    val statsPeriodMonths: MutableStateFlow<Int?> = MutableStateFlow(
+        gymOrderPrefs.getLastStatsPeriod() ?: 2
+    )
 
     /** Computed stats for the Stats tab; null when no gym is selected or no data. */
     // metricsConfig is included so stats recompute reactively when filterRepeats is toggled.
@@ -121,6 +123,12 @@ class HistoryViewModel(
     fun setStatsGym(gymName: String?) {
         statsGym.value = gymName
         gymOrderPrefs.setLastStatsGym(gymName)
+    }
+
+    /** Updates the Stats tab period filter and persists the choice. */
+    fun setStatsPeriodMonths(months: Int?) {
+        statsPeriodMonths.value = months
+        gymOrderPrefs.setLastStatsPeriod(months)
     }
 
     fun deleteLog(log: SessionLog) {

@@ -4,7 +4,8 @@ import android.content.Context
 
 /**
  * Contract for reading/writing the user-defined gym display order,
- * the last-selected Stats tab gym, and the starred favourite gym.
+ * the last-selected Stats tab gym, the starred favourite gym,
+ * and the last-selected Stats tab period filter.
  */
 interface GymOrderPreferences {
     /** Returns the saved ordered list of active gym names, or empty list if never set. */
@@ -24,6 +25,12 @@ interface GymOrderPreferences {
 
     /** Persists the favourite gym name; null clears the saved value. */
     fun setFavouriteGym(gymName: String?)
+
+    /** Returns the Stats tab period (months) last selected by the user, or null if never set (= Lifetime). */
+    fun getLastStatsPeriod(): Int?
+
+    /** Persists the Stats tab period selection; null means Lifetime. */
+    fun setLastStatsPeriod(months: Int?)
 }
 
 /**
@@ -62,10 +69,24 @@ class SharedPrefsGymOrderPreferences(context: Context) : GymOrderPreferences {
         edit.apply()
     }
 
+    // Returns INT_MIN sentinel as "not set"; convert back to null for Lifetime.
+    override fun getLastStatsPeriod(): Int? {
+        val stored = prefs.getInt(KEY_STATS_PERIOD, Int.MIN_VALUE)
+        return if (stored == Int.MIN_VALUE) null else stored
+    }
+
+    override fun setLastStatsPeriod(months: Int?) {
+        val edit = prefs.edit()
+        if (months != null) edit.putInt(KEY_STATS_PERIOD, months)
+        else edit.remove(KEY_STATS_PERIOD)
+        edit.apply()
+    }
+
     companion object {
         private const val PREFS_NAME = "gym_order_prefs"
         private const val KEY_GYM_ORDER = "gym_order"
         private const val KEY_STATS_GYM = "stats_gym"
         private const val KEY_FAVOURITE_GYM = "favourite_gym"
+        private const val KEY_STATS_PERIOD = "stats_period_months"
     }
 }
