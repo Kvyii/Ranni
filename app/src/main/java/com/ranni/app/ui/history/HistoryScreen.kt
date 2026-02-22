@@ -24,7 +24,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -160,42 +159,63 @@ private fun CalendarTab(viewModel: HistoryViewModel) {
         selectedDate = null
     }
 
-    // Slide in from right when drilling into a day; slide in from left when going back
-    AnimatedContent(
-        targetState = selectedDate,
-        transitionSpec = {
-            if (navigatingForward)
-                slideInHorizontally { it } togetherWith slideOutHorizontally { -it }
-            else
-                slideInHorizontally { -it } togetherWith slideOutHorizontally { it }
-        },
-        label = "calendarDetail",
-        modifier = Modifier.fillMaxSize()
-    ) { date ->
-        if (date == null) {
-            // --- Full-screen calendar view ---
-            CalendarView(
-                sessionsByDate = sessionsByDate,
-                climbsByDate = climbsByDate,
-                dotClimbsByDate = dotClimbsByDate,
-                injuriesByDate = injuriesByDate,
-                onDaySelected = { day ->
-                    navigatingForward = true
-                    selectedDate = day
-                }
-            )
-        } else {
-            // --- Full-screen day detail view ---
-            DayDetail(
-                date = date,
-                sessionLogs = sessionsByDate[date].orEmpty(),
-                climbLogs = climbsByDate[date].orEmpty(),
-                injuryLogs = injuriesByDate[date].orEmpty(),
-                onDeleteLog = { viewModel.deleteLog(it) },
-                onDeleteClimb = { viewModel.deleteClimb(it) },
-                onDeleteInjury = { viewModel.deleteInjury(it) },
-                onBack = goBack
-            )
+    // Swipe-right-to-go-back: no visual translation, just trigger goBack() on threshold
+    var dragOffsetX by remember { mutableFloatStateOf(0f) }
+    val screenWidthPx = LocalConfiguration.current.screenWidthDp * LocalContext.current.resources.displayMetrics.density
+    val swipeThreshold = screenWidthPx * 0.30f
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .pointerInput(selectedDate) {
+                if (selectedDate == null) return@pointerInput
+                detectHorizontalDragGestures(
+                    onDragEnd = {
+                        if (dragOffsetX >= swipeThreshold) goBack()
+                        dragOffsetX = 0f
+                    },
+                    onDragCancel = { dragOffsetX = 0f },
+                    onHorizontalDrag = { _, dragAmount -> dragOffsetX += dragAmount }
+                )
+            }
+    ) {
+        // Slide in from right when drilling into a day; slide in from left when going back
+        AnimatedContent(
+            targetState = selectedDate,
+            transitionSpec = {
+                if (navigatingForward)
+                    slideInHorizontally { it } togetherWith slideOutHorizontally { -it }
+                else
+                    slideInHorizontally { -it } togetherWith slideOutHorizontally { it }
+            },
+            label = "calendarDetail",
+            modifier = Modifier.fillMaxSize()
+        ) { date ->
+            if (date == null) {
+                // --- Full-screen calendar view ---
+                CalendarView(
+                    sessionsByDate = sessionsByDate,
+                    climbsByDate = climbsByDate,
+                    dotClimbsByDate = dotClimbsByDate,
+                    injuriesByDate = injuriesByDate,
+                    onDaySelected = { day ->
+                        navigatingForward = true
+                        selectedDate = day
+                    }
+                )
+            } else {
+                // --- Full-screen day detail view ---
+                DayDetail(
+                    date = date,
+                    sessionLogs = sessionsByDate[date].orEmpty(),
+                    climbLogs = climbsByDate[date].orEmpty(),
+                    injuryLogs = injuriesByDate[date].orEmpty(),
+                    onDeleteLog = { viewModel.deleteLog(it) },
+                    onDeleteClimb = { viewModel.deleteClimb(it) },
+                    onDeleteInjury = { viewModel.deleteInjury(it) },
+                    onBack = goBack
+                )
+            }
         }
     }
 }
@@ -277,12 +297,6 @@ private fun DayDetail(
     var climbToDelete by remember { mutableStateOf<ClimbLog?>(null) }
     var injuryToDelete by remember { mutableStateOf<InjuryLog?>(null) }
 
-    // Swipe-right-to-go-back: track cumulative horizontal drag offset
-    var dragOffsetX by remember { mutableFloatStateOf(0f) }
-    val screenWidthPx = LocalConfiguration.current.screenWidthDp * LocalContext.current.resources.displayMetrics.density
-    // Threshold: 30% of screen width triggers navigation back
-    val swipeThreshold = screenWidthPx * 0.30f
-
     // Sort once here so the composable body stays clean
     val dayClimbs = remember(climbLogs) {
         climbLogs.sortedWith(compareByDescending<ClimbLog> { it.score }.thenByDescending { it.loggedAt })
@@ -345,28 +359,7 @@ private fun DayDetail(
         )
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            // Apply rubber-band translation; clamped to 0 so it only drags rightward
-            .graphicsLayer { translationX = dragOffsetX.coerceAtLeast(0f) }
-            .pointerInput(Unit) {
-                detectHorizontalDragGestures(
-                    onDragEnd = {
-                        if (dragOffsetX >= swipeThreshold) {
-                            // Threshold met — commit the back navigation
-                            onBack()
-                        }
-                        // Always reset offset so it snaps back if threshold not met
-                        dragOffsetX = 0f
-                    },
-                    onDragCancel = { dragOffsetX = 0f },
-                    onHorizontalDrag = { _, dragAmount ->
-                        dragOffsetX += dragAmount
-                    }
-                )
-            }
-    ) {
+    Column(modifier = Modifier.fillMaxSize()) {
         // Date title row at the top of the detail page
         Text(
             text = date.format(dateFormatter),
@@ -673,11 +666,11 @@ private fun Day(
         verticalArrangement = Arrangement.Bottom,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        val cappedSessions = sessionLogs.take(10)
+        val cappedSessions = sessionLogs.take(8)
         // Use dotClimbLogs for dots so REPEATs are hidden when filterRepeats is enabled.
         val cappedClimbs = dotClimbLogs
             .sortedWith(compareByDescending<ClimbLog> { it.score }.thenByDescending { it.loggedAt })
-            .take(10)
+            .take(8)
         if (cappedSessions.isNotEmpty() || cappedClimbs.isNotEmpty() || worstInjury != null) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(2.dp),

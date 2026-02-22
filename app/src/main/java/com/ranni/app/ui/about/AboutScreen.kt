@@ -134,6 +134,19 @@ fun AboutContent() {
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
 
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text("v1.2.3", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            // Release date
+            Text("23/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+            Text(
+                """
+                • Fix clipping bug in calendar
+                • Fix sliding animation jitter from daily view back to calendar
+                """.trimIndent(),
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }    
+
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("v1.2.2", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
             // Release date
             Text("23/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
