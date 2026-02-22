@@ -39,23 +39,21 @@
 
 ## Recent Releases
 
-**v1.4.0** — 21/02/2026
-- Added outdoor gyms with YDS and V grading
-- Bumped DB schema to v13 with one-time migration
+**v1.6.1** — 23/02/2026
+- Added a favourites feature to keep gyms expanded
+- Added done button to exercises
+- Animated Ranni logo
+- Rejigged the UI a bit more
 
-**v1.3.0** — 21/02/2026
-- Added injury tracking
-- Added reordering for gyms and exercises
-- Bumped DB schema to v12
+**v1.6.0** — 22/02/2026
+- Added Stats page
+- Added ability to filter repeat climbs from display
+- Repeated climbs are now displayed faded in Calendar
 
-**v1.2.1** — 21/02/2026
-- Added database migration to preserve data between versions
-- Redesigned About page
-- Added Easter egg
-
-**v1.2.0** — 21/02/2026
-- Fix alarm bug
-- Update icons
+**v1.5.0** — 22/02/2026
+- Big UI rehaul. Added Themes
+- Changed default theme from Android Dark to Ranni Dark
+- WARNING: DB will be deprecated by v1.7.0+. Users below 1.4.0+ will lose their data if upgrading to v1.7.0+
 
 ## Building
 

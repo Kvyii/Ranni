@@ -276,6 +276,7 @@ fun AboutContent() {
             Text("19/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
             Text(
                 """
+                • First release! My first android app.
                 • Climb tab — log routes at 9 Degrees by colour and grade
                 • Exercise sessions with set/rest timers and alarm sounds
                 • History calendar showing completed sessions by day
