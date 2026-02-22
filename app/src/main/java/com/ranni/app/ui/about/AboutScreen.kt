@@ -99,6 +99,19 @@ fun AboutContent() {
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
 
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text("v1.6.0", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            // Release date
+            Text("22/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+            Text(
+                """
+                • Added Stats page
+                • Added ability to filter repeat climbs from display
+                """.trimIndent(),
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }       
+
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("v1.5.0", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
             // Release date
             Text("22/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))

@@ -28,6 +28,20 @@ class ClimbViewModel(
     private val _orderedActiveGyms = MutableStateFlow(loadOrderedGyms())
     val orderedActiveGyms: StateFlow<List<Gym>> = _orderedActiveGyms.asStateFlow()
 
+    // Favourite gym for the Climb tab — null means no favourite is set
+    private val _favouriteGym = MutableStateFlow(gymOrderPrefs.getFavouriteGym())
+    val favouriteGym: StateFlow<String?> = _favouriteGym.asStateFlow()
+
+    /**
+     * Toggles the favourite gym: tapping the same gym a second time clears the favourite.
+     * Persists the result immediately to SharedPreferences.
+     */
+    fun setFavouriteGym(gymName: String) {
+        val newValue = if (_favouriteGym.value == gymName) null else gymName
+        _favouriteGym.value = newValue
+        gymOrderPrefs.setFavouriteGym(newValue)
+    }
+
     // Log a climb with the specified type — score should already have the multiplier applied
     fun logClimb(color: String, gymName: String, score: Int, climbType: ClimbType = ClimbType.NEW) {
         viewModelScope.launch { repo.logClimb(color, gymName, score, climbType) }
