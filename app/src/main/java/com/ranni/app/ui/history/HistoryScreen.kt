@@ -229,7 +229,7 @@ private fun CalendarTab(viewModel: HistoryViewModel) {
             }
         )
 
-        HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))
+        HorizontalDivider(modifier = Modifier.padding(top = 8.dp, bottom = 4.dp))
 
         Box(modifier = Modifier.weight(1f)) { selectedDate?.let { date ->
             val dayLogs = sessionsByDate[date].orEmpty()
