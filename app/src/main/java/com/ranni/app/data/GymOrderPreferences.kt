@@ -3,8 +3,8 @@ package com.ranni.app.data
 import android.content.Context
 
 /**
- * Contract for reading/writing the user-defined gym display order
- * and the last-selected Stats tab gym.
+ * Contract for reading/writing the user-defined gym display order,
+ * the last-selected Stats tab gym, and the starred favourite gym.
  */
 interface GymOrderPreferences {
     /** Returns the saved ordered list of active gym names, or empty list if never set. */
@@ -18,6 +18,12 @@ interface GymOrderPreferences {
 
     /** Persists the gym name selected in the Stats tab; null clears the saved value. */
     fun setLastStatsGym(gymName: String?)
+
+    /** Returns the starred favourite gym name for the Climb tab, or null if none is set. */
+    fun getFavouriteGym(): String?
+
+    /** Persists the favourite gym name; null clears the saved value. */
+    fun setFavouriteGym(gymName: String?)
 }
 
 /**
@@ -47,9 +53,19 @@ class SharedPrefsGymOrderPreferences(context: Context) : GymOrderPreferences {
         edit.apply()
     }
 
+    override fun getFavouriteGym(): String? = prefs.getString(KEY_FAVOURITE_GYM, null)
+
+    override fun setFavouriteGym(gymName: String?) {
+        val edit = prefs.edit()
+        if (gymName != null) edit.putString(KEY_FAVOURITE_GYM, gymName)
+        else edit.remove(KEY_FAVOURITE_GYM)
+        edit.apply()
+    }
+
     companion object {
         private const val PREFS_NAME = "gym_order_prefs"
         private const val KEY_GYM_ORDER = "gym_order"
         private const val KEY_STATS_GYM = "stats_gym"
+        private const val KEY_FAVOURITE_GYM = "favourite_gym"
     }
 }

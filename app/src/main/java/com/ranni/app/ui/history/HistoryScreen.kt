@@ -229,7 +229,7 @@ private fun CalendarTab(viewModel: HistoryViewModel) {
             }
         )
 
-        HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))
+        HorizontalDivider(modifier = Modifier.padding(top = 8.dp, bottom = 4.dp))
 
         Box(modifier = Modifier.weight(1f)) { selectedDate?.let { date ->
             val dayLogs = sessionsByDate[date].orEmpty()
@@ -771,7 +771,7 @@ private fun StatsTab(viewModel: HistoryViewModel) {
                             }
                         }
 
-                        // Current max card: dot + grade + route name + first-logged date
+                        // Sessions card: distinct days with at least one climb at this gym
                         Card(
                             colors = CardDefaults.cardColors(
                                 containerColor = MaterialTheme.colorScheme.surfaceContainerLow
@@ -780,28 +780,15 @@ private fun StatsTab(viewModel: HistoryViewModel) {
                         ) {
                             Column(
                                 modifier = Modifier.fillMaxWidth().padding(16.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                                horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                // Dot on the left, grade to the right — inline in a row
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    ClimbDot(
-                                        gymName = data.statsGymName,
-                                        routeName = data.maxRouteName,
-                                        size = 14.dp
-                                    )
-                                    Text(
-                                        text = data.maxGrade,
-                                        style = MaterialTheme.typography.headlineSmall,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                                // Label + date of when the max grade was first climbed in the period
                                 Text(
-                                    text = "Best Climb: ${data.maxFirstDate.format(statsDateFormatter)}",
+                                    text = data.totalSessions.toString(),
+                                    style = MaterialTheme.typography.headlineMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "Sessions",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -812,24 +799,11 @@ private fun StatsTab(viewModel: HistoryViewModel) {
 
                 // Section header for the histogram
                 item {
-                    // Header row: title on left, legend on right
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.Bottom
-                    ) {
-                        Text(
-                            text = "Grade Histogram",
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        // Legend: explains the count label format used in each bar row
-                        Text(
-                            text = "count (flash %)",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                        )
-                    }
+                    Text(
+                        text = "Grade Histogram",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
 
                 // Horizontal bar histogram — one row per grade, hardest at top
@@ -839,8 +813,119 @@ private fun StatsTab(viewModel: HistoryViewModel) {
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
+
+                // Legend below the histogram: mocked bar showing flash vs climb split
+                item {
+                    HistogramLegend()
+                }
             }
         }
+    }
+}
+
+/**
+ * A small legend row placed below the grade histogram.
+ *
+ * Renders a mocked horizontal bar (doubled width vs the grade label column) split
+ * 25% flash (hatched, labelled "Flash") / 75% climb (solid, labelled "Non Flash"),
+ * using [MaterialTheme.colorScheme.onSecondaryContainer] as the bar colour.
+ * "Legend:" prefix and "Total Count (Flash %)" label sit to the right.
+ */
+@Composable
+private fun HistogramLegend() {
+    val barColor   = MaterialTheme.colorScheme.onSecondaryContainer
+    // Background used to draw hatch lines that fake transparency on the flash segment
+    val bgColor    = MaterialTheme.colorScheme.background
+    val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+
+    // Fixed dimensions for the legend bar — doubled width vs the 56dp grade label column
+    val barHeightDp  = 14.dp
+    val barWidthDp   = 112.dp
+    val cornerRadius = 3.dp
+    val hatchSpacing = 7.dp
+    val hatchWidth   = 1.5.dp
+
+    Row(
+        verticalAlignment = Alignment.Bottom,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        modifier = Modifier.padding(top = 8.dp)
+    ) {
+        // "Legend:" prefix label — aligns to bar bottom via Alignment.Bottom on the Row
+        Text(
+            text  = "Legend:",
+            style = MaterialTheme.typography.labelSmall,
+            color = labelColor.copy(alpha = 0.7f)
+        )
+
+        // Bar with "Flash" / "Non Flash" labels above each segment
+        Column(horizontalAlignment = Alignment.Start) {
+            // Segment labels above the bar — smaller than labelSmall, proportional to the 25/75 split
+            Row(modifier = Modifier.width(barWidthDp)) {
+                // "Flash" label centred over the left 25%
+                Text(
+                    text      = "Flash",
+                    style     = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
+                    color     = labelColor.copy(alpha = 0.7f),
+                    modifier  = Modifier.weight(0.25f),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+                // "Non Flash" label centred over the right 75%
+                Text(
+                    text      = "Non Flash",
+                    style     = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
+                    color     = labelColor.copy(alpha = 0.7f),
+                    modifier  = Modifier.weight(0.75f),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+            }
+
+            // Mocked bar: left 25% flash (hatched), right 75% climb (solid)
+            Canvas(
+                modifier = Modifier
+                    .width(barWidthDp)
+                    .height(barHeightDp)
+            ) {
+                val totalWidth = size.width
+                val barH       = size.height
+                val cornerPx   = cornerRadius.toPx()
+                val dividerPx  = 2.dp.toPx()
+                val flashWidth = totalWidth * 0.25f - dividerPx / 2f
+                val newLeft    = totalWidth * 0.25f + dividerPx / 2f
+                val newWidth   = totalWidth - newLeft
+
+                // Flash segment (left 25%) — filled + hatched
+                drawRoundRect(
+                    color        = barColor.copy(alpha = 0.8f),
+                    topLeft      = Offset(0f, 0f),
+                    size         = Size(flashWidth.coerceAtLeast(0f), barH),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerPx)
+                )
+                drawHatch(
+                    left       = 0f,
+                    top        = 0f,
+                    right      = flashWidth.coerceAtLeast(0f),
+                    bottom     = barH,
+                    hatchColor = bgColor.copy(alpha = 1.0f),
+                    spacing    = hatchSpacing.toPx(),
+                    lineWidth  = hatchWidth.toPx()
+                )
+
+                // Climb segment (right 75%) — solid fill only
+                drawRoundRect(
+                    color        = barColor.copy(alpha = 0.8f),
+                    topLeft      = Offset(newLeft, 0f),
+                    size         = Size(newWidth.coerceAtLeast(0f), barH),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerPx)
+                )
+            }
+        }
+
+        // Label explaining the count format shown on each histogram bar row
+        Text(
+            text  = "Total Count (Flash %)",
+            style = MaterialTheme.typography.labelSmall,
+            color = labelColor.copy(alpha = 0.7f)
+        )
     }
 }
 

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Star twinkle: scale pulse with 0ms start offset -->
+<set xmlns:android="http://schemas.android.com/apk/res/android"
+    android:ordering="together">
+    <objectAnimator
+        android:propertyName="scaleX"
+        android:duration="800"
+        android:startOffset="0"
+        android:valueFrom="1"
+        android:valueTo="0.2"
+        android:valueType="floatType"
+        android:repeatCount="infinite"
+        android:repeatMode="reverse"
+        android:interpolator="@android:interpolator/accelerate_decelerate" />
+    <objectAnimator
+        android:propertyName="scaleY"
+        android:duration="800"
+        android:startOffset="0"
+        android:valueFrom="1"
+        android:valueTo="0.2"
+        android:valueType="floatType"
+        android:repeatCount="infinite"
+        android:repeatMode="reverse"
+        android:interpolator="@android:interpolator/accelerate_decelerate" />
+</set>

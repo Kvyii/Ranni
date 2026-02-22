@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Animated vector (transparent): stars twinkle + ponytail/leg sway -->
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/ranni_transp3_static">
+
+    <!-- Large purple star, top-right — pulses first -->
+    <target
+        android:name="star_top_right"
+        android:animation="@animator/star_twinkle_1" />
+
+    <!-- White star, bottom-left — 200ms delay -->
+    <target
+        android:name="star_bottom_left"
+        android:animation="@animator/star_twinkle_2" />
+
+    <!-- Small purple star, top-left — 400ms delay -->
+    <target
+        android:name="star_top_left"
+        android:animation="@animator/star_twinkle_3" />
+
+    <!-- White star, bottom-right — 600ms delay -->
+    <target
+        android:name="star_bottom_right"
+        android:animation="@animator/star_twinkle_4" />
+
+    <!-- Purple star, bottom-center — 800ms delay -->
+    <target
+        android:name="star_bottom_center"
+        android:animation="@animator/star_twinkle_5" />
+
+    <!-- Ponytail gentle sway -->
+    <target
+        android:name="ponytail"
+        android:animation="@animator/sway_ponytail" />
+
+    <!-- Back leg gentle sway -->
+    <target
+        android:name="back_leg"
+        android:animation="@animator/sway_leg" />
+
+</animated-vector>

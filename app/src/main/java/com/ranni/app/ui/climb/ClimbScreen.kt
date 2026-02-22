@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.foundation.Image
@@ -45,6 +46,17 @@ fun ClimbScreen(viewModel: ClimbViewModel) {
     var liarGym by remember { mutableStateOf<String?>(null) }       // Gym name for the liar route
     // Holds the injury severity pending confirmation (null = dialog hidden)
     var pendingInjurySeverity by remember { mutableStateOf<InjurySeverity?>(null) }
+
+    // Observe the starred favourite gym; null means no favourite is set
+    val favouriteGym by viewModel.favouriteGym.collectAsState()
+
+    // Auto-expand the favourite gym each time it changes (including on first composition).
+    // Only applies when no card is already open so manual expansions are not overridden.
+    LaunchedEffect(favouriteGym) {
+        if (expandedCard == null) {
+            expandedCard = favouriteGym
+        }
+    }
 
     // "Liar" dialog for V12 routes — dismissing proceeds to the log confirmation
     if (liarRoute != null) {
@@ -227,6 +239,7 @@ fun ClimbScreen(viewModel: ClimbViewModel) {
                         }
                 ) {
                     Column {
+                        val isFavourite = favouriteGym == gym.name
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -240,10 +253,29 @@ fun ClimbScreen(viewModel: ClimbViewModel) {
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(gym.name, style = MaterialTheme.typography.titleMedium)
-                            Icon(
-                                if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                                contentDescription = null
-                            )
+                            // Right-hand controls: star toggle then expand arrow
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                // Star icon — tapping toggles this gym as the favourite
+                                IconButton(
+                                    onClick = { viewModel.setFavouriteGym(gym.name) },
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Star,
+                                        contentDescription = if (isFavourite) "Remove favourite" else "Set as favourite",
+                                        // Primary colour when starred, invisible against card when not
+                                        tint = if (isFavourite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.background
+                                    )
+                                }
+                                // Expand / collapse arrow
+                                Icon(
+                                    if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                    contentDescription = null
+                                )
+                            }
                         }
 
                         AnimatedVisibility(visible = isExpanded) {

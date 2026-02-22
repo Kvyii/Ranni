@@ -42,6 +42,7 @@ data class GradeStats(
 /** Aggregated stats for the Stats tab, computed for a specific gym + time window. */
 data class StatsData(
     val totalClimbs: Int,
+    val totalSessions: Int,     // Distinct calendar days with at least one climb at this gym
     val statsGymName: String,   // Gym name — needed to resolve dot color/outline for the max card
     val maxGrade: String,       // Grade string of the highest-scored route climbed in window
     val maxRouteName: String,   // Route color name of the max grade (for the ClimbDot)
@@ -174,6 +175,12 @@ private fun computeStats(
         .maxByOrNull { it.score }
         ?: return null
 
+    // Count distinct calendar days that had at least one climb in the window
+    val totalSessions = windowClimbs
+        .map { Instant.ofEpochMilli(it.loggedAt).atZone(zone).toLocalDate() }
+        .toSet()
+        .size
+
     // Find the earliest date the max grade was logged within the period
     val maxFirstDate = windowClimbs
         .filter { it.color == maxRoute.name }
@@ -205,6 +212,7 @@ private fun computeStats(
 
     return StatsData(
         totalClimbs = windowClimbs.size,
+        totalSessions = totalSessions,
         statsGymName = gymName,
         maxGrade = routeGrade(gymName, maxRoute.name),
         maxRouteName = maxRoute.name,
