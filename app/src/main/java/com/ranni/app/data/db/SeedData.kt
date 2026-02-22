@@ -141,6 +141,20 @@ suspend fun seedDatabase(db: AppDatabase) {
     }
 }
 
+// TO REMOVE IN v1.7.0
+/**
+ * Renames outdoor gym entries in climb_logs from the old parenthesis-free format to the current
+ * format. Required because the gym names were corrected in v1.6.x:
+ *   "Outdoor V-Grade"   → "Outdoor (V-Grade)"
+ *   "Outdoor YDS Grade" → "Outdoor (YDS Grade)"
+ * Safe to call on every launch — the WHERE clause is a no-op once all rows are updated.
+ */
+suspend fun migrateOutdoorGymNames(db: AppDatabase) {
+    val dao = db.climbLogDao()
+    dao.renameGym(oldName = "Outdoor V-Grade",   newName = "Outdoor (V-Grade)")
+    dao.renameGym(oldName = "Outdoor YDS Grade", newName = "Outdoor (YDS Grade)")
+}
+
 /**
  * Clears all data from the database (climbs, sessions, exercises, metrics config).
  */

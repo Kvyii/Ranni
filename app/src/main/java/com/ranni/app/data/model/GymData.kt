@@ -12,7 +12,9 @@ data class RouteColor(
 data class Gym(
     val name: String,
     val routes: List<RouteColor>,
-    val comingSoon: Boolean = false
+    val comingSoon: Boolean = false,
+    // When true, dots and bars for this gym render as hollow outlines instead of filled shapes
+    val hollowDots: Boolean = false,
 )
 
 val gyms = listOf(
@@ -31,6 +33,7 @@ val gyms = listOf(
     ),
     Gym(
         name = "Custom",
+        hollowDots = true,
         routes = listOf(
             RouteColor("V0",  "V0",  Color(0xFFEDEDED),  100),
             RouteColor("V1",  "V1",  Color(0xFFEDEDED),  175),
@@ -49,6 +52,7 @@ val gyms = listOf(
     ),
     Gym(
         name = "Outdoor (V-Grade)",
+        hollowDots = true,
         routes = listOf(
             RouteColor("V0",  "V0",  Color(0xFF283673),  110),
             RouteColor("V1",  "V1",  Color(0xFF283673),  195),
@@ -67,6 +71,7 @@ val gyms = listOf(
     ),
     Gym(
         name = "Outdoor (YDS Grade)",
+        hollowDots = true,
         routes = listOf(
             RouteColor("5.9",   "5.9",   Color(0xFF67578c),  110),
             RouteColor("5.10c", "5.10c", Color(0xFF67578c),  195),
@@ -103,5 +108,6 @@ fun routeColor(gymName: String, routeName: String): Color =
 fun routeGrade(gymName: String, routeName: String): String =
     routeMap[gymName to routeName]?.grade ?: routeName
 
-// Gyms whose dots render as hollow/outline circles instead of filled dots.
-val outlineGyms: Set<String> = setOf("Custom", "Outdoor V-Grade", "Outdoor YDS Grade")
+// Returns true if dots/bars for this gym should render as hollow outlines.
+// Derived directly from the Gym.hollowDots flag — no separate string list to maintain.
+fun isOutlineGym(name: String): Boolean = gyms.find { it.name == name }?.hollowDots == true

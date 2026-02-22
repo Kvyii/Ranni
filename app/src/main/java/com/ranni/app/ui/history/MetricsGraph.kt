@@ -28,7 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ranni.app.R
 import com.ranni.app.data.model.InjurySeverity
-import com.ranni.app.data.model.outlineGyms
+import com.ranni.app.data.model.isOutlineGym
 import com.ranni.app.data.model.routeColor
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
@@ -232,7 +232,7 @@ fun MetricsGraph(
                         if (currentY - dotRadius < topPadding) return@forEach // don't overflow
                         // Resolve color using (gymName, routeName) — unambiguous across all gyms
                         val dotColor = routeColor(gymName, colorName)
-                        if (gymName in outlineGyms) {
+                        if (isOutlineGym(gymName)) {
                             // Hollow ring — stroke uses the route's own color
                             drawCircle(
                                 color = dotColor,

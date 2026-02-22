@@ -119,6 +119,12 @@ class SessionViewModel(
         alarmPlayer.stopAll()
     }
 
+    /** Immediately log the exercise as done without going through any sets, then signal completion. */
+    fun justLog() {
+        val ex = exercise ?: return
+        logAndComplete(ex.name)
+    }
+
     private fun logAndComplete(name: String) {
         viewModelScope.launch {
             sessionRepo.logSession(name)

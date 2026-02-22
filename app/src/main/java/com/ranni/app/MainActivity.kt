@@ -42,6 +42,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.ranni.app.data.db.AppDatabase
 import com.ranni.app.data.db.backfillLegacyGymNames
+import com.ranni.app.data.db.migrateOutdoorGymNames // TO REMOVE IN v1.7.0
 import com.ranni.app.data.repository.ClimbRepository
 import com.ranni.app.data.repository.ExerciseRepository
 import com.ranni.app.data.repository.InjuryRepository
@@ -117,6 +118,7 @@ fun MainScaffold() {
                     // Backfill gymName for rows migrated from schema v12 (gymName = '').
                     // No-op on subsequent launches once all rows are populated.
                     backfillLegacyGymNames(instance)
+                    migrateOutdoorGymNames(instance) // TO REMOVE IN v1.7.0
                     instance
                 }.await()
                 screenState = ScreenState.Climb

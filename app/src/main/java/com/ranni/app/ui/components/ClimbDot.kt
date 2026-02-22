@@ -11,13 +11,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.ranni.app.data.model.outlineGyms
+import com.ranni.app.data.model.isOutlineGym
 import com.ranni.app.data.model.routeColor
 
 /**
  * A colored circle representing a climb route.
  *
- * Gyms in [outlineGyms] render as a hollow ring using the route's own color.
+ * Gyms where [isOutlineGym] returns true render as a hollow ring using the route's own color.
  * Other gyms render as a filled circle.
  *
  * @param gymName        Gym name (e.g. "9 Degrees", "Custom") — required to disambiguate routes
@@ -39,7 +39,7 @@ fun ClimbDot(
 ) {
     // Resolve color using the (gymName, routeName) pair — unambiguous even when names collide
     val color = routeColor(gymName, routeName)
-    val isOutline = gymName in outlineGyms
+    val isOutline = isOutlineGym(gymName)
 
     Box(
         modifier = Modifier
