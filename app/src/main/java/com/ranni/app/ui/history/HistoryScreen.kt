@@ -310,6 +310,8 @@ private fun CalendarTab(viewModel: HistoryViewModel) {
                             val time = Instant.ofEpochMilli(climb.loggedAt)
                                 .atZone(ZoneId.systemDefault())
                                 .format(timeFormatter)
+                            // Repeat climbs are dimmed to visually distinguish them from new/flash sends
+                            val alpha = if (climb.climbType == ClimbType.REPEAT.name) 0.4f else 1f
                             Card(
                                 colors = CardDefaults.cardColors(
                                     containerColor = MaterialTheme.colorScheme.surfaceContainerLow
@@ -317,6 +319,7 @@ private fun CalendarTab(viewModel: HistoryViewModel) {
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 16.dp)
+                                    .alpha(alpha)
                                     .clickable { climbToDelete = climb }
                             ) {
                                 Row(
