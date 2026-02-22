@@ -39,6 +39,12 @@ class MetricsViewModel(private val repo: MetricsRepository) : ViewModel() {
         viewModelScope.launch { repo.updateConfig(c.copy(showExerciseDots = show)) }
     }
 
+    // Persists the filterRepeats preference; when true, REPEAT climbs are hidden from dots/stats.
+    fun updateFilterRepeats(filter: Boolean) {
+        val c = config.value
+        viewModelScope.launch { repo.updateConfig(c.copy(filterRepeats = filter)) }
+    }
+
     // Persists the selected UI theme name so it survives app restarts.
     fun updateTheme(theme: AppTheme) {
         val c = config.value

@@ -96,7 +96,8 @@ class HistoryViewModel(
     /** Weekly activity dots: combines climbs + sessions + injuries, grouped by Mon-Sun weeks. */
     val weeklyActivity: StateFlow<List<WeekActivity>> =
         combine(climbLogs, logs, injuryLogs, metricsConfig) { climbs, sessions, injuries, config ->
-            computeWeeklyActivity(climbs, sessions, injuries, config.topK, config.timelineMonths)
+            // Pass filterRepeats so REPEAT climbs can be excluded from dot rendering when enabled.
+            computeWeeklyActivity(climbs, sessions, injuries, config.topK, config.timelineMonths, config.filterRepeats)
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // --- Stats tab state ---
@@ -110,8 +111,9 @@ class HistoryViewModel(
     val statsPeriodMonths: MutableStateFlow<Int?> = MutableStateFlow(2)
 
     /** Computed stats for the Stats tab; null when no gym is selected or no data. */
-    val statsData: StateFlow<StatsData?> = combine(climbLogs, statsGym, statsPeriodMonths) { climbs, gym, months ->
-        if (gym == null) null else computeStats(climbs, gym, months)
+    // metricsConfig is included so stats recompute reactively when filterRepeats is toggled.
+    val statsData: StateFlow<StatsData?> = combine(climbLogs, statsGym, statsPeriodMonths, metricsConfig) { climbs, gym, months, config ->
+        if (gym == null) null else computeStats(climbs, gym, months, config.filterRepeats)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     /** Updates the selected Stats gym and persists the choice. */
@@ -146,7 +148,8 @@ class HistoryViewModel(
 private fun computeStats(
     climbs: List<ClimbLog>,
     gymName: String,
-    periodMonths: Int?  // null = Lifetime
+    periodMonths: Int?,          // null = Lifetime
+    filterRepeats: Boolean = false  // Excludes REPEAT climbs from all aggregations when true
 ): StatsData? {
     val gym = gyms.find { it.name == gymName } ?: return null
     val zone = ZoneId.systemDefault()
@@ -157,7 +160,9 @@ private fun computeStats(
     } else {
         0L  // Lifetime: no cutoff
     }
+    // Optionally strip REPEAT climbs; all downstream aggregations (total, max, histogram) use this list.
     val windowClimbs = climbs.filter { it.gymName == gymName && it.loggedAt > cutoff }
+        .let { if (filterRepeats) it.filter { c -> c.climbType != ClimbType.REPEAT.name } else it }
 
     if (windowClimbs.isEmpty()) return null
 
@@ -284,7 +289,8 @@ private fun computeWeeklyActivity(
     sessions: List<SessionLog>,
     injuries: List<InjuryLog>,
     topK: Int,
-    timelineMonths: Int
+    timelineMonths: Int,
+    filterRepeats: Boolean = false  // Excludes REPEAT climbs from dot rendering when true
 ): List<WeekActivity> {
     val zone = ZoneId.systemDefault()
     val today = LocalDate.now()
@@ -293,8 +299,11 @@ private fun computeWeeklyActivity(
     // Snap start to the Monday on or before startDate
     val firstMonday = startDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
 
+    // Filter REPEAT climbs for dot rendering only; sessions and injuries are unaffected.
+    val dotClimbs = if (filterRepeats) climbs.filter { it.climbType != ClimbType.REPEAT.name } else climbs
+
     // Group climbs by their week's Monday
-    val climbsByWeek = climbs.mapNotNull { climb ->
+    val climbsByWeek = dotClimbs.mapNotNull { climb ->
         val date = Instant.ofEpochMilli(climb.loggedAt).atZone(zone).toLocalDate()
         if (date.isBefore(firstMonday) || date.isAfter(today)) return@mapNotNull null
         val weekMon = date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))

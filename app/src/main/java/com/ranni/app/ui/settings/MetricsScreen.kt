@@ -146,6 +146,19 @@ fun MetricsScreen(viewModel: MetricsViewModel) {
                     onCheckedChange = { viewModel.updateShowExerciseDots(it) }
                 )
             }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Hides REPEAT climbs from dots and stats; detail/list views still show them.
+                Text("Filter repeat climbs", style = MaterialTheme.typography.bodyMedium)
+                Switch(
+                    checked = config.filterRepeats,
+                    onCheckedChange = { viewModel.updateFilterRepeats(it) }
+                )
+            }
         }
     }
 }

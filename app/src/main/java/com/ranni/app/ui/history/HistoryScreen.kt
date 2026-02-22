@@ -94,6 +94,7 @@ private fun CalendarTab(viewModel: HistoryViewModel) {
     val logs by viewModel.logs.collectAsState()
     val climbLogs by viewModel.climbLogs.collectAsState()
     val injuryLogs by viewModel.injuryLogs.collectAsState()
+    val config by viewModel.metricsConfig.collectAsState()
     var selectedDate by remember { mutableStateOf<LocalDate?>(LocalDate.now()) }
     var logToDelete by remember { mutableStateOf<SessionLog?>(null) }
     var climbToDelete by remember { mutableStateOf<ClimbLog?>(null) }
@@ -108,8 +109,25 @@ private fun CalendarTab(viewModel: HistoryViewModel) {
         }
     }
 
+    // Full climb list grouped by date — used for the day detail list (always shows REPEATs).
     val climbsByDate: Map<LocalDate, List<ClimbLog>> = remember(climbLogs) {
         climbLogs.groupBy { log ->
+            LocalDate.ofInstant(
+                java.time.Instant.ofEpochMilli(log.loggedAt),
+                ZoneId.systemDefault()
+            )
+        }
+    }
+
+    // Filtered climb list grouped by date — REPEATs excluded when filterRepeats is enabled.
+    // Used only for dot rendering in the Day() composable.
+    val dotClimbsByDate: Map<LocalDate, List<ClimbLog>> = remember(climbLogs, config.filterRepeats) {
+        val filtered = if (config.filterRepeats) {
+            climbLogs.filter { it.climbType != ClimbType.REPEAT.name }
+        } else {
+            climbLogs
+        }
+        filtered.groupBy { log ->
             LocalDate.ofInstant(
                 java.time.Instant.ofEpochMilli(log.loggedAt),
                 ZoneId.systemDefault()
@@ -198,7 +216,8 @@ private fun CalendarTab(viewModel: HistoryViewModel) {
                 Day(
                     day = day,
                     sessionLogs = sessionsByDate[day.date].orEmpty(),
-                    climbLogs = climbsByDate[day.date].orEmpty(),
+                    climbLogs = climbsByDate[day.date].orEmpty(),         // unfiltered — for detail list
+                    dotClimbLogs = dotClimbsByDate[day.date].orEmpty(),   // filtered — for dots only
                     injuryLogs = injuriesByDate[day.date].orEmpty(),
                     isSelected = day.date == selectedDate
                 ) {
@@ -483,7 +502,8 @@ private fun ProgressTab(viewModel: HistoryViewModel) {
 private fun Day(
     day: CalendarDay,
     sessionLogs: List<SessionLog>,
-    climbLogs: List<ClimbLog>,
+    climbLogs: List<ClimbLog>,       // Full list — passed through for any downstream detail use
+    dotClimbLogs: List<ClimbLog>,    // Filtered list — REPEATs excluded when filterRepeats is on
     injuryLogs: List<InjuryLog>,
     isSelected: Boolean,
     onClick: () -> Unit
@@ -508,7 +528,8 @@ private fun Day(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         val cappedSessions = sessionLogs.take(4)
-        val cappedClimbs = climbLogs
+        // Use dotClimbLogs for dots so REPEATs are hidden when filterRepeats is enabled.
+        val cappedClimbs = dotClimbLogs
             .sortedWith(compareByDescending<ClimbLog> { it.score }.thenByDescending { it.loggedAt })
             .take(4)
         if (cappedSessions.isNotEmpty() || cappedClimbs.isNotEmpty() || worstInjury != null) {
@@ -953,42 +974,29 @@ private fun GradeHistogram(
                 val barLeft = labelWidthPx
 
                 if (isOutline) {
-                    val hasFlash = flashBarWidth > 0f
-                    val hasNew = flashBarWidth < totalBarWidth
-                    val outlineStroke = Stroke(width = 1.5.dp.toPx())
-
-                    // FLASH segment — outline rect, left side
-                    if (hasFlash) {
-                        val segWidth = if (hasNew) flashBarWidth - dividerWidthPx / 2f else totalBarWidth
-                        drawRoundRect(
-                            color = barColor,
-                            topLeft = Offset(barLeft, barTop),
-                            size = Size(segWidth.coerceAtLeast(0f), barHeight),
-                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerRadiusPx),
-                            style = outlineStroke
-                        )
-                        // Hatch with route colour inside the hollow flash segment
+                    // Outline-only rounded bar for hollow-dot gyms
+                    drawRoundRect(
+                        color = barColor,
+                        topLeft = Offset(barLeft, barTop),
+                        size = Size(totalBarWidth, barHeight),
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerRadiusPx),
+                        style = Stroke(width = 1.5.dp.toPx())
+                    )
+                    // If any flashes exist, overlay hatch in the route colour over the bar interior
+                    // (hollow bar has no fill, so hatch lines are the visual indicator)
+                    if (row.flashClimbs > 0) {
+                        val flashSegWidth = if (flashBarWidth < totalBarWidth)
+                            flashBarWidth - dividerWidthPx / 2f
+                        else
+                            totalBarWidth
                         drawHatch(
                             left       = barLeft,
                             top        = barTop,
-                            right      = barLeft + segWidth.coerceAtLeast(0f),
+                            right      = barLeft + flashSegWidth.coerceAtLeast(0f),
                             bottom     = barBottom,
                             hatchColor = barColor.copy(alpha = 0.7f),
                             spacing    = hatchSpacingPx,
                             lineWidth  = hatchLineWidthPx
-                        )
-                    }
-
-                    // NEW segment — outline rect, right side
-                    if (hasNew) {
-                        val newLeft = if (hasFlash) barLeft + flashBarWidth + dividerWidthPx / 2f else barLeft
-                        val newWidth = totalBarWidth - (newLeft - barLeft)
-                        drawRoundRect(
-                            color = barColor,
-                            topLeft = Offset(newLeft, barTop),
-                            size = Size(newWidth.coerceAtLeast(0f), barHeight),
-                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerRadiusPx),
-                            style = outlineStroke
                         )
                     }
                 } else {

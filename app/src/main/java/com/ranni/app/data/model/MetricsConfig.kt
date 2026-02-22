@@ -17,5 +17,9 @@ data class MetricsConfig(
     // Resolved to AppTheme via AppTheme.valueOf(uiTheme) at the call site.
     // @ColumnInfo defaultValue is required by Room's AutoMigration to generate the ALTER TABLE SQL.
     @ColumnInfo(defaultValue = "RANNI_DARK")
-    val uiTheme: String = AppTheme.RANNI_DARK.name
+    val uiTheme: String = AppTheme.RANNI_DARK.name,
+    // When true, REPEAT climbs are excluded from dots, graph, and stats; detail/list views are unaffected.
+    // @ColumnInfo defaultValue "0" (false) is required for AutoMigration to generate ALTER TABLE SQL.
+    @ColumnInfo(defaultValue = "0")
+    val filterRepeats: Boolean = false
 )

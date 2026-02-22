@@ -18,15 +18,16 @@ import com.ranni.app.data.model.SessionLog
 // For renames or deletes, supply a spec class — see Room docs.
 @Database(
     entities = [Exercise::class, SessionLog::class, ClimbLog::class, MetricsConfig::class, InjuryLog::class],
-    version = 15,
+    version = 16,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 9, to = 10),
         AutoMigration(from = 10, to = 11),  // Adds injury_logs table
         AutoMigration(from = 11, to = 12),  // Adds orderIndex column to exercises
         AutoMigration(from = 12, to = 13),  // Adds gymName column to climb_logs
-        AutoMigration(from = 13, to = 14)   // Adds uiTheme column to metrics_config
+        AutoMigration(from = 13, to = 14),  // Adds uiTheme column to metrics_config
         // 14→15: table recreate, handled by MIGRATION_14_15 below (default value rename fix)
+        AutoMigration(from = 15, to = 16)   // Adds filterRepeats column to metrics_config
     ]
 )
 abstract class AppDatabase : RoomDatabase() {
