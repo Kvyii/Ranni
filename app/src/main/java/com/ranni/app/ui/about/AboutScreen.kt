@@ -136,22 +136,7 @@ fun AboutContent() {
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
 
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text("v1.6.1", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-            // Release date
-            Text("23/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
-            Text(
-                """
-                • Added a favourites feature to keep gyms expanded
-                • Added done button to exercises
-                • Animated Ranni logo
-                • Rejigged the UI a bit more                
-                """.trimIndent(),
-                style = MaterialTheme.typography.bodyMedium
-            )
-        }    
-
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text("v1.6.0", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            Text("v1.2.0", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
             // Release date
             Text("22/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
             Text(
@@ -159,89 +144,45 @@ fun AboutContent() {
                 • Added Stats page
                 • Added ability to filter repeat climbs from display
                 • Repeated climbs are now displayed faded in Calendar
+                • Added a favourites feature to keep gyms expanded
+                • Added done button to exercises
+                • Animated Ranni logo
+                • Rejigged the UI a bit more     
                 """.trimIndent(),
                 style = MaterialTheme.typography.bodyMedium
             )
         }       
 
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text("v1.5.0", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-            // Release date
-            Text("22/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
-            Text(
-                """
-                • Big UI rehaul. Added Themes
-                • Changed default theme from Android Dark to Ranni Dark
-                • WARNING: DB will be deprecated by v1.7.0+. Users below 1.4.0+ will lose their data if upgrading to v1.7.0+
-                """.trimIndent(),
-                style = MaterialTheme.typography.bodyMedium
-            )
-        }        
-
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text("v1.4.0", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            Text("v1.1.0", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
             // Release date
             Text("21/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
             Text(
                 """
+                • Big UI rehaul. Added Themes
+                • Changed default theme from Android Dark to Ranni Dark
                 • Added outdoor gyms with YDS and V grading
                 • Bumped DB schema to v13 with one time migration. All older DBs will need to be updated to work with 1.4.0+
+                • WARNING: DB will be deprecated by v1.1.0+. Users below 1.0.3+ will lose their data if upgrading to v1.7.0+
                 """.trimIndent(),
                 style = MaterialTheme.typography.bodyMedium
             )
         }            
 
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text("v1.3.0", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-            // Release date
-            Text("21/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
-            Text(
-                """
-                • Added injury tracking
-                • Added reordering for gyms and exercises
-                • Bumped DB schema to v12
-                """.trimIndent(),
-                style = MaterialTheme.typography.bodyMedium
-            )
-        }
-
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text("v1.2.1", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-            // Release date
-            Text("21/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
-            Text(
-                """
-                • Added database migration to preserve data between versions
-                • Redesigned 'About' page
-                • Added EasterEgg
-                """.trimIndent(),
-                style = MaterialTheme.typography.bodyMedium
-            )
-        }
-
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text("v1.2.0", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            Text("v1.0.3", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
             // Release date
             Text("21/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
             Text(
                 """
                 • Fix alarm bug
                 • Update icons
-                """.trimIndent(),
-                style = MaterialTheme.typography.bodyMedium
-            )
-        }
-
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text("v1.1.0", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-            // Release date
-            Text("20/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
-            Text(
-                """
-                • Added multipliers for flash and repeat attempts
-                • Updated visuals for custom category
-                • Fixed text indentations for scores
-                • New logo
+                • Added database migration to preserve data between versions
+                • Redesigned 'About' page
+                • Added EasterEgg
+                • Added injury tracking
+                • Added reordering for gyms and exercises
+                • Bumped DB schema to v12
                 """.trimIndent(),
                 style = MaterialTheme.typography.bodyMedium
             )
@@ -255,6 +196,10 @@ fun AboutContent() {
                 """
                 • More UI fixes.
                 • Gym dots separation.
+                • Added multipliers for flash and repeat attempts
+                • Updated visuals for custom category
+                • Fixed text indentations for scores
+                • Added a new logo for the app
                 """.trimIndent(),
                 style = MaterialTheme.typography.bodyMedium
             )
