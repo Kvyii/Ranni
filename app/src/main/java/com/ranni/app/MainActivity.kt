@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -223,10 +224,15 @@ fun MainContent(
                     modifier = Modifier
                         .fillMaxWidth()
                         .statusBarsPadding()
-                        .padding(horizontal = 4.dp),
+                        // Reduced horizontal padding to bring gear closer to screen edges
+                        .padding(horizontal = 4.dp, vertical = 0.dp),
                     horizontalArrangement = Arrangement.End
                 ) {
-                    IconButton(onClick = { onScreenStateChange(ScreenState.About) }) {
+                    // Constrain the IconButton to 32dp to reduce the gap below the gear icon
+                    IconButton(
+                        onClick = { onScreenStateChange(ScreenState.About) },
+                        modifier = Modifier.size(32.dp)
+                    ) {
                         Icon(Icons.Default.Settings, contentDescription = "About", modifier = Modifier.size(20.dp))
                     }
                 }
@@ -271,7 +277,8 @@ fun MainContent(
         },
         bottomBar = {
             if (isTopLevel) {
-                NavigationBar {
+                // Slightly reduced from default (80dp bar + insets); keeps gesture bar padding
+                NavigationBar(modifier = Modifier.height(100.dp)) {
                     NavigationBarItem(
                         selected = selectedTab == 0,
                         onClick = { selectedTab = 0; onScreenStateChange(ScreenState.Climb) },

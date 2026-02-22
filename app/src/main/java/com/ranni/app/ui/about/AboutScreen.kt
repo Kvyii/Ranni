@@ -144,6 +144,7 @@ fun AboutContent() {
                 • Added a favourites feature to keep gyms expanded
                 • Added done button to exercises
                 • Animated Ranni logo
+                • Rejigged the UI a bit more                
                 """.trimIndent(),
                 style = MaterialTheme.typography.bodyMedium
             )

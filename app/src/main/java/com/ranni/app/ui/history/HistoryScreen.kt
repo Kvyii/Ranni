@@ -771,7 +771,7 @@ private fun StatsTab(viewModel: HistoryViewModel) {
                             }
                         }
 
-                        // Current max card: dot + grade + route name + first-logged date
+                        // Sessions card: distinct days with at least one climb at this gym
                         Card(
                             colors = CardDefaults.cardColors(
                                 containerColor = MaterialTheme.colorScheme.surfaceContainerLow
@@ -780,28 +780,15 @@ private fun StatsTab(viewModel: HistoryViewModel) {
                         ) {
                             Column(
                                 modifier = Modifier.fillMaxWidth().padding(16.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                                horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                // Dot on the left, grade to the right — inline in a row
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    ClimbDot(
-                                        gymName = data.statsGymName,
-                                        routeName = data.maxRouteName,
-                                        size = 14.dp
-                                    )
-                                    Text(
-                                        text = data.maxGrade,
-                                        style = MaterialTheme.typography.headlineSmall,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                                // Label + date of when the max grade was first climbed in the period
                                 Text(
-                                    text = "Best Climb: ${data.maxFirstDate.format(statsDateFormatter)}",
+                                    text = data.totalSessions.toString(),
+                                    style = MaterialTheme.typography.headlineMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "Sessions",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
