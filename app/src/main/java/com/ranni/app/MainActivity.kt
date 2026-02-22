@@ -65,7 +65,7 @@ import com.ranni.app.ui.settings.DeveloperScreen
 import com.ranni.app.ui.settings.MetricsViewModel
 import com.ranni.app.ui.settings.SoundsScreen
 import com.ranni.app.data.AlarmPreferences
-import com.ranni.app.data.GymOrderPreferences
+import com.ranni.app.data.SharedPrefsGymOrderPreferences
 import com.ranni.app.ui.settings.ThemeScreen
 import com.ranni.app.ui.theme.AppTheme
 import com.ranni.app.ui.theme.RanniTheme
@@ -153,7 +153,7 @@ fun MainContent(
     val climbRepo = remember { ClimbRepository(db.climbLogDao()) }
     val injuryRepo = remember { InjuryRepository(db.injuryLogDao()) }
     val alarmPrefs = remember { AlarmPreferences(context) }
-    val gymOrderPrefs = remember { GymOrderPreferences(context) }
+    val gymOrderPrefs = remember { SharedPrefsGymOrderPreferences(context) }
 
     // Track the display name of the custom rest alarm (null = default)
     var customRestAlarmName by remember { mutableStateOf(getAlarmDisplayName(context, alarmPrefs)) }
@@ -340,7 +340,7 @@ fun MainContent(
                     ClimbScreen(vm)
                 }
                 is ScreenState.History -> {
-                    val vm = remember { HistoryViewModel(sessionRepo, climbRepo, metricsRepo, injuryRepo, context) }
+                    val vm = remember { HistoryViewModel(sessionRepo, climbRepo, metricsRepo, injuryRepo, SharedPrefsGymOrderPreferences(context)) }
                     HistoryScreen(vm)
                 }
                 is ScreenState.About -> {

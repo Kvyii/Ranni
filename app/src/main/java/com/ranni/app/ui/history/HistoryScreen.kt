@@ -32,13 +32,15 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.text.TextStyle as TextStyleUI
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.sp
 import com.ranni.app.R
-import com.ranni.app.data.GymOrderPreferences
+import com.ranni.app.data.SharedPrefsGymOrderPreferences
 import com.ranni.app.data.model.ClimbLog
 import com.ranni.app.data.model.ClimbType
 import com.ranni.app.data.model.InjuryLog
@@ -593,7 +595,7 @@ private val statsPeriodOptions: List<Pair<Int?, String>> = listOf(
 @Composable
 private fun StatsTab(viewModel: HistoryViewModel) {
     val context = LocalContext.current
-    val gymPrefs = remember { GymOrderPreferences(context) }
+    val gymPrefs = remember { SharedPrefsGymOrderPreferences(context) }
 
     // Build the ordered list of active gyms using the user's saved drag order.
     // Falls back to the global gyms list order if no saved order exists.
@@ -819,6 +821,49 @@ private fun StatsTab(viewModel: HistoryViewModel) {
 }
 
 /**
+ * Draws diagonal (45°) hatch lines clipped to the given rectangle.
+ *
+ * Used to indicate flash climbs on the histogram bars. The [hatchColor] should be
+ * the surface background colour (filled bars) or the route colour (outline bars)
+ * to create a "fake transparency" effect over the solid fill beneath.
+ *
+ * @param left       Left edge of the clipping rect in px
+ * @param top        Top edge of the clipping rect in px
+ * @param right      Right edge of the clipping rect in px
+ * @param bottom     Bottom edge of the clipping rect in px
+ * @param hatchColor Colour of each diagonal line
+ * @param spacing    Distance between line start points in px
+ * @param lineWidth  Stroke width of each line in px
+ */
+private fun DrawScope.drawHatch(
+    left: Float,
+    top: Float,
+    right: Float,
+    bottom: Float,
+    hatchColor: Color,
+    spacing: Float,
+    lineWidth: Float
+) {
+    val height = bottom - top
+    val width  = right - left
+    // Clip to the segment rect so lines don't bleed into adjacent segments
+    clipRect(left = left, top = top, right = right, bottom = bottom) {
+        // Walk start points along the top + left edges combined, shifted back by height
+        // so lines entering from the top-left corner are included
+        var offset = -height
+        while (offset < width) {
+            drawLine(
+                color       = hatchColor,
+                start       = Offset(left + offset, top),
+                end         = Offset(left + offset + height, bottom),
+                strokeWidth = lineWidth
+            )
+            offset += spacing
+        }
+    }
+}
+
+/**
  * Horizontal bar histogram showing NEW and FLASH climb counts per grade.
  *
  * Each bar is a single solid fill (route color at reduced alpha).
@@ -839,6 +884,8 @@ private fun GradeHistogram(
     val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
     val axisColor = MaterialTheme.colorScheme.outlineVariant
     val onSurface = MaterialTheme.colorScheme.onSurface
+    // Background colour used as hatch line colour on filled bars to fake transparency
+    val bgColor = MaterialTheme.colorScheme.background
 
     // Per-row height and fixed layout constants (converted to pixels inside the Canvas)
     val rowHeightDp = 44.dp
@@ -864,6 +911,10 @@ private fun GradeHistogram(
         val dividerWidthPx = dividerWidthDp.toPx()
         val cornerRadiusPx = cornerRadiusDp.toPx()
         val countReservePx = countReserveDp.toPx()
+
+        // Hatch line constants for flash segment indicator
+        val hatchSpacingPx  = 7.dp.toPx()    // medium density — gap between diagonal lines
+        val hatchLineWidthPx = 1.5.dp.toPx() // stroke width of each hatch line
 
         // Available plot area — right side reserved for the count label
         val plotWidth = size.width - labelWidthPx - countReservePx
@@ -910,6 +961,23 @@ private fun GradeHistogram(
                         cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerRadiusPx),
                         style = Stroke(width = 1.5.dp.toPx())
                     )
+                    // If any flashes exist, overlay hatch in the route colour over the bar interior
+                    // (hollow bar has no fill, so hatch lines are the visual indicator)
+                    if (row.flashClimbs > 0) {
+                        val flashSegWidth = if (flashBarWidth < totalBarWidth)
+                            flashBarWidth - dividerWidthPx / 2f
+                        else
+                            totalBarWidth
+                        drawHatch(
+                            left       = barLeft,
+                            top        = barTop,
+                            right      = barLeft + flashSegWidth.coerceAtLeast(0f),
+                            bottom     = barBottom,
+                            hatchColor = barColor.copy(alpha = 0.7f),
+                            spacing    = hatchSpacingPx,
+                            lineWidth  = hatchLineWidthPx
+                        )
+                    }
                 } else {
                     val hasFlash = flashBarWidth > 0f
                     val hasNew = flashBarWidth < totalBarWidth
@@ -922,6 +990,16 @@ private fun GradeHistogram(
                             topLeft = Offset(barLeft, barTop),
                             size = Size(segWidth.coerceAtLeast(0f), barHeight),
                             cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerRadiusPx)
+                        )
+                        // Hatch at full opacity so lines cut clearly through the semi-transparent bar
+                        drawHatch(
+                            left       = barLeft,
+                            top        = barTop,
+                            right      = barLeft + segWidth.coerceAtLeast(0f),
+                            bottom     = barBottom,
+                            hatchColor = bgColor.copy(alpha = 1.0f),
+                            spacing    = hatchSpacingPx,
+                            lineWidth  = hatchLineWidthPx
                         )
                     }
 

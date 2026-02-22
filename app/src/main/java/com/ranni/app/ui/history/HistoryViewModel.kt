@@ -1,6 +1,5 @@
 package com.ranni.app.ui.history
 
-import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ranni.app.data.GymOrderPreferences
@@ -64,11 +63,8 @@ class HistoryViewModel(
     private val climbRepo: ClimbRepository,
     private val metricsRepo: MetricsRepository,
     private val injuryRepo: InjuryRepository,
-    context: Context
+    private val gymOrderPrefs: GymOrderPreferences
 ) : ViewModel() {
-
-    // SharedPreferences for persisting the last-selected Stats tab gym across sessions
-    private val gymOrderPrefs = GymOrderPreferences(context)
 
     val logs: StateFlow<List<SessionLog>> = sessionRepo.getAllLogs()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
