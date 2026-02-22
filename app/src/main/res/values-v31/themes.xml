@@ -3,7 +3,7 @@
     <!-- Android 12+ uses the compat splash screen library; no extra overrides needed -->
     <style name="Theme.Ranni" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">#191C2D</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/ranni_transp3_animated</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ranni_splash_animated</item>
         <item name="windowSplashScreenAnimationDuration">2400</item>
         <item name="postSplashScreenTheme">@style/Theme.Ranni.Main</item>
     </style>

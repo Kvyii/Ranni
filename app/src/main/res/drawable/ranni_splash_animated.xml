@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Splash screen animated vector — uses original 500x500 viewport, unmodified -->
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/ranni_splash_static">
+
+    <target
+        android:name="star_top_right"
+        android:animation="@animator/star_twinkle_1" />
+
+    <target
+        android:name="star_bottom_left"
+        android:animation="@animator/star_twinkle_2" />
+
+    <target
+        android:name="star_top_left"
+        android:animation="@animator/star_twinkle_3" />
+
+    <target
+        android:name="star_bottom_right"
+        android:animation="@animator/star_twinkle_4" />
+
+    <target
+        android:name="star_bottom_center"
+        android:animation="@animator/star_twinkle_5" />
+
+    <target
+        android:name="ponytail"
+        android:animation="@animator/sway_ponytail" />
+
+    <target
+        android:name="back_leg"
+        android:animation="@animator/sway_leg" />
+
+</animated-vector>

@@ -223,17 +223,13 @@ fun MainContent(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .statusBarsPadding()
-                        // Reduced horizontal padding to bring gear closer to screen edges
-                        .padding(horizontal = 4.dp, vertical = 0.dp),
+                        .statusBarsPadding(),
                     horizontalArrangement = Arrangement.End
                 ) {
-                    // Constrain the IconButton to 32dp to reduce the gap below the gear icon
                     IconButton(
-                        onClick = { onScreenStateChange(ScreenState.About) },
-                        modifier = Modifier.size(32.dp)
+                        onClick = { onScreenStateChange(ScreenState.About) }
                     ) {
-                        Icon(Icons.Default.Settings, contentDescription = "About", modifier = Modifier.size(20.dp))
+                        Icon(Icons.Default.Settings, contentDescription = "About")
                     }
                 }
             } else {
@@ -277,8 +273,7 @@ fun MainContent(
         },
         bottomBar = {
             if (isTopLevel) {
-                // Slightly reduced from default (80dp bar + insets); keeps gesture bar padding
-                NavigationBar(modifier = Modifier.height(100.dp)) {
+                NavigationBar {
                     NavigationBarItem(
                         selected = selectedTab == 0,
                         onClick = { selectedTab = 0; onScreenStateChange(ScreenState.Climb) },
