@@ -232,7 +232,7 @@ fun MainContent(
                         Text(when (screenState) {
                             is ScreenState.About -> "Settings"
                             is ScreenState.SettingsScores -> "Scores"
-                            is ScreenState.SettingsMetrics -> "Configure Metrics"
+                            is ScreenState.SettingsMetrics -> "Metric Preferences"
                             is ScreenState.SettingsSounds -> "Sounds"
                             is ScreenState.SettingsAbout -> "About"
                             is ScreenState.SettingsDev -> "Developer"

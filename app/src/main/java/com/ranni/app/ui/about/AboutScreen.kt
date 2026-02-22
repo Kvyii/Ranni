@@ -30,7 +30,7 @@ fun SettingsScreen(
     Column(modifier = Modifier.fillMaxSize()) {
         SettingsRow("Scores", onClick = onNavigateScores)
         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-        SettingsRow("Configure Metrics", onClick = onNavigateMetrics)
+        SettingsRow("Metric Preferences", onClick = onNavigateMetrics)
         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
         SettingsRow("Sounds", onClick = onNavigateSounds)
         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
