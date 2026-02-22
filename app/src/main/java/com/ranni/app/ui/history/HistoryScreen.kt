@@ -655,6 +655,7 @@ private fun Day(
     val primaryColor = MaterialTheme.colorScheme.primary
     val tertiaryColor = MaterialTheme.colorScheme.tertiary
     val onSurface = MaterialTheme.colorScheme.onSurface
+    val secondaryContainer = MaterialTheme.colorScheme.secondaryContainer
 
     // Worst severity for this day, or null if no injuries
     val worstInjury: InjurySeverity? = remember(injuryLogs) {
@@ -666,7 +667,9 @@ private fun Day(
             .fillMaxWidth()
             .height(cellHeight)
             .clickable(enabled = isCurrentMonth, onClick = onClick)
-            .padding(2.dp),
+            .padding(2.dp)
+            // Highlight border for today using secondaryContainer colour, with rounded corners
+            .then(if (isToday) Modifier.border(1.5.dp, secondaryContainer, androidx.compose.foundation.shape.RoundedCornerShape(4.dp)) else Modifier),
         verticalArrangement = Arrangement.Bottom,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
