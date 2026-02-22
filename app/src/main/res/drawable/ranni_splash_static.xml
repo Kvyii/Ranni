@@ -1,11 +1,8 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="380dp"
-    android:height="380dp"
-    android:viewportWidth="380"
-    android:viewportHeight="380">
-  <!-- Center content (orig bounds x:125-370, y:110-379) with ~15% padding on each side.
-       Content center ~(247.5, 244.5) mapped to viewport center (190, 190): translate (-57.5, -54.5) -->
-  <group android:translateX="-57.5" android:translateY="-54.5">
+    android:width="500dp"
+    android:height="500dp"
+    android:viewportWidth="500"
+    android:viewportHeight="500">
   <path
       android:pathData="M244.85,207.1a7.86,7.24 74.71,1 0,13.96 -3.82a7.86,7.24 74.71,1 0,-13.96 3.82z"
       android:strokeLineJoin="round"
@@ -138,5 +135,4 @@
         android:fillColor="#9492C6"
         android:strokeColor="#00FFFFFF"/>
   </group>
-  </group><!-- end translate wrapper -->
 </vector>

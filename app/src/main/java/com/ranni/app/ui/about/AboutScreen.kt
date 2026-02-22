@@ -79,11 +79,10 @@ fun HelpContent() {
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            // Looping animated Ranni logo
             AnimatedRanniLogo(
                 modifier = Modifier
                     .fillMaxWidth(0.6f)
-                    .height(240.dp)
+                    .height(200.dp)
                     .align(Alignment.CenterHorizontally)
             )
             Text("FAQ", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
@@ -116,11 +115,10 @@ fun AboutContent() {
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            // Looping animated Ranni logo
             AnimatedRanniLogo(
                 modifier = Modifier
                     .fillMaxWidth(0.6f)
-                    .height(240.dp)
+                    .height(200.dp)
                     .align(Alignment.CenterHorizontally)
             )
             Text("Ranni.app", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
