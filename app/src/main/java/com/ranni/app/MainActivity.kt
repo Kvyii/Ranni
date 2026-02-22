@@ -76,10 +76,10 @@ import kotlinx.coroutines.async
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Hold the system splash screen (with app icon) for at least 3 seconds
+        // Hold the system splash screen long enough for the AVD animation to finish
         val startTime = SystemClock.uptimeMillis()
         installSplashScreen().setKeepOnScreenCondition {
-            SystemClock.uptimeMillis() - startTime < 2000L
+            SystemClock.uptimeMillis() - startTime < 2400L
         }
 
         super.onCreate(savedInstanceState)

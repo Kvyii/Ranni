@@ -1,6 +1,6 @@
 package com.ranni.app.ui.about
 
-import androidx.compose.foundation.Image
+import android.widget.ImageView
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -11,10 +11,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.vectordrawable.graphics.drawable.AnimatedVectorDrawableCompat
 import com.ranni.app.R
 
 @Composable
@@ -79,19 +79,14 @@ fun HelpContent() {
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            // Crop top-aligned to trim the transparent padding at the bottom of the PNG
-            Image(
-                painter = painterResource(R.drawable.ranni_transp),
-                contentDescription = "Ranni logo",
-                contentScale = ContentScale.FillWidth,
-                alignment = Alignment.TopCenter,
+            // Looping animated Ranni logo
+            AnimatedRanniLogo(
                 modifier = Modifier
                     .fillMaxWidth(0.6f)
-                    .height(170.dp)
+                    .height(240.dp)
                     .align(Alignment.CenterHorizontally)
             )
             Text("FAQ", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-            Text("By w_kvib", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
         }
 
         HorizontalDivider()
@@ -100,7 +95,7 @@ fun HelpContent() {
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text("Q: How do I use this app?", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                Text("A: As w_kvib", style = MaterialTheme.typography.bodyMedium)
+                Text("A: Ask w_kvib", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
             }
         }
     }
@@ -121,15 +116,11 @@ fun AboutContent() {
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            // Crop top-aligned to trim the transparent padding at the bottom of the PNG
-            Image(
-                painter = painterResource(R.drawable.ranni_transp),
-                contentDescription = "Ranni logo",
-                contentScale = ContentScale.FillWidth,
-                alignment = Alignment.TopCenter,
+            // Looping animated Ranni logo
+            AnimatedRanniLogo(
                 modifier = Modifier
                     .fillMaxWidth(0.6f)
-                    .height(170.dp)
+                    .height(240.dp)
                     .align(Alignment.CenterHorizontally)
             )
             Text("Ranni.app", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
@@ -147,10 +138,12 @@ fun AboutContent() {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("v1.6.1", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
             // Release date
-            Text("22/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+            Text("23/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
             Text(
                 """
+                • Added a favourites feature to keep gyms expanded
                 • Added done button to exercises
+                • Animated Ranni logo
                 """.trimIndent(),
                 style = MaterialTheme.typography.bodyMedium
             )
@@ -292,4 +285,25 @@ fun AboutContent() {
 
         } // end changelog column
     }
+}
+
+/**
+ * Animated Ranni logo using the View-system AnimatedVectorDrawableCompat,
+ * which correctly respects repeatCount="infinite" in the animator XMLs.
+ * The Compose AVD renderer (rememberAnimatedVectorPainter) does not support
+ * infinite repeat, so we embed an ImageView via AndroidView instead.
+ */
+@Composable
+fun AnimatedRanniLogo(modifier: Modifier = Modifier) {
+    AndroidView(
+        factory = { context ->
+            ImageView(context).apply {
+                // Load the animated vector and start it immediately
+                val avd = AnimatedVectorDrawableCompat.create(context, R.drawable.ranni_transp3_animated)
+                setImageDrawable(avd)
+                avd?.start()
+            }
+        },
+        modifier = modifier
+    )
 }
