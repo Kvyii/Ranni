@@ -47,7 +47,7 @@ import com.ranni.app.data.model.InjuryLog
 import com.ranni.app.data.model.InjurySeverity
 import com.ranni.app.data.model.SessionLog
 import com.ranni.app.data.model.gyms
-import com.ranni.app.data.model.outlineGyms
+import com.ranni.app.data.model.isOutlineGym
 import com.ranni.app.data.model.routeColor
 import com.ranni.app.data.model.routeGrade
 import com.ranni.app.ui.components.ClimbDot
@@ -896,7 +896,7 @@ private fun DrawScope.drawHatch(
  *
  * Label format: "25 (15%)" where 15% = flashClimbs / firstAttempts.
  *
- * For gyms in [outlineGyms] (e.g. Custom, Outdoor V-Grade), bars are drawn as outlines
+ * For gyms where [isOutlineGym] returns true (e.g. Custom, Outdoor gyms), bars are drawn as outlines
  * to match the hollow dot style used elsewhere in the app.
  */
 @Composable
@@ -951,7 +951,7 @@ private fun GradeHistogram(
             val barHeight = barBottom - barTop
 
             val barColor = routeColor(row.gymName, row.routeName)
-            val isOutline = row.gymName in outlineGyms
+            val isOutline = isOutlineGym(row.gymName)
 
             val firstAttempts = row.newClimbs + row.flashClimbs
             val totalBarWidth = if (maxCount > 0) (firstAttempts.toFloat() / maxCount) * plotWidth else 0f

@@ -48,11 +48,11 @@ fun SessionScreen(
             when (val p = phase) {
                 is SessionPhase.Loading -> CircularProgressIndicator()
 
-                is SessionPhase.SetReady -> PhaseLayout(
+                is SessionPhase.SetReady -> SetReadyLayout(
                     subtitle = "Set ${p.currentSet} of ${p.totalSets}",
-                    mainText = "Ready",
-                    buttonText = "Start Set",
-                    onButton = { viewModel.startSet() }
+                    onStartSet = { viewModel.startSet() },
+                    // Log without doing any sets and go straight back
+                    onJustLog = { viewModel.justLog(); onBack() }
                 )
 
                 is SessionPhase.SetActive -> {
@@ -109,6 +109,31 @@ private fun PhaseLayout(
             Button(onClick = onButton, modifier = Modifier.fillMaxWidth()) {
                 Text(buttonText)
             }
+        }
+    }
+}
+
+/** Layout for the SetReady phase: primary "Start Set" button plus a secondary "Just log" option. */
+@Composable
+private fun SetReadyLayout(
+    subtitle: String,
+    onStartSet: () -> Unit,
+    onJustLog: () -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(24.dp),
+        modifier = Modifier.padding(32.dp)
+    ) {
+        Text(subtitle, style = MaterialTheme.typography.titleMedium)
+        Text("Ready", fontSize = 56.sp, fontWeight = FontWeight.Bold)
+        // Primary action: begin the timed/untimed set flow
+        Button(onClick = onStartSet, modifier = Modifier.fillMaxWidth()) {
+            Text("Start Set")
+        }
+        // Secondary action: record the exercise as done without going through any sets
+        OutlinedButton(onClick = onJustLog, modifier = Modifier.fillMaxWidth()) {
+            Text("Just log")
         }
     }
 }
