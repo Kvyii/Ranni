@@ -697,7 +697,7 @@ private fun StatsTab(viewModel: HistoryViewModel) {
                         DropdownMenuItem(
                             text = { Text(label) },
                             onClick = {
-                                viewModel.statsPeriodMonths.value = months
+                                viewModel.setStatsPeriodMonths(months)  // persists selection
                                 periodDropdownExpanded = false
                             }
                         )
