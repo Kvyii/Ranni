@@ -1,9 +1,15 @@
 package com.ranni.app.ui.history
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.ui.draw.alpha
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -18,6 +24,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -95,10 +104,11 @@ private fun CalendarTab(viewModel: HistoryViewModel) {
     val climbLogs by viewModel.climbLogs.collectAsState()
     val injuryLogs by viewModel.injuryLogs.collectAsState()
     val config by viewModel.metricsConfig.collectAsState()
-    var selectedDate by remember { mutableStateOf<LocalDate?>(LocalDate.now()) }
-    var logToDelete by remember { mutableStateOf<SessionLog?>(null) }
-    var climbToDelete by remember { mutableStateOf<ClimbLog?>(null) }
-    var injuryToDelete by remember { mutableStateOf<InjuryLog?>(null) }
+
+    // Which day the user has drilled into (null = show the calendar full-screen)
+    var selectedDate by remember { mutableStateOf<LocalDate?>(null) }
+    // Direction flag set before state change so AnimatedContent picks the right slide direction
+    var navigatingForward by remember { mutableStateOf(true) }
 
     val sessionsByDate: Map<LocalDate, List<SessionLog>> = remember(logs) {
         logs.groupBy { log ->
@@ -144,6 +154,64 @@ private fun CalendarTab(viewModel: HistoryViewModel) {
         }
     }
 
+    // Navigate back to the calendar (shared by BackHandler and swipe gesture)
+    val goBack: () -> Unit = {
+        navigatingForward = false
+        selectedDate = null
+    }
+
+    // Slide in from right when drilling into a day; slide in from left when going back
+    AnimatedContent(
+        targetState = selectedDate,
+        transitionSpec = {
+            if (navigatingForward)
+                slideInHorizontally { it } togetherWith slideOutHorizontally { -it }
+            else
+                slideInHorizontally { -it } togetherWith slideOutHorizontally { it }
+        },
+        label = "calendarDetail",
+        modifier = Modifier.fillMaxSize()
+    ) { date ->
+        if (date == null) {
+            // --- Full-screen calendar view ---
+            CalendarView(
+                sessionsByDate = sessionsByDate,
+                climbsByDate = climbsByDate,
+                dotClimbsByDate = dotClimbsByDate,
+                injuriesByDate = injuriesByDate,
+                onDaySelected = { day ->
+                    navigatingForward = true
+                    selectedDate = day
+                }
+            )
+        } else {
+            // --- Full-screen day detail view ---
+            DayDetail(
+                date = date,
+                sessionLogs = sessionsByDate[date].orEmpty(),
+                climbLogs = climbsByDate[date].orEmpty(),
+                injuryLogs = injuriesByDate[date].orEmpty(),
+                onDeleteLog = { viewModel.deleteLog(it) },
+                onDeleteClimb = { viewModel.deleteClimb(it) },
+                onDeleteInjury = { viewModel.deleteInjury(it) },
+                onBack = goBack
+            )
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// CalendarView — fills the entire tab, no detail panel below
+// ---------------------------------------------------------------------------
+
+@Composable
+private fun CalendarView(
+    sessionsByDate: Map<LocalDate, List<SessionLog>>,
+    climbsByDate: Map<LocalDate, List<ClimbLog>>,
+    dotClimbsByDate: Map<LocalDate, List<ClimbLog>>,
+    injuriesByDate: Map<LocalDate, List<InjuryLog>>,
+    onDaySelected: (LocalDate) -> Unit
+) {
     val currentMonth = remember { YearMonth.now() }
     val startMonth = remember { currentMonth.minusMonths(12) }
     val endMonth = remember { currentMonth.plusMonths(1) }
@@ -156,6 +224,66 @@ private fun CalendarTab(viewModel: HistoryViewModel) {
         firstDayOfWeek = firstDayOfWeek
     )
 
+    HorizontalCalendar(
+        state = calendarState,
+        modifier = Modifier.fillMaxSize(),
+        dayContent = { day ->
+            Day(
+                day = day,
+                sessionLogs = sessionsByDate[day.date].orEmpty(),
+                climbLogs = climbsByDate[day.date].orEmpty(),
+                dotClimbLogs = dotClimbsByDate[day.date].orEmpty(),
+                injuryLogs = injuriesByDate[day.date].orEmpty(),
+                isSelected = false  // no persistent selection state on the calendar itself
+            ) {
+                // Only navigate into current-month days
+                if (day.position == DayPosition.MonthDate) onDaySelected(day.date)
+            }
+        },
+        monthHeader = { month ->
+            MonthHeader(month.yearMonth, calendarState)
+        }
+    )
+}
+
+// ---------------------------------------------------------------------------
+// DayDetail — full-screen detail for a single day, with swipe-right-to-go-back
+// ---------------------------------------------------------------------------
+
+@Composable
+private fun DayDetail(
+    date: LocalDate,
+    sessionLogs: List<SessionLog>,
+    climbLogs: List<ClimbLog>,
+    injuryLogs: List<InjuryLog>,
+    onDeleteLog: (SessionLog) -> Unit,
+    onDeleteClimb: (ClimbLog) -> Unit,
+    onDeleteInjury: (InjuryLog) -> Unit,
+    onBack: () -> Unit
+) {
+    // Intercept Android system back button
+    BackHandler(enabled = true, onBack = onBack)
+
+    // Delete confirmation state — held locally so dialogs work the same as before
+    var logToDelete by remember { mutableStateOf<SessionLog?>(null) }
+    var climbToDelete by remember { mutableStateOf<ClimbLog?>(null) }
+    var injuryToDelete by remember { mutableStateOf<InjuryLog?>(null) }
+
+    // Swipe-right-to-go-back: track cumulative horizontal drag offset
+    var dragOffsetX by remember { mutableFloatStateOf(0f) }
+    val screenWidthPx = LocalConfiguration.current.screenWidthDp * LocalContext.current.resources.displayMetrics.density
+    // Threshold: 30% of screen width triggers navigation back
+    val swipeThreshold = screenWidthPx * 0.30f
+
+    // Sort once here so the composable body stays clean
+    val dayClimbs = remember(climbLogs) {
+        climbLogs.sortedWith(compareByDescending<ClimbLog> { it.score }.thenByDescending { it.loggedAt })
+    }
+    val dayInjuries = remember(injuryLogs) {
+        injuryLogs.sortedByDescending { it.severityEnum.ordinal }
+    }
+
+    // Delete dialogs (unchanged from original)
     if (logToDelete != null) {
         AlertDialog(
             onDismissRequest = { logToDelete = null },
@@ -163,7 +291,7 @@ private fun CalendarTab(viewModel: HistoryViewModel) {
             text = { Text("Remove \"${logToDelete!!.exerciseName}\" from your history?") },
             confirmButton = {
                 TextButton(onClick = {
-                    viewModel.deleteLog(logToDelete!!)
+                    onDeleteLog(logToDelete!!)
                     logToDelete = null
                 }) { Text("Delete") }
             },
@@ -181,7 +309,7 @@ private fun CalendarTab(viewModel: HistoryViewModel) {
             text = { Text("Remove $grade climb from your history?") },
             confirmButton = {
                 TextButton(onClick = {
-                    viewModel.deleteClimb(climbToDelete!!)
+                    onDeleteClimb(climbToDelete!!)
                     climbToDelete = null
                 }) { Text("Delete") }
             },
@@ -199,7 +327,7 @@ private fun CalendarTab(viewModel: HistoryViewModel) {
             text = { Text("Remove $severity injury from your history?") },
             confirmButton = {
                 TextButton(onClick = {
-                    viewModel.deleteInjury(injuryToDelete!!)
+                    onDeleteInjury(injuryToDelete!!)
                     injuryToDelete = null
                 }) { Text("Delete") }
             },
@@ -209,188 +337,190 @@ private fun CalendarTab(viewModel: HistoryViewModel) {
         )
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        HorizontalCalendar(
-            state = calendarState,
-            dayContent = { day ->
-                Day(
-                    day = day,
-                    sessionLogs = sessionsByDate[day.date].orEmpty(),
-                    climbLogs = climbsByDate[day.date].orEmpty(),         // unfiltered — for detail list
-                    dotClimbLogs = dotClimbsByDate[day.date].orEmpty(),   // filtered — for dots only
-                    injuryLogs = injuriesByDate[day.date].orEmpty(),
-                    isSelected = day.date == selectedDate
-                ) {
-                    selectedDate = if (selectedDate == day.date) null else day.date
-                }
-            },
-            monthHeader = { month ->
-                MonthHeader(month.yearMonth, calendarState)
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            // Apply rubber-band translation; clamped to 0 so it only drags rightward
+            .graphicsLayer { translationX = dragOffsetX.coerceAtLeast(0f) }
+            .pointerInput(Unit) {
+                detectHorizontalDragGestures(
+                    onDragEnd = {
+                        if (dragOffsetX >= swipeThreshold) {
+                            // Threshold met — commit the back navigation
+                            onBack()
+                        }
+                        // Always reset offset so it snaps back if threshold not met
+                        dragOffsetX = 0f
+                    },
+                    onDragCancel = { dragOffsetX = 0f },
+                    onHorizontalDrag = { _, dragAmount ->
+                        dragOffsetX += dragAmount
+                    }
+                )
             }
+    ) {
+        // Date title row at the top of the detail page
+        Text(
+            text = date.format(dateFormatter),
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
         )
 
-        HorizontalDivider(modifier = Modifier.padding(top = 8.dp, bottom = 4.dp))
+        HorizontalDivider(modifier = Modifier.padding(bottom = 4.dp))
 
-        Box(modifier = Modifier.weight(1f)) { selectedDate?.let { date ->
-            val dayLogs = sessionsByDate[date].orEmpty()
-            val dayClimbs = climbsByDate[date].orEmpty()
-                .sortedWith(compareByDescending<ClimbLog> { it.score }.thenByDescending { it.loggedAt })
-            val dayInjuries = injuriesByDate[date].orEmpty()
-                .sortedByDescending { it.severityEnum.ordinal }
-            if (dayLogs.isEmpty() && dayClimbs.isEmpty() && dayInjuries.isEmpty()) {
-                Box(modifier = Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
-                    Text("Nothing logged on this day", style = MaterialTheme.typography.bodyMedium)
+        // Empty state
+        if (sessionLogs.isEmpty() && dayClimbs.isEmpty() && dayInjuries.isEmpty()) {
+            Box(
+                modifier = Modifier.fillMaxSize().padding(24.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("Nothing logged on this day", style = MaterialTheme.typography.bodyMedium)
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(bottom = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (dayInjuries.isNotEmpty()) {
+                    item {
+                        Text(
+                            "Injuries",
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    items(dayInjuries, key = { "injury-${it.id}" }) { injury ->
+                        val time = Instant.ofEpochMilli(injury.loggedAt)
+                            .atZone(ZoneId.systemDefault())
+                            .format(timeFormatter)
+                        val severity = injury.severityEnum
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp)
+                                .clickable { injuryToDelete = injury }
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    // Skull icon colored per severity
+                                    Image(
+                                        painter = androidx.compose.ui.res.painterResource(severity.skullRes),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Text(
+                                        severity.name.lowercase().replaceFirstChar { it.uppercase() },
+                                        style = MaterialTheme.typography.bodyLarge
+                                    )
+                                }
+                                Text(time, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
                 }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentPadding = PaddingValues(bottom = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    if (dayInjuries.isNotEmpty()) {
-                        item {
-                            Text(
-                                "Injuries",
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        items(dayInjuries, key = { "injury-${it.id}" }) { injury ->
-                            val time = Instant.ofEpochMilli(injury.loggedAt)
-                                .atZone(ZoneId.systemDefault())
-                                .format(timeFormatter)
-                            val severity = injury.severityEnum
-                            Card(
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-                                ),
+                if (dayClimbs.isNotEmpty()) {
+                    item {
+                        Text(
+                            "Climbs",
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    items(dayClimbs, key = { "climb-${it.id}" }) { climb ->
+                        val time = Instant.ofEpochMilli(climb.loggedAt)
+                            .atZone(ZoneId.systemDefault())
+                            .format(timeFormatter)
+                        // Repeat climbs are dimmed to visually distinguish them from new/flash sends
+                        val alpha = if (climb.climbType == ClimbType.REPEAT.name) 0.4f else 1f
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp)
+                                .alpha(alpha)
+                                .clickable { climbToDelete = climb }
+                        ) {
+                            Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 16.dp)
-                                    .clickable { injuryToDelete = injury }
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Row(
-                                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        // Skull icon colored per severity
-                                        Image(
-                                            painter = androidx.compose.ui.res.painterResource(severity.skullRes),
-                                            contentDescription = null,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                        Text(
-                                            severity.name.lowercase().replaceFirstChar { it.uppercase() },
-                                            style = MaterialTheme.typography.bodyLarge
-                                        )
+                                    ClimbDot(gymName = climb.gymName, routeName = climb.color, size = 12.dp)
+                                    Text(routeGrade(climb.gymName, climb.color), style = MaterialTheme.typography.bodyLarge)
+                                    // Gym name + climb type label combined to avoid extra spacing
+                                    val gymName = climb.gymName.ifEmpty { "Unknown" }
+                                    val typeLabel = when (climb.climbType) {
+                                        ClimbType.FLASH.name -> " - Flash"
+                                        ClimbType.REPEAT.name -> " - Repeat"
+                                        else -> ""
                                     }
-                                    Text(time, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text("$gymName$typeLabel", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
+                                Text(time, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     }
-                    if (dayClimbs.isNotEmpty()) {
-                        item {
-                            Text(
-                                "Climbs",
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        items(dayClimbs, key = { "climb-${it.id}" }) { climb ->
-                            val time = Instant.ofEpochMilli(climb.loggedAt)
-                                .atZone(ZoneId.systemDefault())
-                                .format(timeFormatter)
-                            // Repeat climbs are dimmed to visually distinguish them from new/flash sends
-                            val alpha = if (climb.climbType == ClimbType.REPEAT.name) 0.4f else 1f
-                            Card(
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-                                ),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp)
-                                    .alpha(alpha)
-                                    .clickable { climbToDelete = climb }
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Row(
-                                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        ClimbDot(gymName = climb.gymName, routeName = climb.color, size = 12.dp)
-                                        Text(routeGrade(climb.gymName, climb.color), style = MaterialTheme.typography.bodyLarge)
-                                        // Gym name + climb type label combined to avoid extra spacing
-                                        val gymName = climb.gymName.ifEmpty { "Unknown" }
-                                        val typeLabel = when (climb.climbType) {
-                                            ClimbType.FLASH.name -> " - Flash"
-                                            ClimbType.REPEAT.name -> " - Repeat"
-                                            else -> ""
-                                        }
-                                        Text("$gymName$typeLabel", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    }
-                                    Text(time, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-                            }
-                        }
+                }
+                if (sessionLogs.isNotEmpty()) {
+                    item {
+                        Text(
+                            "Exercises",
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
-                    if (dayLogs.isNotEmpty()) {
-                        item {
-                            Text(
-                                "Exercises",
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        items(dayLogs, key = { it.id }) { log ->
-                            val time = Instant.ofEpochMilli(log.completedAt)
-                                .atZone(ZoneId.systemDefault())
-                                .format(timeFormatter)
-                            Card(
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-                                ),
+                    items(sessionLogs, key = { it.id }) { log ->
+                        val time = Instant.ofEpochMilli(log.completedAt)
+                            .atZone(ZoneId.systemDefault())
+                            .format(timeFormatter)
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp)
+                                .clickable { logToDelete = log }
+                        ) {
+                            Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 16.dp)
-                                    .clickable { logToDelete = log }
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(log.exerciseName, style = MaterialTheme.typography.bodyLarge)
-                                    Text(time, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
+                                Text(log.exerciseName, style = MaterialTheme.typography.bodyLarge)
+                                Text(time, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     }
                 }
             }
-        } ?: run {
-            Box(modifier = Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
-                Text("Select a day to see activity", style = MaterialTheme.typography.bodyMedium)
-            }
-        } }
+        }
     }
 }
 
