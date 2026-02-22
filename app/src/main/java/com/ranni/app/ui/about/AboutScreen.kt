@@ -141,6 +141,8 @@ fun AboutContent() {
                 """
                 • Fix non persistent history filter bug
                 • Update calendar UI to slide to daily items when selected.
+                • Increase calendar max dots to 10 from 4
+                • Update 9D Orange route to V3 - V5 from V3 - V4
                 """.trimIndent(),
                 style = MaterialTheme.typography.bodyMedium
             )
