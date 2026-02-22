@@ -39,6 +39,13 @@ class FakeClimbLogDao : ClimbLogDao {
         }
     }
 
+    override suspend fun renameGym(oldName: String, newName: String) {
+        // Replace all climbs whose gymName matches oldName with newName
+        climbs.value = climbs.value.map { log ->
+            if (log.gymName == oldName) log.copy(gymName = newName) else log
+        }
+    }
+
     /** Bulk-set climbs for test setup (bypasses insert one-by-one). */
     fun setClimbs(logs: List<ClimbLog>) {
         climbs.value = logs
@@ -116,9 +123,15 @@ class FakeMetricsConfigDao : MetricsConfigDao {
 class FakeGymOrderPreferences : GymOrderPreferences {
     private var order: List<String> = emptyList()
     private var lastStatsGym: String? = null
+    private var favouriteGym: String? = null
+    private var lastStatsPeriod: Int? = null
 
     override fun getOrder(): List<String> = order
     override fun setOrder(names: List<String>) { order = names }
     override fun getLastStatsGym(): String? = lastStatsGym
     override fun setLastStatsGym(gymName: String?) { lastStatsGym = gymName }
+    override fun getFavouriteGym(): String? = favouriteGym
+    override fun setFavouriteGym(gymName: String?) { favouriteGym = gymName }
+    override fun getLastStatsPeriod(): Int? = lastStatsPeriod
+    override fun setLastStatsPeriod(months: Int?) { lastStatsPeriod = months }
 }
