@@ -48,7 +48,7 @@ val gyms = listOf(
         )
     ),
     Gym(
-        name = "Outdoor V-Grade",
+        name = "Outdoor (V-Grade)",
         routes = listOf(
             RouteColor("V0",  "V0",  Color(0xFF283673),  110),
             RouteColor("V1",  "V1",  Color(0xFF283673),  195),
@@ -66,7 +66,7 @@ val gyms = listOf(
         )
     ),
     Gym(
-        name = "Outdoor YDS Grade",
+        name = "Outdoor (YDS Grade)",
         routes = listOf(
             RouteColor("5.9",   "5.9",   Color(0xFF67578c),  110),
             RouteColor("5.10c", "5.10c", Color(0xFF67578c),  195),

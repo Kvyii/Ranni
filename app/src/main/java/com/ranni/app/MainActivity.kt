@@ -65,7 +65,7 @@ import com.ranni.app.ui.settings.DeveloperScreen
 import com.ranni.app.ui.settings.MetricsViewModel
 import com.ranni.app.ui.settings.SoundsScreen
 import com.ranni.app.data.AlarmPreferences
-import com.ranni.app.data.GymOrderPreferences
+import com.ranni.app.data.SharedPrefsGymOrderPreferences
 import com.ranni.app.ui.settings.ThemeScreen
 import com.ranni.app.ui.theme.AppTheme
 import com.ranni.app.ui.theme.RanniTheme
@@ -153,7 +153,7 @@ fun MainContent(
     val climbRepo = remember { ClimbRepository(db.climbLogDao()) }
     val injuryRepo = remember { InjuryRepository(db.injuryLogDao()) }
     val alarmPrefs = remember { AlarmPreferences(context) }
-    val gymOrderPrefs = remember { GymOrderPreferences(context) }
+    val gymOrderPrefs = remember { SharedPrefsGymOrderPreferences(context) }
 
     // Track the display name of the custom rest alarm (null = default)
     var customRestAlarmName by remember { mutableStateOf(getAlarmDisplayName(context, alarmPrefs)) }
@@ -200,15 +200,15 @@ fun MainContent(
 
             is ScreenState.About -> when (selectedTab) {
                 0 -> ScreenState.Climb
-                1 -> ScreenState.ExerciseList
-                2 -> ScreenState.History
-                else -> ScreenState.ExerciseList
+                1 -> ScreenState.History
+                2 -> ScreenState.ExerciseList
+                else -> ScreenState.Climb
             }
 
             is ScreenState.EditExercise,
             is ScreenState.Session -> ScreenState.ExerciseList
 
-            else -> ScreenState.ExerciseList
+            else -> ScreenState.Climb
         })
     }
 
@@ -232,7 +232,7 @@ fun MainContent(
                         Text(when (screenState) {
                             is ScreenState.About -> "Settings"
                             is ScreenState.SettingsScores -> "Scores"
-                            is ScreenState.SettingsMetrics -> "Configure Metrics"
+                            is ScreenState.SettingsMetrics -> "Metric Preferences"
                             is ScreenState.SettingsSounds -> "Sounds"
                             is ScreenState.SettingsAbout -> "About"
                             is ScreenState.SettingsDev -> "Developer"
@@ -245,9 +245,9 @@ fun MainContent(
                             onScreenStateChange(when (screenState) {
                                 is ScreenState.About -> when (selectedTab) {
                                     0 -> ScreenState.Climb
-                                    1 -> ScreenState.ExerciseList
-                                    2 -> ScreenState.History
-                                    else -> ScreenState.ExerciseList
+                                    1 -> ScreenState.History
+                                    2 -> ScreenState.ExerciseList
+                                    else -> ScreenState.Climb
                                 }
                                 is ScreenState.SettingsScores,
                                 is ScreenState.SettingsMetrics,
@@ -255,7 +255,7 @@ fun MainContent(
                                 is ScreenState.SettingsAbout,
                                 is ScreenState.SettingsDev,
                                 is ScreenState.SettingsTheme -> ScreenState.About
-                                else -> ScreenState.ExerciseList
+                                else -> ScreenState.Climb
                             })
                         }) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -275,15 +275,15 @@ fun MainContent(
                     )
                     NavigationBarItem(
                         selected = selectedTab == 1,
-                        onClick = { selectedTab = 1; onScreenStateChange(ScreenState.ExerciseList) },
-                        icon = { Icon(Icons.Default.List, null) },
-                        label = { Text("Exercises") }
+                        onClick = { selectedTab = 1; onScreenStateChange(ScreenState.History) },
+                        icon = { Icon(Icons.Default.DateRange, null) },
+                        label = { Text("History") }
                     )
                     NavigationBarItem(
                         selected = selectedTab == 2,
-                        onClick = { selectedTab = 2; onScreenStateChange(ScreenState.History) },
-                        icon = { Icon(Icons.Default.DateRange, null) },
-                        label = { Text("History") }
+                        onClick = { selectedTab = 2; onScreenStateChange(ScreenState.ExerciseList) },
+                        icon = { Icon(Icons.Default.List, null) },
+                        label = { Text("Exercises") }
                     )
                 }
             }
@@ -340,7 +340,7 @@ fun MainContent(
                     ClimbScreen(vm)
                 }
                 is ScreenState.History -> {
-                    val vm = remember { HistoryViewModel(sessionRepo, climbRepo, metricsRepo, injuryRepo, context) }
+                    val vm = remember { HistoryViewModel(sessionRepo, climbRepo, metricsRepo, injuryRepo, SharedPrefsGymOrderPreferences(context)) }
                     HistoryScreen(vm)
                 }
                 is ScreenState.About -> {

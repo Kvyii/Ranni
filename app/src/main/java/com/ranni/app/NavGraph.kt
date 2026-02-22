@@ -8,6 +8,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.ranni.app.data.SharedPrefsGymOrderPreferences
 import com.ranni.app.data.db.AppDatabase
 import com.ranni.app.data.repository.ClimbRepository
 import com.ranni.app.data.repository.ExerciseRepository
@@ -66,7 +67,7 @@ fun RanniNavGraph() {
             SessionScreen(vm, id, onBack = { navController.popBackStack() })
         }
         composable("history") {
-            val vm = remember { HistoryViewModel(sessionRepo, climbRepo, metricsRepo, injuryRepo, context) }
+            val vm = remember { HistoryViewModel(sessionRepo, climbRepo, metricsRepo, injuryRepo, SharedPrefsGymOrderPreferences(context)) }
             HistoryScreen(vm)
         }
     }

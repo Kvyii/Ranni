@@ -85,6 +85,19 @@ fun MetricsScreen(viewModel: MetricsViewModel) {
             modifier = Modifier.fillMaxWidth()
         )
 
+        // Toggle to show/hide REPEAT climbs from dots and stats; detail/list views still show them.
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Show repeat climbs", style = MaterialTheme.typography.bodyMedium)
+            Switch(
+                checked = !config.filterRepeats,
+                onCheckedChange = { viewModel.updateFilterRepeats(!it) }
+            )
+        }
+
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("History timeline", style = MaterialTheme.typography.bodyLarge)
             Text(
@@ -116,7 +129,7 @@ fun MetricsScreen(viewModel: MetricsViewModel) {
         HorizontalDivider()
 
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Defaults", style = MaterialTheme.typography.bodyLarge)
+            Text("Visualisations", style = MaterialTheme.typography.bodyLarge)
             Text(
                 "Default visibility of activity dots on the progress graph",
                 style = MaterialTheme.typography.bodySmall,
@@ -146,6 +159,7 @@ fun MetricsScreen(viewModel: MetricsViewModel) {
                     onCheckedChange = { viewModel.updateShowExerciseDots(it) }
                 )
             }
+
         }
     }
 }

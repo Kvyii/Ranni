@@ -1,5 +1,6 @@
 package com.ranni.app.ui.history
 
+import com.ranni.app.data.GymOrderPreferences
 import com.ranni.app.data.db.ClimbLogDao
 import com.ranni.app.data.db.InjuryLogDao
 import com.ranni.app.data.db.MetricsConfigDao
@@ -29,6 +30,14 @@ class FakeClimbLogDao : ClimbLogDao {
 
     override fun getAllLogs(): Flow<List<ClimbLog>> =
         climbs.map { list -> list.sortedByDescending { it.loggedAt } }
+
+    override suspend fun backfillGymName(routeName: String, gymName: String) {
+        // Update all climbs with matching color and empty gymName
+        climbs.value = climbs.value.map { log ->
+            if (log.color == routeName && log.gymName.isEmpty()) log.copy(gymName = gymName)
+            else log
+        }
+    }
 
     /** Bulk-set climbs for test setup (bypasses insert one-by-one). */
     fun setClimbs(logs: List<ClimbLog>) {
@@ -98,4 +107,18 @@ class FakeMetricsConfigDao : MetricsConfigDao {
     fun setConfig(cfg: MetricsConfig) {
         config.value = cfg
     }
+}
+
+/**
+ * In-memory fake of [GymOrderPreferences] for unit tests.
+ * No SharedPreferences dependency — stores values in plain fields.
+ */
+class FakeGymOrderPreferences : GymOrderPreferences {
+    private var order: List<String> = emptyList()
+    private var lastStatsGym: String? = null
+
+    override fun getOrder(): List<String> = order
+    override fun setOrder(names: List<String>) { order = names }
+    override fun getLastStatsGym(): String? = lastStatsGym
+    override fun setLastStatsGym(gymName: String?) { lastStatsGym = gymName }
 }

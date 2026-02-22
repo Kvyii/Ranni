@@ -169,7 +169,8 @@ fun ClimbScreen(viewModel: ClimbViewModel) {
             Text(
                 "Select climb",
                 style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.secondaryContainer
             )
 
             // Collect the user-ordered active gyms from the ViewModel
@@ -291,7 +292,8 @@ fun ClimbScreen(viewModel: ClimbViewModel) {
             Text(
                 "Other",
                 style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.secondaryContainer
             )
 
             // Injury card — same expandable card pattern as gym cards

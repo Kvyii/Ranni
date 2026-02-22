@@ -52,7 +52,8 @@ class HistoryViewModelTest {
             sessionRepo = SessionRepository(sessionDao),
             climbRepo = ClimbRepository(climbDao),
             metricsRepo = MetricsRepository(metricsDao),
-            injuryRepo = InjuryRepository(injuryDao)
+            injuryRepo = InjuryRepository(injuryDao),
+            gymOrderPrefs = FakeGymOrderPreferences()
         )
     }
 
@@ -224,18 +225,18 @@ class HistoryViewModelTest {
     }
 
     @Test
-    fun `topClimbs caps at 50 entries`() = runTest {
+    fun `topClimbs caps at 200 entries`() = runTest {
         val today = LocalDate.now()
-        // Create 60 climbs
-        val climbs = (1..60).map { i ->
+        // Create 250 climbs
+        val climbs = (1..250).map { i ->
             ClimbLog(id = i.toLong(), color = "Blue", score = i * 10, loggedAt = today.toEpochMillis())
         }
         climbDao.setClimbs(climbs)
         metricsDao.setConfig(MetricsConfig(months = 2, topK = 10))
 
         val top = viewModel.topClimbs.first()
-        assertEquals("Capped at 50", 50, top.size)
-        assertEquals("Highest score first", 600, top[0].score)
+        assertEquals("Capped at 200", 200, top.size)
+        assertEquals("Highest score first", 2500, top[0].score)
     }
 
     @Test
@@ -284,7 +285,7 @@ class HistoryViewModelTest {
         // Find the week that contains our Monday
         val targetWeek = weeks.find { it.weekStart == monday }
         assertTrue("Should find the week starting on Monday", targetWeek != null)
-        assertTrue("Week should contain the Blue climb", targetWeek!!.climbColors.contains("Blue"))
+        assertTrue("Week should contain the Blue climb", targetWeek!!.climbColors.any { it.second == "Blue" })
     }
 
     @Test
@@ -346,9 +347,9 @@ class HistoryViewModelTest {
 
         // Mix 9 Degrees and Custom gym climbs — 9 Degrees should come first in output
         climbDao.setClimbs(listOf(
-            ClimbLog(id = 1, color = "V3", score = 400, loggedAt = monday.toEpochMillis()),      // Custom gym
-            ClimbLog(id = 2, color = "Blue", score = 100, loggedAt = monday.toEpochMillis()),     // 9 Degrees
-            ClimbLog(id = 3, color = "V5", score = 725, loggedAt = monday.toEpochMillis()),       // Custom gym
+            ClimbLog(id = 1, color = "V3", gymName = "Custom", score = 400, loggedAt = monday.toEpochMillis()),
+            ClimbLog(id = 2, color = "Blue", gymName = "9 Degrees", score = 100, loggedAt = monday.toEpochMillis()),
+            ClimbLog(id = 3, color = "V5", gymName = "Custom", score = 725, loggedAt = monday.toEpochMillis()),
         ))
         metricsDao.setConfig(MetricsConfig(timelineMonths = 1, topK = 5))
 
@@ -360,10 +361,10 @@ class HistoryViewModelTest {
         assertEquals("All 3 climbs present", 3, colors.size)
         // 9 Degrees routes come first (gym index 0), Custom second (gym index 1)
         // Within each gym group, sorted ascending by score
-        assertEquals("9 Degrees climb first (only one, Blue)", "Blue", colors[0])
+        assertEquals("9 Degrees climb first (only one, Blue)", "Blue", colors[0].second)
         // Custom climbs sorted ascending by score: V3 (400) then V5 (725)
-        assertEquals("Custom lower score", "V3", colors[1])
-        assertEquals("Custom higher score", "V5", colors[2])
+        assertEquals("Custom lower score", "V3", colors[1].second)
+        assertEquals("Custom higher score", "V5", colors[2].second)
     }
 
     @Test
@@ -386,7 +387,7 @@ class HistoryViewModelTest {
         val expectedMonday = wednesday.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
         val targetWeek = weeks.find { it.weekStart == expectedMonday }
         assertTrue("Wednesday climb grouped into its Monday", targetWeek != null)
-        assertTrue("Climb present in week", targetWeek!!.climbColors.contains("Green"))
+        assertTrue("Climb present in week", targetWeek!!.climbColors.any { it.second == "Green" })
     }
 
     // ────────────────────────────────────────────────────────────────────────
