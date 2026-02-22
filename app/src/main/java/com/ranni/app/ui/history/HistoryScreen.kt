@@ -224,26 +224,34 @@ private fun CalendarView(
         firstDayOfWeek = firstDayOfWeek
     )
 
-    HorizontalCalendar(
-        state = calendarState,
-        modifier = Modifier.fillMaxSize(),
-        dayContent = { day ->
-            Day(
-                day = day,
-                sessionLogs = sessionsByDate[day.date].orEmpty(),
-                climbLogs = climbsByDate[day.date].orEmpty(),
-                dotClimbLogs = dotClimbsByDate[day.date].orEmpty(),
-                injuryLogs = injuriesByDate[day.date].orEmpty(),
-                isSelected = false  // no persistent selection state on the calendar itself
-            ) {
-                // Only navigate into current-month days
-                if (day.position == DayPosition.MonthDate) onDaySelected(day.date)
+    // Measure available height so day cells can fill it exactly.
+    // We assume worst-case 6 week rows and subtract the fixed header height (56dp).
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val headerHeight = 56.dp
+        val cellHeight = (maxHeight - headerHeight) / 6
+
+        HorizontalCalendar(
+            state = calendarState,
+            modifier = Modifier.fillMaxSize(),
+            dayContent = { day ->
+                Day(
+                    day = day,
+                    cellHeight = cellHeight,
+                    sessionLogs = sessionsByDate[day.date].orEmpty(),
+                    climbLogs = climbsByDate[day.date].orEmpty(),
+                    dotClimbLogs = dotClimbsByDate[day.date].orEmpty(),
+                    injuryLogs = injuriesByDate[day.date].orEmpty(),
+                    isSelected = false  // no persistent selection state on the calendar itself
+                ) {
+                    // Only navigate into current-month days
+                    if (day.position == DayPosition.MonthDate) onDaySelected(day.date)
+                }
+            },
+            monthHeader = { month ->
+                MonthHeader(month.yearMonth, calendarState)
             }
-        },
-        monthHeader = { month ->
-            MonthHeader(month.yearMonth, calendarState)
-        }
-    )
+        )
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -634,6 +642,7 @@ private fun ProgressTab(viewModel: HistoryViewModel) {
 @Composable
 private fun Day(
     day: CalendarDay,
+    cellHeight: androidx.compose.ui.unit.Dp,
     sessionLogs: List<SessionLog>,
     climbLogs: List<ClimbLog>,       // Full list — passed through for any downstream detail use
     dotClimbLogs: List<ClimbLog>,    // Filtered list — REPEATs excluded when filterRepeats is on
@@ -654,17 +663,18 @@ private fun Day(
 
     Column(
         modifier = Modifier
-            .aspectRatio(1f)
+            .fillMaxWidth()
+            .height(cellHeight)
             .clickable(enabled = isCurrentMonth, onClick = onClick)
             .padding(2.dp),
         verticalArrangement = Arrangement.Bottom,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        val cappedSessions = sessionLogs.take(4)
+        val cappedSessions = sessionLogs.take(10)
         // Use dotClimbLogs for dots so REPEATs are hidden when filterRepeats is enabled.
         val cappedClimbs = dotClimbLogs
             .sortedWith(compareByDescending<ClimbLog> { it.score }.thenByDescending { it.loggedAt })
-            .take(4)
+            .take(10)
         if (cappedSessions.isNotEmpty() || cappedClimbs.isNotEmpty() || worstInjury != null) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(2.dp),
