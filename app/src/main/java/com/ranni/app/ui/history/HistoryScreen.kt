@@ -56,6 +56,7 @@ import com.ranni.app.data.model.InjurySeverity
 import com.ranni.app.data.model.SessionLog
 import com.ranni.app.data.model.gyms
 import com.ranni.app.data.model.isOutlineGym
+import com.ranni.app.data.model.needsContrastRing
 import com.ranni.app.data.model.routeColor
 import com.ranni.app.data.model.routeGrade
 import com.ranni.app.ui.components.ClimbDot
@@ -682,13 +683,12 @@ private fun Day(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     cappedSessions.forEach { _ ->
-                        // Exercise session dot — thin outline border for contrast on both themes
+                        // Exercise session dot — uses onSurfaceVariant which is always legible
                         Box(
                             modifier = Modifier
                                 .size(5.5.dp)
                                 .clip(CircleShape)
                                 .background(MaterialTheme.colorScheme.onSurfaceVariant)
-                                .border(0.5.dp, MaterialTheme.colorScheme.outline, CircleShape)
                         )
                     }
                 }
@@ -701,19 +701,12 @@ private fun Day(
                     // Wrapped in a Box with an outline-colored circle behind it so the pre-colored
                     // skull drawable remains visible on both light and dark backgrounds.
                     if (worstInjury != null) {
-                        Box(
-                            modifier = Modifier
-                                .size(9.dp)
-                                .clip(CircleShape)
-                                .border(0.5.dp, MaterialTheme.colorScheme.outline, CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Image(
-                                painter = androidx.compose.ui.res.painterResource(worstInjury.skullRes),
-                                contentDescription = null,
-                                modifier = Modifier.size(7.dp)
-                            )
-                        }
+                        // Skull icon — pre-colored drawable, no outline ring needed
+                        Image(
+                            painter = androidx.compose.ui.res.painterResource(worstInjury.skullRes),
+                            contentDescription = null,
+                            modifier = Modifier.size(8.dp)
+                        )
                     }
                     cappedClimbs.forEach { climb ->
                         ClimbDot(gymName = climb.gymName, routeName = climb.color, size = 5.5.dp, strokeWidth = 1.dp)
@@ -1077,6 +1070,8 @@ private fun HistogramLegend() {
     }
 }
 
+
+
 /**
  * Draws diagonal (45°) hatch lines clipped to the given rectangle.
  *
@@ -1143,6 +1138,8 @@ private fun GradeHistogram(
     val onSurface = MaterialTheme.colorScheme.onSurface
     // Background colour used as hatch line colour on filled bars to fake transparency
     val bgColor = MaterialTheme.colorScheme.background
+    // Outline color for contrast rings on near-black / near-white bars
+    val outlineColor = MaterialTheme.colorScheme.outline
 
     // Per-row height and fixed layout constants (converted to pixels inside the Canvas)
     val rowHeightDp = 44.dp
@@ -1218,6 +1215,18 @@ private fun GradeHistogram(
                         cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerRadiusPx),
                         style = Stroke(width = 1.5.dp.toPx())
                     )
+                    // For near-black/white route colors the outline stroke itself vanishes against
+                    // the background — draw a second contrasting ring just inside (same size, no
+                    // size change) to keep it visible on both light and dark themes.
+                    if (barColor.needsContrastRing()) {
+                        drawRoundRect(
+                            color = outlineColor,
+                            topLeft = Offset(barLeft, barTop),
+                            size = Size(totalBarWidth, barHeight),
+                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerRadiusPx),
+                            style = Stroke(width = 0.3.dp.toPx())
+                        )
+                    }
                     // If any flashes exist, overlay hatch in the route colour over the bar interior
                     // (hollow bar has no fill, so hatch lines are the visual indicator)
                     if (row.flashClimbs > 0) {
@@ -1258,6 +1267,16 @@ private fun GradeHistogram(
                             spacing    = hatchSpacingPx,
                             lineWidth  = hatchLineWidthPx
                         )
+                        // Hairline ring over this segment only for near-black/white colors
+                        if (barColor.needsContrastRing()) {
+                            drawRoundRect(
+                                color = outlineColor,
+                                topLeft = Offset(barLeft, barTop),
+                                size = Size(segWidth.coerceAtLeast(0f), barHeight),
+                                cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerRadiusPx),
+                                style = Stroke(width = 0.3.dp.toPx())
+                            )
+                        }
                     }
 
                     // NEW segment — right side, rounded bar
@@ -1271,6 +1290,16 @@ private fun GradeHistogram(
                             size = Size(newWidth.coerceAtLeast(0f), barHeight),
                             cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerRadiusPx)
                         )
+                        // Hairline ring over this segment only for near-black/white colors
+                        if (barColor.needsContrastRing()) {
+                            drawRoundRect(
+                                color = outlineColor,
+                                topLeft = Offset(newLeft, barTop),
+                                size = Size(newWidth.coerceAtLeast(0f), barHeight),
+                                cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerRadiusPx),
+                                style = Stroke(width = 0.3.dp.toPx())
+                            )
+                        }
                     }
                 }
             }
