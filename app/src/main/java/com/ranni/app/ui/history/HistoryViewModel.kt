@@ -277,8 +277,22 @@ private fun computeGraphPoints(climbs: List<ClimbLog>, n: Int, k: Int, timelineM
                 .toFloat() / k
         } else 0f
 
-        points.add(GraphPoint(day, metric))
+        // Only record a point when the metric value changes (or on the first/last day).
+        // This prevents flat runs from producing staircase artefacts in the smoothed curve —
+        // each step becomes a single transition between two distinct values instead of
+        // dozens of identical daily points that force sharp corners.
+        val isFirst = points.isEmpty()
+        val valueChanged = points.isNotEmpty() && metric != points.last().value
+        if (isFirst || valueChanged) {
+            points.add(GraphPoint(day, metric))
+        }
         day = day.plusDays(1)
+    }
+
+    // Always ensure the final day (today) is represented so the line reaches the right edge
+    if (points.isNotEmpty() && points.last().date != today) {
+        val lastMetric = points.last().value
+        points.add(GraphPoint(today, lastMetric))
     }
 
     return points
