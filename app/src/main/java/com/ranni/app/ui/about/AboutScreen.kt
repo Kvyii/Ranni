@@ -133,6 +133,20 @@ fun AboutContent() {
         // Extra spacing between each version entry
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
 
+
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text("v1.2.4", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            // Release date
+            Text("??/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+            Text(
+                """
+                • Increase History > Progress graph size
+                """.trimIndent(),
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }    
+
+
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("v1.2.3", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
             // Release date
@@ -154,7 +168,7 @@ fun AboutContent() {
                 """
                 • Fix non persistent history filter bug
                 • Update calendar UI to slide to daily items when selected.
-                • Increase calendar max dots to 10 from 4
+                • Increase calendar max dots to 8 from 4
                 • Update 9D Orange route to V3 - V5 from V3 - V4
                 """.trimIndent(),
                 style = MaterialTheme.typography.bodyMedium

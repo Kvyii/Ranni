@@ -537,7 +537,7 @@ private fun ProgressTab(viewModel: HistoryViewModel) {
     val dotsEnabled = config.timelineMonths <= 6
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // Graph with weekly dot overlay — top 2/5 of available space
+        // Graph with weekly dot overlay — top half of available space
         MetricsGraph(
             data = graphData,
             title = "Average of Top ${config.topK} climbs over the Last ${config.months} months",
@@ -546,24 +546,24 @@ private fun ProgressTab(viewModel: HistoryViewModel) {
             showExercises = config.showExerciseDots,
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(2f)
+                .weight(1f)
                 .padding(horizontal = 16.dp)
                 .padding(top = 16.dp, bottom = 16.dp)
         )
 
         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
 
-        // Top k climbs list — bottom 3/5 of available space
+        // Top k climbs list — bottom half of available space
         if (topClimbs.isEmpty()) {
             Box(
-                modifier = Modifier.weight(3f).fillMaxWidth().padding(24.dp),
+                modifier = Modifier.weight(1f).fillMaxWidth().padding(24.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text("No climbs yet", style = MaterialTheme.typography.bodyMedium)
             }
         } else {
             LazyColumn(
-                modifier = Modifier.weight(3f).fillMaxWidth(),
+                modifier = Modifier.weight(1f).fillMaxWidth(),
                 contentPadding = PaddingValues(vertical = 8.dp, horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
