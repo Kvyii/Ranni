@@ -703,19 +703,7 @@ private fun Day(
                             modifier = Modifier.size(8.dp)
                         )
                     }
-                    var prevGym: String? = null
                     cappedClimbs.forEach { climb ->
-                        val gym = climb.gymName
-                        // Thin separator bar between different gym groups
-                        if (prevGym != null && gym != prevGym) {
-                            Box(
-                                modifier = Modifier
-                                    .width(4.dp)
-                                    .height(1.dp)
-                                    .background(MaterialTheme.colorScheme.outlineVariant)
-                            )
-                        }
-                        prevGym = gym
                         ClimbDot(gymName = climb.gymName, routeName = climb.color, size = 5.5.dp, strokeWidth = 1.dp)
                     }
                 }
