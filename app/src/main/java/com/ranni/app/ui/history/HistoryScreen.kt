@@ -682,11 +682,13 @@ private fun Day(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     cappedSessions.forEach { _ ->
+                        // Exercise session dot — thin outline border for contrast on both themes
                         Box(
                             modifier = Modifier
                                 .size(5.5.dp)
                                 .clip(CircleShape)
                                 .background(MaterialTheme.colorScheme.onSurfaceVariant)
+                                .border(0.5.dp, MaterialTheme.colorScheme.outline, CircleShape)
                         )
                     }
                 }
@@ -695,13 +697,23 @@ private fun Day(
                     verticalArrangement = Arrangement.spacedBy(2.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Skull icon for the worst injury sits above the climb dots
+                    // Skull icon for the worst injury sits above the climb dots.
+                    // Wrapped in a Box with an outline-colored circle behind it so the pre-colored
+                    // skull drawable remains visible on both light and dark backgrounds.
                     if (worstInjury != null) {
-                        Image(
-                            painter = androidx.compose.ui.res.painterResource(worstInjury.skullRes),
-                            contentDescription = null,
-                            modifier = Modifier.size(8.dp)
-                        )
+                        Box(
+                            modifier = Modifier
+                                .size(9.dp)
+                                .clip(CircleShape)
+                                .border(0.5.dp, MaterialTheme.colorScheme.outline, CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Image(
+                                painter = androidx.compose.ui.res.painterResource(worstInjury.skullRes),
+                                contentDescription = null,
+                                modifier = Modifier.size(7.dp)
+                            )
+                        }
                     }
                     cappedClimbs.forEach { climb ->
                         ClimbDot(gymName = climb.gymName, routeName = climb.color, size = 5.5.dp, strokeWidth = 1.dp)
