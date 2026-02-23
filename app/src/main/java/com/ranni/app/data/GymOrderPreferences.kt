@@ -69,17 +69,26 @@ class SharedPrefsGymOrderPreferences(context: Context) : GymOrderPreferences {
         edit.apply()
     }
 
-    // Returns INT_MIN sentinel as "not set"; convert back to null for Lifetime.
+    // Sentinel values:
+    //   Int.MIN_VALUE = key absent / never set → caller applies its own default (2 months)
+    //   -1            = Lifetime (user explicitly chose no time limit)
+    //   positive int  = number of months
     override fun getLastStatsPeriod(): Int? {
         val stored = prefs.getInt(KEY_STATS_PERIOD, Int.MIN_VALUE)
-        return if (stored == Int.MIN_VALUE) null else stored
+        return when (stored) {
+            Int.MIN_VALUE -> null   // never explicitly set
+            -1            -> null   // Lifetime — return null to signal "no cutoff"
+            else          -> stored
+        }
     }
 
+    // Whether the user has ever explicitly saved a period selection (including Lifetime).
+    // Used by the ViewModel to distinguish "never set" from "set to Lifetime".
+    fun hasStatsPeriod(): Boolean = prefs.contains(KEY_STATS_PERIOD)
+
     override fun setLastStatsPeriod(months: Int?) {
-        val edit = prefs.edit()
-        if (months != null) edit.putInt(KEY_STATS_PERIOD, months)
-        else edit.remove(KEY_STATS_PERIOD)
-        edit.apply()
+        // Store -1 for Lifetime so it's distinguishable from "key absent" (never set).
+        prefs.edit().putInt(KEY_STATS_PERIOD, months ?: -1).apply()
     }
 
     companion object {
