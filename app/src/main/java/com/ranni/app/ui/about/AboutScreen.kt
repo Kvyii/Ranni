@@ -137,10 +137,12 @@ fun AboutContent() {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("v1.2.4", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
             // Release date
-            Text("??/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+            Text("23/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
             Text(
                 """
                 • Increase History > Progress graph size
+                • Removed separation lines in history > calendar UI
+                • Introduced smoothing in history > progress graph
                 """.trimIndent(),
                 style = MaterialTheme.typography.bodyMedium
             )

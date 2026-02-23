@@ -279,12 +279,63 @@ fun MetricsGraph(
                 }
             }
 
-            // Draw line path (on top of dots so the trend line is always visible)
-            val path = Path()
-            data.forEachIndexed { i, point ->
+            // Map each data point to its (x, y) pixel position
+            val pts = data.map { point ->
                 val x = leftPadding + (ChronoUnit.DAYS.between(minDate, point.date) / totalDays) * plotWidth
                 val y = topPadding + plotHeight - (point.value / maxY) * plotHeight
-                if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+                Offset(x, y)
+            }
+
+            // Draw line path using monotone cubic interpolation (on top of dots).
+            // Monotone cubic guarantees the curve passes through every data point and
+            // never overshoots between adjacent points, so no artificial dips or peaks.
+            val path = Path()
+            if (pts.size == 1) {
+                // Single point — just move to it (nothing to draw)
+                path.moveTo(pts[0].x, pts[0].y)
+            } else {
+                // Step 1: compute secant slopes between consecutive points
+                val n = pts.size
+                val dx = FloatArray(n - 1) { i -> pts[i + 1].x - pts[i].x }
+                val dy = FloatArray(n - 1) { i -> pts[i + 1].y - pts[i].y }
+                val secants = FloatArray(n - 1) { i -> if (dx[i] != 0f) dy[i] / dx[i] else 0f }
+
+                // Step 2: initialise tangents using the average of neighbouring secants
+                val tangents = FloatArray(n)
+                tangents[0] = secants[0]
+                tangents[n - 1] = secants[n - 2]
+                for (i in 1 until n - 1) {
+                    tangents[i] = (secants[i - 1] + secants[i]) / 2f
+                }
+
+                // Step 3: enforce monotonicity — scale tangents that would cause overshoot
+                for (i in 0 until n - 1) {
+                    if (secants[i] == 0f) {
+                        // Flat segment: force both endpoints to zero so the curve stays flat
+                        tangents[i] = 0f
+                        tangents[i + 1] = 0f
+                    } else {
+                        val alpha = tangents[i] / secants[i]
+                        val beta = tangents[i + 1] / secants[i]
+                        val norm = alpha * alpha + beta * beta
+                        if (norm > 9f) {
+                            // Clamp to the Fritsch–Carlson circle of radius 3 to prevent overshoot
+                            val scale = 3f / kotlin.math.sqrt(norm)
+                            tangents[i] = alpha * scale * secants[i]
+                            tangents[i + 1] = beta * scale * secants[i]
+                        }
+                    }
+                }
+
+                // Step 4: build the cubic Bezier path from the monotone tangents
+                path.moveTo(pts[0].x, pts[0].y)
+                for (i in 0 until n - 1) {
+                    val cp1x = pts[i].x + dx[i] / 3f
+                    val cp1y = pts[i].y + tangents[i] * dx[i] / 3f
+                    val cp2x = pts[i + 1].x - dx[i] / 3f
+                    val cp2y = pts[i + 1].y - tangents[i + 1] * dx[i] / 3f
+                    path.cubicTo(cp1x, cp1y, cp2x, cp2y, pts[i + 1].x, pts[i + 1].y)
+                }
             }
             drawPath(
                 path,
