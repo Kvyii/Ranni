@@ -184,9 +184,7 @@ fun AboutContent() {
             // Release date
             Text("23/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
             ChangelogText("""
-                • Increase History > Progress graph size
-                • Removed separation lines in history > calendar UI
-                • Introduced smoothing in history > progress graph
+                • Added 11 new themes
                 """.trimIndent())
         }
 

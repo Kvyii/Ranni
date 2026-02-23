@@ -89,7 +89,7 @@ enum class AppTheme(val colorScheme: ColorScheme, val displayName: String) {
 
     // Kaneko Lumi (Phase Connect) — light scheme: cream white base, gold + navy accents
     KANEKO_LUMI_LIGHT(
-        displayName = "Kaneko Lumi Light",
+        displayName = "Kaneko Lumi",
         colorScheme = lightColorScheme(
             // Accent — Lumi's signature golden yellow (darkened for light bg contrast)
             primary          = Color(0xFFC49A28),
@@ -119,6 +119,356 @@ enum class AppTheme(val colorScheme: ColorScheme, val displayName: String) {
             onSecondaryContainer  = Color(0xFF1A1600),
             // Exercise card background — slightly deeper cream
             surfaceContainerLow   = Color(0xFFF7F0DF),
+        )
+    ),
+
+    // Mari_Mari_EN — light scheme: sky blue base, vivid orange accents
+    MARI_MARI(
+        displayName = "MariMari",
+        colorScheme = lightColorScheme(
+            // Accent — vivid sky blue from her jacket
+            primary          = Color(0xFF1A7EC4),
+            // Secondary accent — bright orange bow and goldfish scales
+            tertiary         = Color(0xFFE06010),
+            // App background — pure soft white, like her silver hair
+            background       = Color(0xFFF4F8FF),
+            // Card / sheet / dialog surfaces
+            surface          = Color(0xFFF4F8FF),
+            // Navigation bar and tab bar container — light sky blue tint
+            surfaceContainer = Color(0xFFCCE4F8),
+            // Primary text colour — deep navy-blue for contrast
+            onSurface        = Color(0xFF0A1A2E),
+            // Secondary text, inactive icons — muted blue-grey
+            onSurfaceVariant = Color(0xFF304060),
+            // Validation errors, danger — red gem from her brooch
+            error            = Color(0xFFCC2020),
+            // Text / icons drawn on top of error-coloured surfaces
+            onError          = Color(0xFFFFFFFF),
+            // Climb dot border colour — steel blue-grey
+            outline          = Color(0xFF5880A0),
+            // Graph grid lines, horizontal dividers — light blue divider
+            outlineVariant   = Color(0xFFA8C8E8),
+            // Nav bar selected item pill background — vivid orange
+            secondaryContainer    = Color(0xFFFF8C20),
+            // Nav bar selected icon and label colour — deep navy
+            onSecondaryContainer  = Color(0xFF1A0A00),
+            // Exercise card background — very light blue-white
+            surfaceContainerLow   = Color(0xFFE0EFFB),
+        )
+    ),
+
+    // Ceres Fauna (Hololive EN) — light scheme: mint green base, teal + coral + gold accents
+    CERES_FAUNA(
+        displayName = "Ceres Fauna",
+        colorScheme = lightColorScheme(
+            // Accent — Fauna's sage/mint green hair
+            primary          = Color(0xFF5A9E72),
+            // Secondary accent — coral/salmon from her skirt gradient
+            tertiary         = Color(0xFFE87A6A),
+            // App background — soft mint white, like her dress base
+            background       = Color(0xFFF2FAF4),
+            // Card / sheet / dialog surfaces
+            surface          = Color(0xFFF2FAF4),
+            // Navigation bar and tab bar container — light sage tint
+            surfaceContainer = Color(0xFFD8EFE0),
+            // Primary text colour — deep teal-navy from her bodice
+            onSurface        = Color(0xFF0D2020),
+            // Secondary text, inactive icons — muted dark teal
+            onSurfaceVariant = Color(0xFF2E4A40),
+            // Validation errors, danger — coral from her skirt
+            error            = Color(0xFFCC5540),
+            // Text / icons drawn on top of error-coloured surfaces
+            onError          = Color(0xFFFFFFFF),
+            // Climb dot border colour — muted gold filigree
+            outline          = Color(0xFF7A8A60),
+            // Graph grid lines, horizontal dividers — light green divider
+            outlineVariant   = Color(0xFFB8D8C0),
+            // Nav bar selected item pill background — soft mint green
+            secondaryContainer    = Color(0xFFA8DEB8),
+            // Nav bar selected icon and label colour — deep teal
+            onSecondaryContainer  = Color(0xFF0A2018),
+            // Exercise card background — barely-tinted mint white
+            surfaceContainerLow   = Color(0xFFE8F5EC),
+        )
+    ),
+
+    // IRyS (Hololive EN) — dark scheme: deep magenta base, vivid crimson + electric cyan accents
+    IRYS(
+        displayName = "IRyS",
+        colorScheme = darkColorScheme(
+            // Accent — her vivid crimson-red hair, fully saturated
+            primary          = Color(0xFFFF1A6C),
+            // Secondary accent — electric teal/cyan eyes
+            tertiary         = Color(0xFF00E5F0),
+            // App background — deep saturated magenta-black
+            background       = Color(0xFF100612),
+            // Card / sheet / dialog surfaces
+            surface          = Color(0xFF100612),
+            // Navigation bar and tab bar container — rich purple-magenta
+            surfaceContainer = Color(0xFF280A38),
+            // Primary text colour — bright white like her dress
+            onSurface        = Color(0xFFFFF0FF),
+            // Secondary text, inactive icons — soft lavender
+            onSurfaceVariant = Color(0xFFD0A8D8),
+            // Validation errors, danger — screaming hot pink
+            error            = Color(0xFFFF2D7A),
+            // Text / icons drawn on top of error-coloured surfaces
+            onError          = Color(0xFF3A0020),
+            // Climb dot border colour — vivid purple
+            outline          = Color(0xFFAA50C0),
+            // Graph grid lines, horizontal dividers — deep purple divider
+            outlineVariant   = Color(0xFF501860),
+            // Nav bar selected item pill background — vivid magenta-purple
+            secondaryContainer    = Color(0xFF8B0A60),
+            // Nav bar selected icon and label colour — bright pink-white
+            onSecondaryContainer  = Color(0xFFFFAAE0),
+            // Exercise card background — deep saturated purple-black
+            surfaceContainerLow   = Color(0xFF1C081E),
+        )
+    ),
+
+    // Gawr Gura (Hololive EN) — light scheme: deep ocean blue base, vivid teal + white accents
+    GAWR_GURA(
+        displayName = "Gawr Gura",
+        colorScheme = lightColorScheme(
+            // Accent — vivid ocean blue of her shark hoodie, fully saturated
+            primary          = Color(0xFF0060C0),
+            // Secondary accent — electric aqua trident
+            tertiary         = Color(0xFF00B8B0),
+            // App background — medium ocean blue, like deep water
+            background       = Color(0xFFB8D8F0),
+            // Card / sheet / dialog surfaces
+            surface          = Color(0xFFB8D8F0),
+            // Navigation bar and tab bar container — rich saturated blue
+            surfaceContainer = Color(0xFF70A8D8),
+            // Primary text colour — deep ocean navy
+            onSurface        = Color(0xFF001428),
+            // Secondary text, inactive icons — dark navy-blue
+            onSurfaceVariant = Color(0xFF102848),
+            // Validation errors, danger — vivid coral/pink (blushing cheeks)
+            error            = Color(0xFFD02050),
+            // Text / icons drawn on top of error-coloured surfaces
+            onError          = Color(0xFFFFFFFF),
+            // Climb dot border colour — shark grey-white teeth
+            outline          = Color(0xFF3870A0),
+            // Graph grid lines, horizontal dividers — medium blue divider
+            outlineVariant   = Color(0xFF6898C0),
+            // Nav bar selected item pill background — electric teal aqua
+            secondaryContainer    = Color(0xFF0098B0),
+            // Nav bar selected icon and label colour — bright white
+            onSecondaryContainer  = Color(0xFFE0FAFF),
+            // Exercise card background — slightly deeper ocean blue
+            surfaceContainerLow   = Color(0xFF9CCAE8),
+        )
+    ),
+
+    // Nanashi Mumei (Hololive EN) — mid-dark scheme: teal-brown base, sandy brown + teal accents, brass gold highlights
+    NANASHI_MUMEI(
+        displayName = "Nanashi Mumei",
+        colorScheme = darkColorScheme(
+            // Accent — deep teal cape lining, her most dominant colour
+            primary          = Color(0xFF3A9488),
+            // Secondary accent — warm brass gold from belt buckles and lantern glow
+            tertiary         = Color(0xFFC49A30),
+            // App background — mid-dark teal-brown, blending her two dominant tones
+            background       = Color(0xFF1E2420),
+            // Card / sheet / dialog surfaces
+            surface          = Color(0xFF1E2420),
+            // Navigation bar and tab bar container — slightly lifted teal-brown
+            surfaceContainer = Color(0xFF2C3630),
+            // Primary text colour — warm off-white from her blouse
+            onSurface        = Color(0xFFF0EDE6),
+            // Secondary text, inactive icons — sandy brown from her hair
+            onSurfaceVariant = Color(0xFFBBA888),
+            // Validation errors, danger — crimson red from her pleated underskirt
+            error            = Color(0xFFCC3030),
+            // Text / icons drawn on top of error-coloured surfaces
+            onError          = Color(0xFFFFFFFF),
+            // Climb dot border colour — dark chocolate brown from her corset and boots
+            outline          = Color(0xFF6A5040),
+            // Graph grid lines, horizontal dividers — muted teal-brown divider
+            outlineVariant   = Color(0xFF384038),
+            // Nav bar selected item pill background — muted teal
+            secondaryContainer    = Color(0xFF2A6860),
+            // Nav bar selected icon and label colour — warm sandy cream
+            onSecondaryContainer  = Color(0xFFE8DEC8),
+            // Exercise card background — dark brown-teal card surface
+            surfaceContainerLow   = Color(0xFF181E1A),
+        )
+    ),
+
+    // Inugami Korone (Hololive JP) — light scheme: sunny yellow base, red + cyan highlights
+    INUGAMI_KORONE(
+        displayName = "Inugami Korone",
+        colorScheme = lightColorScheme(
+            // Accent — her signature vivid yellow hoodie
+            primary          = Color(0xFFD4A800),
+            // Secondary accent — cyan button highlight on her shirt
+            tertiary         = Color(0xFF00A8B8),
+            // App background — bright sunny yellow, like her background
+            background       = Color(0xFFFFF8D6),
+            // Card / sheet / dialog surfaces
+            surface          = Color(0xFFFFF8D6),
+            // Navigation bar and tab bar container — warm yellow tint
+            surfaceContainer = Color(0xFFFFEE90),
+            // Primary text colour — deep warm brown, like her hair
+            onSurface        = Color(0xFF2A1A08),
+            // Secondary text, inactive icons — muted warm brown
+            onSurfaceVariant = Color(0xFF5A3E20),
+            // Validation errors, danger — red button highlight from her shirt
+            error            = Color(0xFFCC2020),
+            // Text / icons drawn on top of error-coloured surfaces
+            onError          = Color(0xFFFFFFFF),
+            // Climb dot border colour — warm amber-brown
+            outline          = Color(0xFF907040),
+            // Graph grid lines, horizontal dividers — soft yellow divider
+            outlineVariant   = Color(0xFFE8D880),
+            // Nav bar selected item pill background — vivid red accent
+            secondaryContainer    = Color(0xFFE83030),
+            // Nav bar selected icon and label colour — bright white
+            onSecondaryContainer  = Color(0xFFFFFFFF),
+            // Exercise card background — soft warm cream
+            surfaceContainerLow   = Color(0xFFFFF4C0),
+        )
+    ),
+
+    // Saber / Artoria Pendragon (Fate) — dark scheme: deep royal blue base, silver + gold accents
+    SABER(
+        displayName = "Saber",
+        colorScheme = darkColorScheme(
+            // Accent — her royal blue dress
+            primary          = Color(0xFF4A7FD4),
+            // Secondary accent — her golden ahoge and armour trim
+            tertiary         = Color(0xFFD4A800),
+            // App background — deep navy-black, like the dark battlefield behind her
+            background       = Color(0xFF090C14),
+            // Card / sheet / dialog surfaces
+            surface          = Color(0xFF090C14),
+            // Navigation bar and tab bar container — deep royal blue-black
+            surfaceContainer = Color(0xFF141A2E),
+            // Primary text colour — silver-white like her armour
+            onSurface        = Color(0xFFECEEF8),
+            // Secondary text, inactive icons — muted silver-grey
+            onSurfaceVariant = Color(0xFFA8AABF),
+            // Validation errors, danger — red (enemy faction)
+            error            = Color(0xFFEF6060),
+            // Text / icons drawn on top of error-coloured surfaces
+            onError          = Color(0xFF3A0000),
+            // Climb dot border colour — gold armour trim
+            outline          = Color(0xFF9A8020),
+            // Graph grid lines, horizontal dividers — dark blue divider
+            outlineVariant   = Color(0xFF252840),
+            // Nav bar selected item pill background — deep gold-tinted blue
+            secondaryContainer    = Color(0xFF2A3A60),
+            // Nav bar selected icon and label colour — bright gold
+            onSecondaryContainer  = Color(0xFFFFE580),
+            // Exercise card background — very dark blue-black
+            surfaceContainerLow   = Color(0xFF0E1220),
+        )
+    ),
+
+    // Diluc (Genshin Impact) — dark scheme: charcoal base, crimson red + gold accents
+    DILUC(
+        displayName = "Diluc",
+        colorScheme = darkColorScheme(
+            // Accent — his vivid crimson red hair and coat lining
+            primary          = Color(0xFFD93030),
+            // Secondary accent — warm ember glow / gold pendant
+            tertiary         = Color(0xFFD4920A),
+            // App background — deep charcoal, like his black outer coat
+            background       = Color(0xFF0F0C0C),
+            // Card / sheet / dialog surfaces
+            surface          = Color(0xFF0F0C0C),
+            // Navigation bar and tab bar container — dark maroon-grey
+            surfaceContainer = Color(0xFF211418),
+            // Primary text colour — soft warm white
+            onSurface        = Color(0xFFF5EDE8),
+            // Secondary text, inactive icons — muted warm grey
+            onSurfaceVariant = Color(0xFFBBADAA),
+            // Validation errors, danger — bright red
+            error            = Color(0xFFFF6B6B),
+            // Text / icons drawn on top of error-coloured surfaces
+            onError          = Color(0xFF3A0000),
+            // Climb dot border colour — dark gold filigree
+            outline          = Color(0xFF806040),
+            // Graph grid lines, horizontal dividers — dark maroon divider
+            outlineVariant   = Color(0xFF3A2020),
+            // Nav bar selected item pill background — deep crimson
+            secondaryContainer    = Color(0xFF6B1010),
+            // Nav bar selected icon and label colour — warm red-white
+            onSecondaryContainer  = Color(0xFFFFD0CC),
+            // Exercise card background — very dark warm charcoal
+            surfaceContainerLow   = Color(0xFF1A1010),
+        )
+    ),
+
+    // Frieren (Frieren: Beyond Journey's End) — light scheme: grey-tinted white base, gold + teal accents
+    FRIEREN(
+        displayName = "Frieren",
+        colorScheme = lightColorScheme(
+            // Accent — teal/emerald green eyes
+            primary          = Color(0xFF2A9A80),
+            // Secondary accent — ruby red earring / staff orb
+            tertiary         = Color(0xFFCC1830),
+            // App background — grey-tinted white, like her silver hair / white robes
+            background       = Color(0xFFDEE0E4),
+            // Card / sheet / dialog surfaces
+            surface          = Color(0xFFDEE0E4),
+            // Navigation bar and tab bar container — slightly deeper grey-blue
+            surfaceContainer = Color(0xFFC4C8D0),
+            // Primary text colour — deep charcoal for contrast on light grey
+            onSurface        = Color(0xFF101418),
+            // Secondary text, inactive icons — muted slate
+            onSurfaceVariant = Color(0xFF384048),
+            // Validation errors, danger — vivid red earring / ruby staff gem
+            error            = Color(0xFFCC1830),
+            // Text / icons drawn on top of error-coloured surfaces
+            onError          = Color(0xFFFFFFFF),
+            // Climb dot border colour — muted gold filigree
+            outline          = Color(0xFF807060),
+            // Graph grid lines, horizontal dividers — soft grey divider
+            outlineVariant   = Color(0xFFB0B4BC),
+            // Nav bar selected item pill background — rich gold robe trim
+            secondaryContainer    = Color(0xFFB88A00),
+            // Nav bar selected icon and label colour — bright off-white
+            onSecondaryContainer  = Color(0xFFFFF8E0),
+            // Exercise card background — slightly darker grey for dot contrast
+            surfaceContainerLow   = Color(0xFFD0D4DA),
+        )
+    ),
+
+    // Robin (Fire Emblem Awakening, Female) — dark scheme: medium navy-charcoal base, dusty mauve-purple + brass gold
+    ROBIN_FE(
+        displayName = "Robin FE",
+        colorScheme = darkColorScheme(
+            // Accent — dusty mauve-purple cloak inner lining
+            primary          = Color(0xFF8A78C0),
+            // Secondary accent — brass gold rope toggles and accessories
+            tertiary         = Color(0xFFC09838),
+            // App background — medium dark navy, like the body of her cloak (not pitch black)
+            background       = Color(0xFF1A1A26),
+            // Card / sheet / dialog surfaces
+            surface          = Color(0xFF1A1A26),
+            // Navigation bar and tab bar container — purple-tinted navy, a touch more saturated
+            surfaceContainer = Color(0xFF252240),
+            // Primary text colour — cool silver-white like her hair
+            onSurface        = Color(0xFFE8EAF0),
+            // Secondary text, inactive icons — muted silver
+            onSurfaceVariant = Color(0xFFB0AABF),
+            // Validation errors, danger — soft red (thunder tome)
+            error            = Color(0xFFD46060),
+            // Text / icons drawn on top of error-coloured surfaces
+            onError          = Color(0xFF3A0000),
+            // Climb dot border colour — warm brown from her boots and belt
+            outline          = Color(0xFF806848),
+            // Graph grid lines, horizontal dividers — more saturated purple divider
+            outlineVariant   = Color(0xFF443868),
+            // Nav bar selected item pill background — more saturated purple
+            secondaryContainer    = Color(0xFF5A3EA0),
+            // Nav bar selected icon and label colour — soft lavender
+            onSecondaryContainer  = Color(0xFFDDD0F0),
+            // Exercise card background — purple-tinted navy card surface
+            surfaceContainerLow   = Color(0xFF1E1C38),
         )
     );
 
