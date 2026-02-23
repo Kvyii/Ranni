@@ -111,3 +111,12 @@ fun routeGrade(gymName: String, routeName: String): String =
 // Returns true if dots/bars for this gym should render as hollow outlines.
 // Derived directly from the Gym.hollowDots flag — no separate string list to maintain.
 fun isOutlineGym(name: String): Boolean = gyms.find { it.name == name }?.hollowDots == true
+
+// Returns true if this color is near-black (lum < 0.06) or near-white (lum > 0.85),
+// meaning it needs a contrasting outline ring to stay visible on both light and dark themes.
+// Threshold of 0.85 catches 0xFFEDEDED (lum ≈ 0.929) used for White/Custom/Outdoor routes.
+// Uses standard sRGB luminance coefficients.
+fun Color.needsContrastRing(): Boolean {
+    val lum = 0.2126f * red + 0.7152f * green + 0.0722f * blue
+    return lum < 0.06f || lum > 0.85f
+}

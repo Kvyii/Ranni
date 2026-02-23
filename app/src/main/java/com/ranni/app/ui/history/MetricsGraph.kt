@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.sp
 import com.ranni.app.R
 import com.ranni.app.data.model.InjurySeverity
 import com.ranni.app.data.model.isOutlineGym
+import com.ranni.app.data.model.needsContrastRing
 import com.ranni.app.data.model.routeColor
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
@@ -65,6 +66,8 @@ fun MetricsGraph(
         // Captured here so they are accessible inside the Canvas DrawScope
         val exerciseDotColor = MaterialTheme.colorScheme.onSurfaceVariant
         val gymSeparatorColor = MaterialTheme.colorScheme.outlineVariant
+        // Hairline ring drawn over every filled dot for contrast on light and dark themes
+        val dotOutlineColor = MaterialTheme.colorScheme.outline
         val labelStyle = TextStyle(fontSize = 10.sp, color = labelColor)
         val textMeasurer = rememberTextMeasurer()
 
@@ -194,6 +197,7 @@ fun MetricsGraph(
                 }
 
                 // Draw exercise dots — stacking upward
+                // exerciseDotColor is onSurfaceVariant (theme-derived), always legible, no ring needed
                 if (hasExercises) {
                     for (i in 0 until week.exerciseCount) {
                         val dotY = baseY - i * dotStep
@@ -246,6 +250,16 @@ fun MetricsGraph(
                                 radius = dotRadius,
                                 center = Offset(climbColumnX, currentY)
                             )
+                            // Hairline ring only for near-black/white colors that would otherwise
+                            // vanish against the background on one of the themes
+                            if (dotColor.needsContrastRing()) {
+                                drawCircle(
+                                    color = dotOutlineColor,
+                                    radius = dotRadius,
+                                    center = Offset(climbColumnX, currentY),
+                                    style = Stroke(width = 0.3.dp.toPx())
+                                )
+                            }
                         }
                         currentY -= dotStep
                     }
