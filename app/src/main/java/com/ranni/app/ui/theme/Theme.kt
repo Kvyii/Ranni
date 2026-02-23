@@ -3,6 +3,7 @@ package com.ranni.app.ui.theme
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
@@ -84,7 +85,43 @@ enum class AppTheme(val colorScheme: ColorScheme, val displayName: String) {
             // Exercise card background (default Card composable colour)
             surfaceContainerLow   = Color(0xFF2B2930),
         )
+    ),
+
+    // Kaneko Lumi (Phase Connect) — light scheme: cream white base, gold + navy accents
+    KANEKO_LUMI_LIGHT(
+        displayName = "Kaneko Lumi Light",
+        colorScheme = lightColorScheme(
+            // Accent — Lumi's signature golden yellow (darkened for light bg contrast)
+            primary          = Color(0xFFC49A28),
+            // Secondary accent — teal/aqua from her palette swatch
+            tertiary         = Color(0xFF2A9DA5),
+            // App background — bright warm cream, like her white outfit
+            background       = Color(0xFFFDF8EE),
+            // Card / sheet / dialog surfaces
+            surface          = Color(0xFFFDF8EE),
+            // Navigation bar and tab bar container — soft warm white
+            surfaceContainer = Color(0xFFF0E8D4),
+            // Primary text colour — deep navy from her coat
+            onSurface        = Color(0xFF0D1020),
+            // Secondary text, inactive icons — muted navy
+            onSurfaceVariant = Color(0xFF3A3D52),
+            // Validation errors, danger — amber-orange from her palette
+            error            = Color(0xFFB85C2A),
+            // Text / icons drawn on top of error-coloured surfaces
+            onError          = Color(0xFFFFFFFF),
+            // Climb dot border colour — muted gold
+            outline          = Color(0xFF8A7A50),
+            // Graph grid lines, horizontal dividers — light warm divider
+            outlineVariant   = Color(0xFFDDD0B0),
+            // Nav bar selected item pill background — soft gold
+            secondaryContainer    = Color(0xFFfad569),
+            // Nav bar selected icon and label colour — deep navy
+            onSecondaryContainer  = Color(0xFF1A1600),
+            // Exercise card background — slightly deeper cream
+            surfaceContainerLow   = Color(0xFFF7F0DF),
+        )
     );
+
 }
 
 /**
