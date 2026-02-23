@@ -3,6 +3,7 @@ package com.ranni.app.ui.history
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ranni.app.data.GymOrderPreferences
+import com.ranni.app.data.SharedPrefsGymOrderPreferences
 import com.ranni.app.data.model.ClimbLog
 import com.ranni.app.data.model.ClimbType
 import com.ranni.app.data.model.InjuryLog
@@ -108,10 +109,32 @@ class HistoryViewModel(
         gymOrderPrefs.getLastStatsGym()
     )
 
-    /** Selected time period in months; null = Lifetime. Loaded from prefs, defaults to 2 months on first launch. */
+    /**
+     * Selected time period in months; null = Lifetime.
+     * Defaults to 2 months on first launch (when the key has never been written).
+     * Once the user has explicitly chosen Lifetime, the -1 sentinel in prefs distinguishes
+     * that from "never set", so the default of 2 is not re-applied.
+     */
     val statsPeriodMonths: MutableStateFlow<Int?> = MutableStateFlow(
-        gymOrderPrefs.getLastStatsPeriod() ?: 2
+        if ((gymOrderPrefs as? SharedPrefsGymOrderPreferences)?.hasStatsPeriod() == true)
+            gymOrderPrefs.getLastStatsPeriod()   // null here means Lifetime
+        else
+            2  // first-launch default
     )
+
+    /**
+     * Set of gym names that have at least one climb log within the selected period.
+     * The gym dropdown is filtered to this set so only gyms with relevant data are shown.
+     */
+    val statsGymsWithData: StateFlow<Set<String>> = combine(climbLogs, statsPeriodMonths) { climbs, months ->
+        // Compute the cutoff timestamp for the current period (0 = Lifetime, no cutoff)
+        val cutoff = if (months != null) {
+            System.currentTimeMillis() - months * 30L * 24 * 60 * 60 * 1000
+        } else {
+            0L
+        }
+        climbs.filter { it.loggedAt > cutoff }.map { it.gymName }.toSet()
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
 
     /** Computed stats for the Stats tab; null when no gym is selected or no data. */
     // metricsConfig is included so stats recompute reactively when filterRepeats is toggled.

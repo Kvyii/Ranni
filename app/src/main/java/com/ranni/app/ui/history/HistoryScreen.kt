@@ -758,6 +758,17 @@ private fun StatsTab(viewModel: HistoryViewModel) {
     val selectedGym by viewModel.statsGym.collectAsState()
     val selectedPeriod by viewModel.statsPeriodMonths.collectAsState()
     val statsData by viewModel.statsData.collectAsState()
+    val gymsWithData by viewModel.statsGymsWithData.collectAsState()
+
+    // Filter the ordered gym list to only gyms that have data in the current period
+    val filteredGymNames = orderedGymNames.filter { it in gymsWithData }
+
+    // If the currently selected gym has no data in the new period, clear the selection
+    LaunchedEffect(gymsWithData) {
+        if (selectedGym != null && selectedGym !in gymsWithData) {
+            viewModel.setStatsGym(null)
+        }
+    }
 
     var gymDropdownExpanded by remember { mutableStateOf(false) }
     var periodDropdownExpanded by remember { mutableStateOf(false) }
@@ -787,7 +798,8 @@ private fun StatsTab(viewModel: HistoryViewModel) {
                     expanded = gymDropdownExpanded,
                     onDismissRequest = { gymDropdownExpanded = false }
                 ) {
-                    orderedGymNames.forEach { gymName ->
+                    // Only show gyms that have climb data in the selected period
+                    filteredGymNames.forEach { gymName ->
                         DropdownMenuItem(
                             text = { Text(gymName) },
                             onClick = {
