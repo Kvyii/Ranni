@@ -18,16 +18,16 @@ import com.ranni.app.data.model.routeColor
  * A colored circle representing a climb route.
  *
  * Gyms where [isOutlineGym] returns true render as a hollow ring using the route's own color.
- * Other gyms render as a filled circle.
+ * Other gyms render as a filled circle, always with a thin [MaterialTheme.colorScheme.outline]
+ * border for contrast on both light and dark backgrounds.
  *
  * @param gymName        Gym name (e.g. "9 Degrees", "Custom") — required to disambiguate routes
  *                       with the same name across different gyms (e.g. "V3" in Custom vs Outdoor)
  * @param routeName      Route color name (e.g. "Green", "V3") stored on ClimbLog.color
  * @param size           Diameter of the circle
- * @param strokeWidth    Border width for the hollow ring (outline gyms) and optional filled border
- * @param showFilledBorder  When true, adds a thin [MaterialTheme.colorScheme.outline] ring around
- *                          filled circles. Use for larger swatches (ClimbScreen, InfoScreen)
- *                          where the ring aids contrast; omit for small history dots.
+ * @param strokeWidth    Border width for the hollow ring (outline gyms)
+ * @param showFilledBorder  Kept for call-site compatibility; always treated as true so that filled
+ *                          dots have contrast on both light and dark themes.
  */
 @Composable
 fun ClimbDot(
@@ -50,10 +50,11 @@ fun ClimbDot(
                     // Hollow ring — stroke uses the route's own color
                     Modifier.border(strokeWidth, color, CircleShape)
                 } else {
-                    // Filled circle, with optional thin outer ring for contrast
-                    val filled = Modifier.background(color)
-                    if (showFilledBorder) filled.border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
-                    else filled
+                    // Always add a thin outline ring so dots are visible on both light and dark
+                    // backgrounds (e.g. white dots on light theme, black dots on dark theme)
+                    Modifier
+                        .background(color)
+                        .border(0.5.dp, MaterialTheme.colorScheme.outline, CircleShape)
                 }
             )
     )
