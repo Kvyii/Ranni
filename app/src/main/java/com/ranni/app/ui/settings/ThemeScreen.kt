@@ -2,6 +2,8 @@ package com.ranni.app.ui.settings
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
@@ -23,7 +25,10 @@ fun ThemeScreen(viewModel: MetricsViewModel) {
     // Resolve the current theme safely, defaulting to ORIGINAL on unknown values
     val selected = try { AppTheme.valueOf(config.uiTheme) } catch (_: IllegalArgumentException) { AppTheme.RANNI_DARK }
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    // verticalScroll ensures all themes are reachable on small screens
+    Column(modifier = Modifier
+        .fillMaxSize()
+        .verticalScroll(rememberScrollState())) {
         AppTheme.entries.forEachIndexed { index, theme ->
             ThemeRow(
                 theme = theme,
