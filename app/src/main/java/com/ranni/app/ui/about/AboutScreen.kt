@@ -11,11 +11,56 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.vectordrawable.graphics.drawable.AnimatedVectorDrawableCompat
 import com.ranni.app.R
+
+// Keyword → colour mappings applied by ChangelogText
+private val changelogKeywordColors: Map<String, Color> = mapOf(
+    "WARNING" to Color.Red
+)
+
+/**
+ * Renders changelog body text with keyword highlighting.
+ * Any word listed in [changelogKeywordColors] is coloured automatically.
+ */
+@Composable
+private fun ChangelogText(text: String) {
+    Text(
+        text = buildAnnotatedString {
+            // Walk through the text looking for any registered keyword
+            var cursor = 0
+            while (cursor < text.length) {
+                // Find the earliest keyword match from the current cursor position
+                val match = changelogKeywordColors.entries
+                    .mapNotNull { (kw, color) ->
+                        val idx = text.indexOf(kw, cursor)
+                        if (idx >= 0) Triple(idx, kw, color) else null
+                    }
+                    .minByOrNull { it.first }
+
+                if (match == null) {
+                    // No more keywords — append the rest plain
+                    append(text.substring(cursor))
+                    break
+                }
+                val (idx, kw, color) = match
+                // Append plain text before the keyword
+                append(text.substring(cursor, idx))
+                // Append the keyword in its designated colour
+                withStyle(SpanStyle(color = color)) { append(kw) }
+                cursor = idx + kw.length
+            }
+        },
+        style = MaterialTheme.typography.bodyMedium
+    )
+}
 
 @Composable
 fun SettingsScreen(
@@ -135,100 +180,92 @@ fun AboutContent() {
 
 
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text("v1.2.4", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            Text("v1.2.5", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
             // Release date
             Text("23/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
-            Text(
-                """
+            ChangelogText("""
                 • Increase History > Progress graph size
                 • Removed separation lines in history > calendar UI
                 • Introduced smoothing in history > progress graph
-                """.trimIndent(),
-                style = MaterialTheme.typography.bodyMedium
-            )
-        }    
+                """.trimIndent())
+        }
+
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text("v1.2.4", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            // Release date
+            Text("23/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+            ChangelogText("""
+                • Increase History > Progress graph size
+                • Removed separation lines in history > calendar UI
+                • Introduced smoothing in history > progress graph
+                """.trimIndent())
+        }
 
 
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("v1.2.3", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
             // Release date
             Text("23/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
-            Text(
-                """
+            ChangelogText("""
                 • Fix clipping bug in calendar
                 • Fix sliding animation jitter from daily view back to calendar
-                """.trimIndent(),
-                style = MaterialTheme.typography.bodyMedium
-            )
-        }    
+                """.trimIndent())
+        }
 
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("v1.2.2", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
             // Release date
             Text("23/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
-            Text(
-                """
+            ChangelogText("""
                 • Fix non persistent history filter bug
                 • Update calendar UI to slide to daily items when selected.
                 • Increase calendar max dots to 8 from 4
                 • Update 9D Orange route to V3 - V5 from V3 - V4
-                """.trimIndent(),
-                style = MaterialTheme.typography.bodyMedium
-            )
-        }    
+                """.trimIndent())
+        }
 
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("v1.2.1", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
             // Release date
             Text("23/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
-            Text(
-                """
+            ChangelogText("""
                 • Fix clipping UI bug
-                """.trimIndent(),
-                style = MaterialTheme.typography.bodyMedium
-            )
-        }       
+                """.trimIndent())
+        }
 
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("v1.2.0", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
             // Release date
             Text("22/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
-            Text(
-                """
+            ChangelogText("""
                 • Added Stats page
                 • Added ability to filter repeat climbs from display
                 • Repeated climbs are now displayed faded in Calendar
                 • Added a favourites feature to keep gyms expanded
                 • Added done button to exercises
                 • Animated Ranni logo
-                • Rejigged the UI a bit more     
-                """.trimIndent(),
-                style = MaterialTheme.typography.bodyMedium
-            )
-        }       
+                • Rejigged the UI a bit more
+                """.trimIndent())
+        }
 
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("v1.1.0", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
             // Release date
             Text("21/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
-            Text(
-                """
+            ChangelogText("""
                 • Big UI rehaul. Added Themes
                 • Changed default theme from Android Dark to Ranni Dark
                 • Added outdoor gyms with YDS and V grading
                 • Bumped DB schema to v13 with one time migration. All older DBs will need to be updated to work with 1.4.0+
-                • WARNING: DB will be deprecated by v1.1.0+. Users below 1.0.3+ will lose their data if upgrading to v1.7.0+
-                """.trimIndent(),
-                style = MaterialTheme.typography.bodyMedium
-            )
-        }            
+                • WARNING: DB will be deprecated by v1.1.0+. Users below 1.0.3+ will lose their data if upgrading to v1.4.0+
+                """.trimIndent())
+        }
 
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("v1.0.3", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
             // Release date
             Text("21/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
-            Text(
-                """
+            ChangelogText("""
                 • Fix alarm bug
                 • Update icons
                 • Added database migration to preserve data between versions
@@ -237,51 +274,40 @@ fun AboutContent() {
                 • Added injury tracking
                 • Added reordering for gyms and exercises
                 • Bumped DB schema to v12
-                """.trimIndent(),
-                style = MaterialTheme.typography.bodyMedium
-            )
+                """.trimIndent())
         }
 
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("v1.0.2", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
             // Release date
             Text("20/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
-            Text(
-                """
+            ChangelogText("""
                 • More UI fixes.
                 • Gym dots separation.
                 • Added multipliers for flash and repeat attempts
                 • Updated visuals for custom category
                 • Fixed text indentations for scores
                 • Added a new logo for the app
-                """.trimIndent(),
-                style = MaterialTheme.typography.bodyMedium
-            )
+                """.trimIndent())
         }
 
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("v1.0.1", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
             // Release date
             Text("20/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
-            Text(
-                "• Small UI fixes",
-                style = MaterialTheme.typography.bodyMedium
-            )
+            ChangelogText("• Small UI fixes")
         }
 
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("v1.0.0", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
             // Release date
             Text("19/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
-            Text(
-                """
+            ChangelogText("""
                 • First release! My first android app.
                 • Climb tab — log routes at 9 Degrees by colour and grade
                 • Exercise sessions with set/rest timers and alarm sounds
                 • History calendar showing completed sessions by day
-                """.trimIndent(),
-                style = MaterialTheme.typography.bodyMedium
-            )
+                """.trimIndent())
         }
 
         } // end changelog column
