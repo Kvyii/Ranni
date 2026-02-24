@@ -66,7 +66,9 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.time.DayOfWeek
 import java.time.format.TextStyle
+import java.time.temporal.TemporalAdjusters
 import java.util.Locale
 
 // 12-hour time format with AM/PM (e.g. "1:22 PM")
@@ -537,6 +539,16 @@ private fun ProgressTab(viewModel: HistoryViewModel) {
     // Dots only shown on short timelines (3m/6m), too dense on 12m/24m
     val dotsEnabled = config.timelineMonths <= 6
 
+    // Axis bounds match the full weekly-activity window so dots are never clipped when
+    // the graph line starts after the timeline start (first climb date is mid-week).
+    // Must mirror computeWeeklyActivity's firstMonday calculation exactly.
+    val axisMinDate = remember(config.timelineMonths) {
+        LocalDate.now()
+            .minusMonths(config.timelineMonths.toLong())
+            .with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+    }
+    val axisMaxDate = LocalDate.now()
+
     Column(modifier = Modifier.fillMaxSize()) {
         // Graph with weekly dot overlay — top half of available space
         MetricsGraph(
@@ -546,6 +558,8 @@ private fun ProgressTab(viewModel: HistoryViewModel) {
             showClimbs = config.showClimbDots,
             showExercises = config.showExerciseDots,
             showAboveMedianOnly = config.showAboveMedianOnly,
+            axisMinDate = axisMinDate,
+            axisMaxDate = axisMaxDate,
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
