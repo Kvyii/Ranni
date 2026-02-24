@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="ranni_transp.png" alt="Ranni" width="240">
+  <img src=".github/assets/ranni_transp.png" alt="Ranni" width="240">
 </p>
 
 <h1 align="center">Ranni</h1>
