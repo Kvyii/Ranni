@@ -21,5 +21,15 @@ data class MetricsConfig(
     // When true, REPEAT climbs are excluded from dots, graph, and stats; detail/list views are unaffected.
     // @ColumnInfo defaultValue "0" (false) is required for AutoMigration to generate ALTER TABLE SQL.
     @ColumnInfo(defaultValue = "0")
-    val filterRepeats: Boolean = false
+    val filterRepeats: Boolean = false,
+    // When true, the Stats tab shows +/- deltas vs the preceding period of equal length.
+    // Only shown when there is sufficient data (2× the selected period) and period is not Lifetime.
+    // @ColumnInfo defaultValue "0" is the migration default for existing users; new installs use true.
+    @ColumnInfo(defaultValue = "0")
+    val showPeriodComparison: Boolean = true,
+    // When true, activity dots on the Progress graph show only climbs above the timeline-window median.
+    // A below-median count (or star when zero) is drawn beneath each week's dot stack.
+    // Default false so existing users see no change until they opt in.
+    @ColumnInfo(defaultValue = "0")
+    val showAboveMedianOnly: Boolean = false
 )

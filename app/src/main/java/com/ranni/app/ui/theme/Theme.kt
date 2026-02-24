@@ -437,6 +437,111 @@ enum class AppTheme(val colorScheme: ColorScheme, val displayName: String) {
         )
     ),
 
+    // RX-78-2 Gundam — light scheme: greyed white armour base, Federation blue + red + gold accents
+    RX_78_2(
+        displayName = "RX-78-2",
+        colorScheme = lightColorScheme(
+            // Accent — Federation blue chest and torso armour plates
+            primary          = Color(0xFF1A4CA8),
+            // Secondary accent — golden yellow vent grilles and waist armour
+            tertiary         = Color(0xFFB88A00),
+            // App background — greyed white, like the matte armour plating (not pure white)
+            background       = Color(0xFFE8E8EC),
+            // Card / sheet / dialog surfaces
+            surface          = Color(0xFFE8E8EC),
+            // Navigation bar and tab bar container — slightly darker grey armour panel
+            surfaceContainer = Color(0xFFCCCCD2),
+            // Primary text colour — near-black, high contrast on pale grey background
+            onSurface        = Color(0xFF0A0A0F),
+            // Secondary text, inactive icons — deep charcoal, still very readable
+            onSurfaceVariant = Color(0xFF282830),
+            // Validation errors, danger — shield and foot armour red
+            error            = Color(0xFFBE1020),
+            // Text / icons drawn on top of error-coloured surfaces
+            onError          = Color(0xFFFFFFFF),
+            // Climb dot border colour — medium grey armour joint detail
+            outline          = Color(0xFF707080),
+            // Graph grid lines, horizontal dividers — light grey panel seam
+            outlineVariant   = Color(0xFFB0B0BC),
+            // Nav bar selected item pill background — vivid Federation red (shield / head crest)
+            secondaryContainer    = Color(0xFFC81020),
+            // Nav bar selected icon and label colour — bright white (cockpit visor highlight)
+            onSecondaryContainer  = Color(0xFFFFFFFF),
+            // Exercise card background — slightly darker grey armour surface for card depth
+            surfaceContainerLow   = Color(0xFFD8D8DE),
+        )
+    ),
+
+    // RX-93-ν2 Hi-Nu Gundam — light scheme: blue-grey armour base (#B4B7D1), indigo-blue (#646CD1) accents + orange sensor
+    RX_93_V2(
+        displayName = "Hi-Nu Gundam",
+        colorScheme = lightColorScheme(
+            // Accent — indigo-blue fin funnels and shoulder armour, derived from #646CD1
+            primary          = Color(0xFF4850C8),
+            // Secondary accent — amber orange mono-eye / sensor glow
+            tertiary         = Color(0xFFD06800),
+            // App background — cool blue-grey armour plating, exactly #B4B7D1
+            background       = Color(0xFFB4B7D1),
+            // Card / sheet / dialog surfaces
+            surface          = Color(0xFFB4B7D1),
+            // Navigation bar and tab bar container — slightly deeper blue-grey panel
+            surfaceContainer = Color(0xFF9A9DC0),
+            // Primary text colour — near-black for maximum contrast on mid-grey background
+            onSurface        = Color(0xFF080810),
+            // Secondary text, inactive icons — deep cool slate
+            onSurfaceVariant = Color(0xFF252540),
+            // Validation errors, danger — Federation red (shield emblem)
+            error            = Color(0xFFBE1020),
+            // Text / icons drawn on top of error-coloured surfaces
+            onError          = Color(0xFFFFFFFF),
+            // Climb dot border colour — muted blue-grey panel line
+            outline          = Color(0xFF5A5E88),
+            // Graph grid lines, horizontal dividers — lighter blue-grey seam
+            outlineVariant   = Color(0xFF9094B8),
+            // Nav bar selected item pill background — saturated #646CD1 blue
+            secondaryContainer    = Color(0xFF646CD1),
+            // Nav bar selected icon and label colour — bright white
+            onSecondaryContainer  = Color(0xFFFFFFFF),
+            // Exercise card background — slightly deeper blue-grey for card depth
+            surfaceContainerLow   = Color(0xFFA4A8C4),
+        )
+    ),
+
+    // MSN-04 Sazabi — dark scheme: deep charcoal grey core, dominant crimson red + gold sensor accents
+    MSN_04(
+        displayName = "Sazabi",
+        colorScheme = darkColorScheme(
+            // Accent — dominant Zeon crimson red armour panels
+            primary          = Color(0xFFCC2020),
+            // Secondary accent — gold Zeon emblem and sensor ring detail
+            tertiary         = Color(0xFFC08800),
+            // App background — deep charcoal grey, like the inner frame and joints
+            background       = Color(0xFF181818),
+            // Card / sheet / dialog surfaces
+            surface          = Color(0xFF181818),
+            // Navigation bar and tab bar container — slightly lifted dark grey frame
+            surfaceContainer = Color(0xFF282828),
+            // Primary text colour — warm off-white, high contrast on near-black
+            onSurface        = Color(0xFFF0ECEC),
+            // Secondary text, inactive icons — muted warm grey
+            onSurfaceVariant = Color(0xFFB0A8A8),
+            // Validation errors, danger — brighter alert red (distinct from primary)
+            error            = Color(0xFFFF5555),
+            // Text / icons drawn on top of error-coloured surfaces
+            onError          = Color(0xFF2A0000),
+            // Climb dot border colour — dark steel grey panel line
+            outline          = Color(0xFF606060),
+            // Graph grid lines, horizontal dividers — very dark grey seam
+            outlineVariant   = Color(0xFF383838),
+            // Nav bar selected item pill background — deep blood red
+            secondaryContainer    = Color(0xFF8A0A0A),
+            // Nav bar selected icon and label colour — bright warm white
+            onSecondaryContainer  = Color(0xFFFFE8E8),
+            // Exercise card background — slightly deeper charcoal than bg
+            surfaceContainerLow   = Color(0xFF101010),
+        )
+    ),
+
     // Robin (Fire Emblem Awakening, Female) — dark scheme: medium navy-charcoal base, dusty mauve-purple + brass gold
     ROBIN_FE(
         displayName = "Robin FE",

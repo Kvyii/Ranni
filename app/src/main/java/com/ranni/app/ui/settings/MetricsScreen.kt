@@ -98,6 +98,20 @@ fun MetricsScreen(viewModel: MetricsViewModel) {
             )
         }
 
+        // Toggle to show +/- deltas vs the prior period of equal length in the Stats tab.
+        // Only appears when sufficient data exists (2× the selected period); Lifetime hides it.
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Show comparison to period prior", style = MaterialTheme.typography.bodyMedium)
+            Switch(
+                checked = config.showPeriodComparison,
+                onCheckedChange = { viewModel.updateShowPeriodComparison(it) }
+            )
+        }
+
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("History timeline", style = MaterialTheme.typography.bodyLarge)
             Text(
@@ -157,6 +171,27 @@ fun MetricsScreen(viewModel: MetricsViewModel) {
                 Switch(
                     checked = config.showExerciseDots,
                     onCheckedChange = { viewModel.updateShowExerciseDots(it) }
+                )
+            }
+
+            // When on, only climbs above the timeline-window median score are shown as dots.
+            // A count of below-median climbs (or a star when all made the cut) appears beneath each stack.
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                    Text("Show only above-median climbs", style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        "Dots show climbs above the window median. A count below each stack shows how many were filtered.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = config.showAboveMedianOnly,
+                    onCheckedChange = { viewModel.updateShowAboveMedianOnly(it) }
                 )
             }
 

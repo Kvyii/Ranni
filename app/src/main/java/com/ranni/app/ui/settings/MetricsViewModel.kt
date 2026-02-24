@@ -45,6 +45,18 @@ class MetricsViewModel(private val repo: MetricsRepository) : ViewModel() {
         viewModelScope.launch { repo.updateConfig(c.copy(filterRepeats = filter)) }
     }
 
+    // Persists the showPeriodComparison preference; when true, Stats tab shows +/- vs the prior period.
+    fun updateShowPeriodComparison(show: Boolean) {
+        val c = config.value
+        viewModelScope.launch { repo.updateConfig(c.copy(showPeriodComparison = show)) }
+    }
+
+    // Persists the showAboveMedianOnly preference; when true, dots show only above-median climbs.
+    fun updateShowAboveMedianOnly(show: Boolean) {
+        val c = config.value
+        viewModelScope.launch { repo.updateConfig(c.copy(showAboveMedianOnly = show)) }
+    }
+
     // Persists the selected UI theme name so it survives app restarts.
     fun updateTheme(theme: AppTheme) {
         val c = config.value

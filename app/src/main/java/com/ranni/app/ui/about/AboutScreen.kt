@@ -76,7 +76,7 @@ fun SettingsScreen(
     Column(modifier = Modifier.fillMaxSize()) {
         SettingsRow("Scores", onClick = onNavigateScores)
         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-        SettingsRow("Metric Preferences", onClick = onNavigateMetrics)
+        SettingsRow("Preferences", onClick = onNavigateMetrics)
         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
         SettingsRow("Sounds", onClick = onNavigateSounds)
         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
@@ -177,6 +177,19 @@ fun AboutContent() {
 
         // Extra spacing between each version entry
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text("v1.2.7", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            // Release date
+            Text("25/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+            ChangelogText("""
+                • Added comparison option to settings > metrics to show +/- deltas vs the preceding period of equal length (e.g. if you select 1 month, it compares to the previous month; if you select 3 months, it compares to the previous 3 months). Only shown when there is sufficient data (2× the selected period) and period is not Lifetime.
+                • Added median setting for History > Progress to reflect only best 50% of climbs
+                • Fixed graph bug where plot starts before first available data point
+                • Fixed histograph bug where hollow type climbs do not render both bars
+                • Added 3 Gundam themes
+                """.trimIndent())
+        }
 
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("v1.2.6.2", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
@@ -289,8 +302,8 @@ fun AboutContent() {
             // Release date
             Text("20/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
             ChangelogText("""
-                • More UI fixes.
-                • Gym dots separation.
+                • More UI fixes
+                • Gym dots separation
                 • Added multipliers for flash and repeat attempts
                 • Updated visuals for custom category
                 • Fixed text indentations for scores
@@ -310,7 +323,7 @@ fun AboutContent() {
             // Release date
             Text("19/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
             ChangelogText("""
-                • First release! My first android app.
+                • First release! My first android app
                 • Climb tab — log routes at 9 Degrees by colour and grade
                 • Exercise sessions with set/rest timers and alarm sounds
                 • History calendar showing completed sessions by day

@@ -51,13 +51,29 @@ data class StatsData(
     val gradeRows: List<GradeStats>  // Hardest first, all grades up to the current max
 )
 
+/**
+ * Deltas vs the immediately preceding period of equal length.
+ * null is emitted by [priorStatsData] when: Lifetime is selected, the toggle is off,
+ * or there is insufficient historical data (< 2× the selected period).
+ */
+data class StatsComparison(
+    val climbsDelta: Int,           // current total climbs − prior total climbs
+    val sessionsDelta: Int,         // current sessions − prior sessions
+    // routeName → (current NEW+FLASH) − (prior NEW+FLASH); includes prior-only routes (delta < 0)
+    val gradeDeltas: Map<String, Int>
+)
+
 /** Weekly activity summary for the Progress tab dot tally. */
 data class WeekActivity(
     val weekStart: LocalDate,
-    // Each entry is (gymName, routeName) — both needed to look up color and outline status unambiguously
+    // Each entry is (gymName, routeName) — both needed to look up color and outline status unambiguously.
+    // When showAboveMedianOnly is on, only above-median climbs are included here.
     val climbColors: List<Pair<String, String>>,
     val exerciseCount: Int,             // Number of exercise sessions (capped at 25)
-    val injuries: List<InjurySeverity>  // Injuries this week, sorted worst-first, capped at 3
+    val injuries: List<InjurySeverity>, // Injuries this week, sorted worst-first, capped at 3
+    // Count of climbs at or below the timeline-window median, omitted when showAboveMedianOnly is off.
+    // 0 means all of this week's climbs beat the median (renders as a star in the graph).
+    val belowMedianCount: Int = 0
 )
 
 class HistoryViewModel(
@@ -98,8 +114,12 @@ class HistoryViewModel(
     /** Weekly activity dots: combines climbs + sessions + injuries, grouped by Mon-Sun weeks. */
     val weeklyActivity: StateFlow<List<WeekActivity>> =
         combine(climbLogs, logs, injuryLogs, metricsConfig) { climbs, sessions, injuries, config ->
-            // Pass filterRepeats so REPEAT climbs can be excluded from dot rendering when enabled.
-            computeWeeklyActivity(climbs, sessions, injuries, config.topK, config.timelineMonths, config.filterRepeats)
+            // Pass filterRepeats and showAboveMedianOnly so dot rendering respects both preferences.
+            computeWeeklyActivity(
+                climbs, sessions, injuries,
+                config.topK, config.timelineMonths,
+                config.filterRepeats, config.showAboveMedianOnly
+            )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // --- Stats tab state ---
@@ -140,6 +160,21 @@ class HistoryViewModel(
     // metricsConfig is included so stats recompute reactively when filterRepeats is toggled.
     val statsData: StateFlow<StatsData?> = combine(climbLogs, statsGym, statsPeriodMonths, metricsConfig) { climbs, gym, months, config ->
         if (gym == null) null else computeStats(climbs, gym, months, config.filterRepeats)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    /**
+     * Comparison deltas vs the prior period; null when:
+     *   - showPeriodComparison toggle is off
+     *   - Lifetime period is selected (months == null)
+     *   - No gym selected
+     *   - Insufficient historical data (earliest climb > 2× period ago)
+     */
+    val priorStatsData: StateFlow<StatsComparison?> = combine(
+        climbLogs, statsGym, statsPeriodMonths, metricsConfig
+    ) { climbs, gym, months, config ->
+        // Comparison requires a finite period and the toggle to be on
+        if (gym == null || months == null || !config.showPeriodComparison) return@combine null
+        computePriorComparison(climbs, gym, months, config.filterRepeats)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     /** Updates the selected Stats gym and persists the choice. */
@@ -252,6 +287,82 @@ private fun computeStats(
     )
 }
 
+/**
+ * Computes deltas between the current period and the immediately preceding period of equal length.
+ *
+ * Windows:
+ *   current: (now - periodMs, now]
+ *   prior:   (now - 2×periodMs, now - periodMs]
+ *
+ * Returns null when the earliest climb for this gym is more recent than [now - 2×periodMs],
+ * meaning there is not enough historical data to populate the prior window.
+ *
+ * Grade deltas use NEW+FLASH counts only (repeats excluded from both numerator and denominator
+ * regardless of [filterRepeats], because histogram bars only count first-attempt climbs).
+ * The total-climbs delta does respect [filterRepeats], matching the behaviour of [computeStats].
+ */
+private fun computePriorComparison(
+    climbs: List<ClimbLog>,
+    gymName: String,
+    periodMonths: Int,
+    filterRepeats: Boolean
+): StatsComparison? {
+    val now = System.currentTimeMillis()
+    val periodMs = periodMonths * 30L * 24 * 60 * 60 * 1000
+
+    // Boundary timestamps
+    val currentCutoff = now - periodMs          // start of current window
+    val priorStart    = now - 2 * periodMs      // start of prior window
+
+    // Filter to this gym, then optionally strip REPEAT climbs for total-climbs delta
+    val gymClimbs = climbs
+        .filter { it.gymName == gymName }
+        .let { if (filterRepeats) it.filter { c -> c.climbType != ClimbType.REPEAT.name } else it }
+
+    // Guard: earliest log must reach back to the start of the prior window
+    val earliestLog = gymClimbs.minOfOrNull { it.loggedAt } ?: return null
+    if (earliestLog > priorStart) return null
+
+    val currentClimbs = gymClimbs.filter { it.loggedAt > currentCutoff }
+    // Prior window is a closed-open interval [priorStart, currentCutoff]
+    val priorClimbs   = gymClimbs.filter { it.loggedAt > priorStart && it.loggedAt <= currentCutoff }
+
+    // Both windows must contribute data for a meaningful comparison
+    if (currentClimbs.isEmpty() && priorClimbs.isEmpty()) return null
+
+    val zone = ZoneId.systemDefault()
+
+    // Session delta: distinct calendar days per window
+    val currentSessions = currentClimbs
+        .map { Instant.ofEpochMilli(it.loggedAt).atZone(zone).toLocalDate() }
+        .toSet().size
+    val priorSessions = priorClimbs
+        .map { Instant.ofEpochMilli(it.loggedAt).atZone(zone).toLocalDate() }
+        .toSet().size
+
+    // Grade deltas use only first-attempt types (NEW + FLASH), matching histogram bar counts.
+    // REPEAT climbs are never counted in first-attempt tallies regardless of filterRepeats.
+    fun firstAttemptsByRoute(list: List<ClimbLog>): Map<String, Int> =
+        list.filter { it.climbType == ClimbType.NEW.name || it.climbType == ClimbType.FLASH.name }
+            .groupBy { it.color }
+            .mapValues { (_, v) -> v.size }
+
+    val currentByRoute = firstAttemptsByRoute(currentClimbs)
+    val priorByRoute   = firstAttemptsByRoute(priorClimbs)
+
+    // Union of routes seen in either window
+    val allRoutes = currentByRoute.keys + priorByRoute.keys
+    val gradeDeltas = allRoutes.associateWith { route ->
+        (currentByRoute[route] ?: 0) - (priorByRoute[route] ?: 0)
+    }
+
+    return StatsComparison(
+        climbsDelta   = currentClimbs.size - priorClimbs.size,
+        sessionsDelta = currentSessions - priorSessions,
+        gradeDeltas   = gradeDeltas
+    )
+}
+
 private fun computeGraphPoints(climbs: List<ClimbLog>, n: Int, k: Int, timelineMonths: Int): List<GraphPoint> {
     if (climbs.isEmpty() || n <= 0 || k <= 0) return emptyList()
 
@@ -268,7 +379,10 @@ private fun computeGraphPoints(climbs: List<ClimbLog>, n: Int, k: Int, timelineM
     val dates = climbEntries.map { it.first }
 
     val points = mutableListOf<GraphPoint>()
-    var day = startDate
+    // Start from the later of (configured window start, first actual climb date) so the
+    // line doesn't begin with a long flat-zero run before any data exists.
+    val firstClimbDate = climbEntries.first().first
+    var day = if (firstClimbDate.isAfter(startDate)) firstClimbDate else startDate
 
     while (!day.isAfter(today)) {
         val windowStart = day.minusMonths(n.toLong())
@@ -328,14 +442,21 @@ private const val MAX_DISPLAY_CLIMBS = 200
 private const val MAX_EXERCISE_DOTS = 25
 
 /** Hard cap on climb dots per week in the Progress tab tally. */
-private const val MAX_CLIMB_DOTS = 25
+private const val MAX_CLIMB_DOTS = 30
 
 /** Max skull icons shown per week in the Progress tab (sorted worst-first). */
 private const val MAX_INJURY_SKULLS = 3
 
 /**
  * Groups climbs, sessions, and injuries into Mon-Sun weeks over the timeline range.
- * Each week keeps the top-k climb colors, a capped exercise count, and up to 3 injuries (worst first).
+ *
+ * When [showAboveMedianOnly] is true:
+ *   - The median score is computed across all dot-eligible climbs in the timeline window.
+ *   - Each week's climbColors contains only climbs strictly above that median (capped at MAX_CLIMB_DOTS).
+ *   - belowMedianCount records how many climbs were at or below the median for that week.
+ *     A value of 0 means every climb in the week beat the median (rendered as a star in the graph).
+ *
+ * When [showAboveMedianOnly] is false, all climbs are shown and belowMedianCount is always 0.
  */
 private fun computeWeeklyActivity(
     climbs: List<ClimbLog>,
@@ -343,7 +464,8 @@ private fun computeWeeklyActivity(
     injuries: List<InjuryLog>,
     topK: Int,
     timelineMonths: Int,
-    filterRepeats: Boolean = false  // Excludes REPEAT climbs from dot rendering when true
+    filterRepeats: Boolean = false,         // Excludes REPEAT climbs from dot rendering when true
+    showAboveMedianOnly: Boolean = false     // Filters dots to above-median climbs when true
 ): List<WeekActivity> {
     val zone = ZoneId.systemDefault()
     val today = LocalDate.now()
@@ -355,7 +477,32 @@ private fun computeWeeklyActivity(
     // Filter REPEAT climbs for dot rendering only; sessions and injuries are unaffected.
     val dotClimbs = if (filterRepeats) climbs.filter { it.climbType != ClimbType.REPEAT.name } else climbs
 
-    // Group climbs by their week's Monday
+    // Compute the median score across all dot-eligible climbs within the timeline window.
+    // Used only when showAboveMedianOnly is on; a Float avoids integer truncation at the midpoint.
+    val medianScore: Float = if (showAboveMedianOnly) {
+        val windowScores = dotClimbs
+            .filter {
+                val date = Instant.ofEpochMilli(it.loggedAt).atZone(zone).toLocalDate()
+                !date.isBefore(startDate) && !date.isAfter(today)
+            }
+            .map { it.score }
+            .sorted()
+        if (windowScores.isEmpty()) {
+            Float.MAX_VALUE  // No data — nothing will pass the threshold
+        } else {
+            val mid = windowScores.size / 2
+            // Even count: average the two middle values; odd count: take the middle value
+            if (windowScores.size % 2 == 0) {
+                (windowScores[mid - 1] + windowScores[mid]) / 2f
+            } else {
+                windowScores[mid].toFloat()
+            }
+        }
+    } else {
+        0f  // Unused when feature is off
+    }
+
+    // Group climbs by their week's Monday (within timeline range)
     val climbsByWeek = dotClimbs.mapNotNull { climb ->
         val date = Instant.ofEpochMilli(climb.loggedAt).atZone(zone).toLocalDate()
         if (date.isBefore(firstMonday) || date.isAfter(today)) return@mapNotNull null
@@ -379,7 +526,6 @@ private fun computeWeeklyActivity(
         weekMon to injury
     }.groupBy({ it.first }, { it.second })
 
-    // Build a WeekActivity for each week in range
     val gymOrder = gyms.mapIndexed { i, g -> g.name to i }.toMap()
     // Severity ordinal: SEVERE=2 > MODERATE=1 > MILD=0
     val severityOrder = InjurySeverity.entries.reversed()
@@ -388,15 +534,25 @@ private fun computeWeeklyActivity(
     val weeks = mutableListOf<WeekActivity>()
     var weekStart = firstMonday
     while (!weekStart.isAfter(today)) {
-        // Top climbs by score for this week, capped at MAX_CLIMB_DOTS.
-        // Grouped by gym (in gyms list order), sorted ascending within each group
-        // so highest scores are drawn last (at the top of each gym's stack).
-        val colors = (climbsByWeek[weekStart] ?: emptyList())
+        val weekClimbs = climbsByWeek[weekStart] ?: emptyList()
+
+        // Split week's climbs into above-median and at-or-below-median pools.
+        // When feature is off, all climbs are treated as above-median (belowMedianCount stays 0).
+        val (aboveMedian, belowMedian) = if (showAboveMedianOnly) {
+            weekClimbs.partition { it.score > medianScore }
+        } else {
+            weekClimbs to emptyList()
+        }
+
+        // Top climbs from the above-median pool, sorted by score desc, capped at MAX_CLIMB_DOTS.
+        // Re-grouped by gym in list order, then sorted ascending within each gym so the
+        // highest-scoring dot is drawn last (on top of each gym's stack).
+        val colors = aboveMedian
             .sortedByDescending { it.score }
             .take(MAX_CLIMB_DOTS)
             .groupBy { it.gymName }
             .toSortedMap(compareBy { gymOrder[it] ?: Int.MAX_VALUE })
-            .flatMap { (_, climbs) -> climbs.sortedBy { it.score }.map { it.gymName to it.color } }
+            .flatMap { (_, gymClimbs) -> gymClimbs.sortedBy { it.score }.map { it.gymName to it.color } }
 
         // Exercise count capped at MAX_EXERCISE_DOTS
         val exerciseCount = (sessionsByWeek[weekStart]?.size ?: 0)
@@ -408,7 +564,7 @@ private fun computeWeeklyActivity(
             .sortedWith(compareBy { severityOrder[it] ?: Int.MAX_VALUE })
             .take(MAX_INJURY_SKULLS)
 
-        weeks.add(WeekActivity(weekStart, colors, exerciseCount, weekInjuries))
+        weeks.add(WeekActivity(weekStart, colors, exerciseCount, weekInjuries, belowMedian.size))
         weekStart = weekStart.plusWeeks(1)
     }
 
