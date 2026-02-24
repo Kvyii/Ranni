@@ -192,6 +192,12 @@ fun MainContent(
             || screenState is ScreenState.Climb
             || screenState is ScreenState.History
 
+    // On root screens, move the task to the background instead of finishing the Activity.
+    // This keeps the process alive so re-opening from recents is instant (no cold-start).
+    BackHandler(enabled = isTopLevel) {
+        (context as? android.app.Activity)?.moveTaskToBack(true)
+    }
+
     // Handle system back button — mirror the toolbar back arrow behavior
     BackHandler(enabled = !isTopLevel) {
         onScreenStateChange(when (screenState) {
