@@ -51,6 +51,18 @@ data class StatsData(
     val gradeRows: List<GradeStats>  // Hardest first, all grades up to the current max
 )
 
+/**
+ * Deltas vs the immediately preceding period of equal length.
+ * null is emitted by [priorStatsData] when: Lifetime is selected, the toggle is off,
+ * or there is insufficient historical data (< 2× the selected period).
+ */
+data class StatsComparison(
+    val climbsDelta: Int,           // current total sends − prior total sends
+    val sessionsDelta: Int,         // current sessions − prior sessions
+    // routeName → (current NEW+FLASH) − (prior NEW+FLASH); includes prior-only routes (delta < 0)
+    val gradeDeltas: Map<String, Int>
+)
+
 /** Weekly activity summary for the Progress tab dot tally. */
 data class WeekActivity(
     val weekStart: LocalDate,
@@ -140,6 +152,21 @@ class HistoryViewModel(
     // metricsConfig is included so stats recompute reactively when filterRepeats is toggled.
     val statsData: StateFlow<StatsData?> = combine(climbLogs, statsGym, statsPeriodMonths, metricsConfig) { climbs, gym, months, config ->
         if (gym == null) null else computeStats(climbs, gym, months, config.filterRepeats)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    /**
+     * Comparison deltas vs the prior period; null when:
+     *   - showPeriodComparison toggle is off
+     *   - Lifetime period is selected (months == null)
+     *   - No gym selected
+     *   - Insufficient historical data (earliest climb > 2× period ago)
+     */
+    val priorStatsData: StateFlow<StatsComparison?> = combine(
+        climbLogs, statsGym, statsPeriodMonths, metricsConfig
+    ) { climbs, gym, months, config ->
+        // Comparison requires a finite period and the toggle to be on
+        if (gym == null || months == null || !config.showPeriodComparison) return@combine null
+        computePriorComparison(climbs, gym, months, config.filterRepeats)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     /** Updates the selected Stats gym and persists the choice. */
@@ -249,6 +276,82 @@ private fun computeStats(
         maxRouteName = maxRoute.name,
         maxFirstDate = maxFirstDate,
         gradeRows = gradeRows
+    )
+}
+
+/**
+ * Computes deltas between the current period and the immediately preceding period of equal length.
+ *
+ * Windows:
+ *   current: (now - periodMs, now]
+ *   prior:   (now - 2×periodMs, now - periodMs]
+ *
+ * Returns null when the earliest climb for this gym is more recent than [now - 2×periodMs],
+ * meaning there is not enough historical data to populate the prior window.
+ *
+ * Grade deltas use NEW+FLASH counts only (repeats excluded from both numerator and denominator
+ * regardless of [filterRepeats], because histogram bars only count first-attempt climbs).
+ * The total-climbs delta does respect [filterRepeats], matching the behaviour of [computeStats].
+ */
+private fun computePriorComparison(
+    climbs: List<ClimbLog>,
+    gymName: String,
+    periodMonths: Int,
+    filterRepeats: Boolean
+): StatsComparison? {
+    val now = System.currentTimeMillis()
+    val periodMs = periodMonths * 30L * 24 * 60 * 60 * 1000
+
+    // Boundary timestamps
+    val currentCutoff = now - periodMs          // start of current window
+    val priorStart    = now - 2 * periodMs      // start of prior window
+
+    // Filter to this gym, then optionally strip REPEAT climbs for total-climbs delta
+    val gymClimbs = climbs
+        .filter { it.gymName == gymName }
+        .let { if (filterRepeats) it.filter { c -> c.climbType != ClimbType.REPEAT.name } else it }
+
+    // Guard: earliest log must reach back to the start of the prior window
+    val earliestLog = gymClimbs.minOfOrNull { it.loggedAt } ?: return null
+    if (earliestLog > priorStart) return null
+
+    val currentClimbs = gymClimbs.filter { it.loggedAt > currentCutoff }
+    // Prior window is a closed-open interval [priorStart, currentCutoff]
+    val priorClimbs   = gymClimbs.filter { it.loggedAt > priorStart && it.loggedAt <= currentCutoff }
+
+    // Both windows must contribute data for a meaningful comparison
+    if (currentClimbs.isEmpty() && priorClimbs.isEmpty()) return null
+
+    val zone = ZoneId.systemDefault()
+
+    // Session delta: distinct calendar days per window
+    val currentSessions = currentClimbs
+        .map { Instant.ofEpochMilli(it.loggedAt).atZone(zone).toLocalDate() }
+        .toSet().size
+    val priorSessions = priorClimbs
+        .map { Instant.ofEpochMilli(it.loggedAt).atZone(zone).toLocalDate() }
+        .toSet().size
+
+    // Grade deltas use only first-attempt types (NEW + FLASH), matching histogram bar counts.
+    // REPEAT climbs are never counted in first-attempt tallies regardless of filterRepeats.
+    fun firstAttemptsByRoute(list: List<ClimbLog>): Map<String, Int> =
+        list.filter { it.climbType == ClimbType.NEW.name || it.climbType == ClimbType.FLASH.name }
+            .groupBy { it.color }
+            .mapValues { (_, v) -> v.size }
+
+    val currentByRoute = firstAttemptsByRoute(currentClimbs)
+    val priorByRoute   = firstAttemptsByRoute(priorClimbs)
+
+    // Union of routes seen in either window
+    val allRoutes = currentByRoute.keys + priorByRoute.keys
+    val gradeDeltas = allRoutes.associateWith { route ->
+        (currentByRoute[route] ?: 0) - (priorByRoute[route] ?: 0)
+    }
+
+    return StatsComparison(
+        climbsDelta   = currentClimbs.size - priorClimbs.size,
+        sessionsDelta = currentSessions - priorSessions,
+        gradeDeltas   = gradeDeltas
     )
 }
 

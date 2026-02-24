@@ -98,6 +98,20 @@ fun MetricsScreen(viewModel: MetricsViewModel) {
             )
         }
 
+        // Toggle to show +/- deltas vs the prior period of equal length in the Stats tab.
+        // Only appears when sufficient data exists (2× the selected period); Lifetime hides it.
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Show comparison to period prior", style = MaterialTheme.typography.bodyMedium)
+            Switch(
+                checked = config.showPeriodComparison,
+                onCheckedChange = { viewModel.updateShowPeriodComparison(it) }
+            )
+        }
+
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("History timeline", style = MaterialTheme.typography.bodyLarge)
             Text(

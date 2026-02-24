@@ -21,5 +21,9 @@ data class MetricsConfig(
     // When true, REPEAT climbs are excluded from dots, graph, and stats; detail/list views are unaffected.
     // @ColumnInfo defaultValue "0" (false) is required for AutoMigration to generate ALTER TABLE SQL.
     @ColumnInfo(defaultValue = "0")
-    val filterRepeats: Boolean = false
+    val filterRepeats: Boolean = false,
+    // When true, the Stats tab shows +/- deltas vs the preceding period of equal length.
+    // Only shown when there is sufficient data (2× the selected period) and period is not Lifetime.
+    @ColumnInfo(defaultValue = "0")
+    val showPeriodComparison: Boolean = false
 )

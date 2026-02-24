@@ -179,6 +179,16 @@ fun AboutContent() {
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
 
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text("v1.2.7", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            // Release date
+            Text("24/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+            ChangelogText("""
+                • Fixed graph bug where plot starts before first available data point
+                • Fixed histograph bug where hollow type climbs do not render both bars
+                """.trimIndent())
+        }
+
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("v1.2.6.2", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
             // Release date
             Text("24/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))

@@ -744,6 +744,17 @@ private val statsPeriodOptions: List<Pair<Int?, String>> = listOf(
     null to "Lifetime"
 )
 
+/**
+ * Returns the colour to use when displaying a period-comparison delta value.
+ * Positive → green (improvement), negative → error red, zero → muted secondary text.
+ */
+@Composable
+private fun deltaColor(delta: Int): Color = when {
+    delta > 0 -> Color(0xFF4CAF50)
+    delta < 0 -> MaterialTheme.colorScheme.error
+    else      -> MaterialTheme.colorScheme.onSurfaceVariant
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun StatsTab(viewModel: HistoryViewModel) {
@@ -764,6 +775,8 @@ private fun StatsTab(viewModel: HistoryViewModel) {
     val selectedPeriod by viewModel.statsPeriodMonths.collectAsState()
     val statsData by viewModel.statsData.collectAsState()
     val gymsWithData by viewModel.statsGymsWithData.collectAsState()
+    // Comparison deltas vs the prior period; null when toggle is off, Lifetime selected, or no data
+    val priorStats by viewModel.priorStatsData.collectAsState()
 
     // Filter the ordered gym list to only gyms that have data in the current period
     val filteredGymNames = orderedGymNames.filter { it in gymsWithData }
@@ -876,19 +889,54 @@ private fun StatsTab(viewModel: HistoryViewModel) {
             }
         } else {
             val data = statsData!!
+
+            // When comparison is active, merge prior-only grade rows (routes climbed in the prior
+            // period but not the current one) into the grade rows list for display.
+            // These rows have zero current climbs and will only show a grade label + negative delta.
+            val mergedGradeRows: List<GradeStats> = if (priorStats != null) {
+                val gym = gyms.find { it.name == data.statsGymName }
+                val currentRouteNames = data.gradeRows.map { it.routeName }.toSet()
+                // Routes that appear in gradeDeltas but not in the current rows
+                val priorOnlyRoutes = priorStats!!.gradeDeltas.keys
+                    .filter { it !in currentRouteNames && (priorStats!!.gradeDeltas[it] ?: 0) < 0 }
+                // Build synthetic GradeStats rows for prior-only routes
+                val priorOnlyRows = priorOnlyRoutes.mapNotNull { routeName ->
+                    gym?.routes?.find { it.name == routeName }?.let { route ->
+                        GradeStats(
+                            routeName  = route.name,
+                            grade      = routeGrade(data.statsGymName, route.name),
+                            gymName    = data.statsGymName,
+                            newClimbs  = 0,
+                            flashClimbs = 0,
+                            totalClimbs = 0
+                        )
+                    }
+                }
+                if (priorOnlyRows.isEmpty()) {
+                    data.gradeRows
+                } else {
+                    // Re-sort all rows by the gym route list order (hardest first)
+                    val routeOrder = gym?.routes?.mapIndexed { i, r -> r.name to i }?.toMap() ?: emptyMap()
+                    (data.gradeRows + priorOnlyRows)
+                        .sortedByDescending { routeOrder[it.routeName] ?: 0 }
+                }
+            } else {
+                data.gradeRows
+            }
+
             // Scrollable column so the histogram is fully accessible on small screens
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Summary row: total climbs card + current max card
+                // Summary row: total sends card + sessions card
                 item {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        // Total climbs card
+                        // Total sends card
                         Card(
                             colors = CardDefaults.cardColors(
                                 containerColor = MaterialTheme.colorScheme.surfaceContainerLow
@@ -899,13 +947,27 @@ private fun StatsTab(viewModel: HistoryViewModel) {
                                 modifier = Modifier.fillMaxWidth().padding(16.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
+                                // Number row: main count with delta aligned to its bottom edge
+                                Row(verticalAlignment = Alignment.Bottom) {
+                                    Text(
+                                        text = data.totalClimbs.toString(),
+                                        style = MaterialTheme.typography.headlineMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    // Delta sits flush to the bottom of the number, shown only when comparison available
+                                    priorStats?.let { cmp ->
+                                        val sign = if (cmp.climbsDelta >= 0) "+" else ""
+                                        Text(
+                                            text = " $sign${cmp.climbsDelta}",
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            fontWeight = FontWeight.Bold,
+                                            color = deltaColor(cmp.climbsDelta),
+                                            modifier = Modifier.padding(bottom = 2.dp)
+                                        )
+                                    }
+                                }
                                 Text(
-                                    text = data.totalClimbs.toString(),
-                                    style = MaterialTheme.typography.headlineMedium,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    text = "Total climbs",
+                                    text = "Total sends",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -923,11 +985,25 @@ private fun StatsTab(viewModel: HistoryViewModel) {
                                 modifier = Modifier.fillMaxWidth().padding(16.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                Text(
-                                    text = data.totalSessions.toString(),
-                                    style = MaterialTheme.typography.headlineMedium,
-                                    fontWeight = FontWeight.Bold
-                                )
+                                // Number row: main count with delta aligned to its bottom edge
+                                Row(verticalAlignment = Alignment.Bottom) {
+                                    Text(
+                                        text = data.totalSessions.toString(),
+                                        style = MaterialTheme.typography.headlineMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    // Delta sits flush to the bottom of the number, shown only when comparison available
+                                    priorStats?.let { cmp ->
+                                        val sign = if (cmp.sessionsDelta >= 0) "+" else ""
+                                        Text(
+                                            text = " $sign${cmp.sessionsDelta}",
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            fontWeight = FontWeight.Bold,
+                                            color = deltaColor(cmp.sessionsDelta),
+                                            modifier = Modifier.padding(bottom = 2.dp)
+                                        )
+                                    }
+                                }
                                 Text(
                                     text = "Sessions",
                                     style = MaterialTheme.typography.bodySmall,
@@ -947,11 +1023,13 @@ private fun StatsTab(viewModel: HistoryViewModel) {
                     )
                 }
 
-                // Horizontal bar histogram — one row per grade, hardest at top
+                // Horizontal bar histogram — one row per grade, hardest at top.
+                // gradeDeltas are passed through when comparison is active so each row shows +/- delta.
                 item {
                     GradeHistogram(
-                        rows = data.gradeRows,
-                        modifier = Modifier.fillMaxWidth()
+                        rows        = mergedGradeRows,
+                        gradeDeltas = priorStats?.gradeDeltas,
+                        modifier    = Modifier.fillMaxWidth()
                     )
                 }
 
@@ -1118,18 +1196,25 @@ private fun DrawScope.drawHatch(
 /**
  * Horizontal bar histogram showing NEW and FLASH climb counts per grade.
  *
- * Each bar is a single solid fill (route color at reduced alpha).
- * The FLASH portion is separated from the NEW portion by a narrow transparent
- * vertical cut — no hatching, no dot.
+ * Each grade row shows two bar segments separated by a small gap:
+ *  - Left segment (FLASH): hatched to distinguish it from new sends.
+ *  - Right segment (NEW): plain fill / outline with no hatching.
+ *
+ * For filled gyms the segments use a solid fill at 80% alpha with background-coloured
+ * hatch lines on the flash segment. For gyms where [isOutlineGym] returns true
+ * (e.g. Custom, Outdoor gyms) the same two-segment layout is used but rendered as
+ * stroke-only outline rects, with route-coloured hatch lines on the flash segment.
  *
  * Label format: "25 (15%)" where 15% = flashClimbs / firstAttempts.
  *
- * For gyms where [isOutlineGym] returns true (e.g. Custom, Outdoor gyms), bars are drawn as outlines
- * to match the hollow dot style used elsewhere in the app.
+ * When [gradeDeltas] is non-null, each row also shows a "+N" / "-N" delta appended after
+ * the count label, coloured green (positive), red (negative), or muted (zero).
+ * No delta is shown for Flash% — only the total first-attempt count is compared.
  */
 @Composable
 private fun GradeHistogram(
     rows: List<GradeStats>,
+    gradeDeltas: Map<String, Int>? = null,  // routeName → delta; null means no comparison active
     modifier: Modifier = Modifier
 ) {
     val textMeasurer = rememberTextMeasurer()
@@ -1140,6 +1225,10 @@ private fun GradeHistogram(
     val bgColor = MaterialTheme.colorScheme.background
     // Outline color for contrast rings on near-black / near-white bars
     val outlineColor = MaterialTheme.colorScheme.outline
+    // Capture theme colours for delta text outside the Canvas lambda (no MaterialTheme in Canvas)
+    val deltaPositiveColor = Color(0xFF4CAF50)
+    val deltaNegativeColor = MaterialTheme.colorScheme.error
+    val deltaZeroColor     = MaterialTheme.colorScheme.onSurfaceVariant
 
     // Per-row height and fixed layout constants (converted to pixels inside the Canvas)
     val rowHeightDp = 44.dp
@@ -1148,7 +1237,9 @@ private fun GradeHistogram(
     val countPaddingDp = 6.dp   // gap between end of bar and count label
     val dividerWidthDp = 2.dp   // gap width between FLASH and NEW bar segments
     val cornerRadiusDp = 3.dp   // rounded corners on each bar segment
-    val countReserveDp = 80.dp  // right-side space always reserved for the count label
+    // Right-side space reserved for the count label; slightly wider when deltas are shown
+    // to accommodate the extra "+N" / "-N" text appended after the count.
+    val countReserveDp = if (gradeDeltas != null) 90.dp else 72.dp
 
     // Max first-attempt count across all rows — determines bar width scaling
     val maxCount = rows.maxOf { it.newClimbs + it.flashClimbs }.coerceAtLeast(1)
@@ -1206,43 +1297,68 @@ private fun GradeHistogram(
             if (totalBarWidth > 0f) {
                 val barLeft = labelWidthPx
 
+                // Both outline (hollow) and filled gyms now draw two separate bar segments:
+                // a FLASH bar on the left and a NEW bar on the right, separated by a small gap.
+                // Outline gyms use a stroke-only style; filled gyms use a solid fill with hatch.
                 if (isOutline) {
-                    // Outline-only rounded bar for hollow-dot gyms
-                    drawRoundRect(
-                        color = barColor,
-                        topLeft = Offset(barLeft, barTop),
-                        size = Size(totalBarWidth, barHeight),
-                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerRadiusPx),
-                        style = Stroke(width = 1.5.dp.toPx())
-                    )
-                    // For near-black/white route colors the outline stroke itself vanishes against
-                    // the background — draw a second contrasting ring just inside (same size, no
-                    // size change) to keep it visible on both light and dark themes.
-                    if (barColor.needsContrastRing()) {
+                    val hasFlash = flashBarWidth > 0f
+                    val hasNew = flashBarWidth < totalBarWidth
+
+                    // FLASH segment — outline stroke + hatch lines in route colour
+                    if (hasFlash) {
+                        val segWidth = if (hasNew) flashBarWidth - dividerWidthPx / 2f else totalBarWidth
+                        // Draw outline rect
                         drawRoundRect(
-                            color = outlineColor,
+                            color = barColor,
                             topLeft = Offset(barLeft, barTop),
-                            size = Size(totalBarWidth, barHeight),
+                            size = Size(segWidth.coerceAtLeast(0f), barHeight),
                             cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerRadiusPx),
-                            style = Stroke(width = 0.3.dp.toPx())
+                            style = Stroke(width = 1.5.dp.toPx())
                         )
-                    }
-                    // If any flashes exist, overlay hatch in the route colour over the bar interior
-                    // (hollow bar has no fill, so hatch lines are the visual indicator)
-                    if (row.flashClimbs > 0) {
-                        val flashSegWidth = if (flashBarWidth < totalBarWidth)
-                            flashBarWidth - dividerWidthPx / 2f
-                        else
-                            totalBarWidth
+                        // Contrast ring for near-black/white colors
+                        if (barColor.needsContrastRing()) {
+                            drawRoundRect(
+                                color = outlineColor,
+                                topLeft = Offset(barLeft, barTop),
+                                size = Size(segWidth.coerceAtLeast(0f), barHeight),
+                                cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerRadiusPx),
+                                style = Stroke(width = 0.3.dp.toPx())
+                            )
+                        }
+                        // Hatch lines in route colour to mark the flash segment
                         drawHatch(
                             left       = barLeft,
                             top        = barTop,
-                            right      = barLeft + flashSegWidth.coerceAtLeast(0f),
+                            right      = barLeft + segWidth.coerceAtLeast(0f),
                             bottom     = barBottom,
                             hatchColor = barColor.copy(alpha = 0.7f),
                             spacing    = hatchSpacingPx,
                             lineWidth  = hatchLineWidthPx
                         )
+                    }
+
+                    // NEW segment — outline stroke only, no hatch
+                    if (hasNew) {
+                        val newLeft = if (hasFlash) barLeft + flashBarWidth + dividerWidthPx / 2f else barLeft
+                        val newWidth = totalBarWidth - (newLeft - barLeft)
+                        // Draw outline rect
+                        drawRoundRect(
+                            color = barColor,
+                            topLeft = Offset(newLeft, barTop),
+                            size = Size(newWidth.coerceAtLeast(0f), barHeight),
+                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerRadiusPx),
+                            style = Stroke(width = 1.5.dp.toPx())
+                        )
+                        // Contrast ring for near-black/white colors
+                        if (barColor.needsContrastRing()) {
+                            drawRoundRect(
+                                color = outlineColor,
+                                topLeft = Offset(newLeft, barTop),
+                                size = Size(newWidth.coerceAtLeast(0f), barHeight),
+                                cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerRadiusPx),
+                                style = Stroke(width = 0.3.dp.toPx())
+                            )
+                        }
                     }
                 } else {
                     val hasFlash = flashBarWidth > 0f
@@ -1304,20 +1420,53 @@ private fun GradeHistogram(
                 }
             }
 
-            // Count label: "25 (15%)" — always drawn in the reserved right margin
-            if (firstAttempts > 0) {
+            // Count label: "25 (15%)" for rows with climbs, or "0" for prior-only rows.
+            // Always drawn in the reserved right margin.
+            val countX = labelWidthPx + totalBarWidth + countPaddingPx
+            val countLabelStr = if (firstAttempts > 0) {
                 val flashPct = row.flashClimbs * 100 / firstAttempts
-                val countLabel = "$firstAttempts (${flashPct}%)"
-                val countText = textMeasurer.measure(
-                    countLabel,
+                "$firstAttempts (${flashPct}%)"
+            } else {
+                // Prior-only row: show "0" so the delta appended after it makes sense
+                if (gradeDeltas?.containsKey(row.routeName) == true) "0" else ""
+            }
+            val countText = if (countLabelStr.isNotEmpty()) {
+                textMeasurer.measure(
+                    countLabelStr,
                     style = TextStyleUI(color = labelColor, fontSize = 10.sp)
+                ).also { measured ->
+                    drawText(
+                        measured,
+                        topLeft = Offset(
+                            x = countX,
+                            y = rowCenterY - measured.size.height / 2f
+                        )
+                    )
+                }
+            } else null
+
+            // Delta label "+N" / "-N" appended after the count label when comparison is active.
+            // Not shown when gradeDeltas is null (toggle off / Lifetime / insufficient data).
+            val delta = gradeDeltas?.get(row.routeName)
+            if (delta != null) {
+                val sign = if (delta >= 0) "+" else ""
+                val deltaStr = "  $sign$delta"
+                val deltaColor = when {
+                    delta > 0 -> deltaPositiveColor
+                    delta < 0 -> deltaNegativeColor
+                    else      -> deltaZeroColor
+                }
+                val deltaText = textMeasurer.measure(
+                    deltaStr,
+                    style = TextStyleUI(color = deltaColor, fontSize = 10.sp)
                 )
-                val countX = labelWidthPx + totalBarWidth + countPaddingPx
+                // Position the delta immediately after the count label (or at countX if no count)
+                val deltaX = countX + (countText?.size?.width?.toFloat() ?: 0f)
                 drawText(
-                    countText,
+                    deltaText,
                     topLeft = Offset(
-                        x = countX,
-                        y = rowCenterY - countText.size.height / 2f
+                        x = deltaX,
+                        y = rowCenterY - deltaText.size.height / 2f
                     )
                 )
             }
