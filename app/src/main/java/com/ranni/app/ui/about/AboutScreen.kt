@@ -179,7 +179,7 @@ fun AboutContent() {
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
 
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text("v1.2.7", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            Text("v1.2.7.1", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
             // Release date
             Text("25/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
             ChangelogText("""
@@ -187,6 +187,7 @@ fun AboutContent() {
                 • Added median setting for History > Progress to reflect only best 50% of climbs
                 • Fixed graph bug where plot starts before first available data point
                 • Fixed histograph bug where hollow type climbs do not render both bars
+                • Fixed a bug with Progress graph truncating when points do not occur on the start of week
                 • Added 3 Gundam themes
                 """.trimIndent())
         }

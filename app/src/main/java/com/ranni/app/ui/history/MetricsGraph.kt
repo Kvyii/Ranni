@@ -32,6 +32,7 @@ import com.ranni.app.data.model.InjurySeverity
 import com.ranni.app.data.model.isOutlineGym
 import com.ranni.app.data.model.needsContrastRing
 import com.ranni.app.data.model.routeColor
+import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 
@@ -45,6 +46,10 @@ fun MetricsGraph(
     showClimbs: Boolean = true,
     showExercises: Boolean = true,
     showAboveMedianOnly: Boolean = false,   // When true, renders the below-median count or star per week
+    // Explicit axis date bounds so dots span the full timeline window even when the line
+    // starts later (first climb date). Defaults to data range if not provided.
+    axisMinDate: LocalDate? = null,
+    axisMaxDate: LocalDate? = null,
     modifier: Modifier = Modifier
 ) {
     if (data.isEmpty()) {
@@ -92,8 +97,10 @@ fun MetricsGraph(
             if (plotWidth <= 0 || plotHeight <= 0) return@Canvas
 
             val maxY = data.maxOf { it.value }.coerceAtLeast(1f)
-            val minDate = data.first().date
-            val maxDate = data.last().date
+            // Use explicit axis bounds when provided so dots span the full weekly-activity range
+            // even when the line starts later (i.e. the first climb date is after the timeline start).
+            val minDate = axisMinDate ?: data.first().date
+            val maxDate = axisMaxDate ?: data.last().date
             val totalDays = ChronoUnit.DAYS.between(minDate, maxDate).toFloat().coerceAtLeast(1f)
 
             // Draw Y axis
