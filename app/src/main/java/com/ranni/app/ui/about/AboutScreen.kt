@@ -188,6 +188,7 @@ fun AboutContent() {
                 • Fixed graph bug where plot starts before first available data point
                 • Fixed histograph bug where hollow type climbs do not render both bars
                 • Fixed a bug with Progress graph truncating when points do not occur on the start of week
+                • Fixed a bug with Progress graph not starting at 0
                 • Added 3 Gundam themes
                 """.trimIndent())
         }
