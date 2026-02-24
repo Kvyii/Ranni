@@ -379,9 +379,21 @@ private fun computeGraphPoints(climbs: List<ClimbLog>, n: Int, k: Int, timelineM
     val dates = climbEntries.map { it.first }
 
     val points = mutableListOf<GraphPoint>()
-    // Start from the later of (configured window start, first actual climb date) so the
-    // line doesn't begin with a long flat-zero run before any data exists.
     val firstClimbDate = climbEntries.first().first
+
+    // When the first climb is after the timeline start, anchor the line at 0 on the Monday
+    // of the week prior to the first climb's week. This gives a clean ramp-up from zero
+    // instead of the line appearing to start mid-air at an elevated value.
+    if (firstClimbDate.isAfter(startDate)) {
+        val firstWeekMonday = firstClimbDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+        val anchorDate = firstWeekMonday.minusWeeks(1)
+        // Only add the anchor if it falls within (or at) the timeline window
+        if (!anchorDate.isBefore(startDate)) {
+            points.add(GraphPoint(anchorDate, 0f))
+        }
+    }
+
+    // Start iterating from the later of (timeline start, first climb date)
     var day = if (firstClimbDate.isAfter(startDate)) firstClimbDate else startDate
 
     while (!day.isAfter(today)) {
