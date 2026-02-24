@@ -179,11 +179,11 @@ fun AboutContent() {
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
 
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text("v1.2.7.1", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            Text("v1.2.7.2", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
             // Release date
             Text("25/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
             ChangelogText("""
-                • Added comparison option to settings > metrics to show +/- deltas vs the preceding period of equal length (e.g. if you select 1 month, it compares to the previous month; if you select 3 months, it compares to the previous 3 months). Only shown when there is sufficient data (2× the selected period) and period is not Lifetime.
+                • Added comparison option to settings > metrics to show +/- deltas
                 • Added median setting for History > Progress to reflect only best 50% of climbs
                 • Fixed graph bug where plot starts before first available data point
                 • Fixed histograph bug where hollow type climbs do not render both bars
