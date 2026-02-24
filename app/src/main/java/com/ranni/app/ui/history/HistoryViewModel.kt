@@ -268,7 +268,10 @@ private fun computeGraphPoints(climbs: List<ClimbLog>, n: Int, k: Int, timelineM
     val dates = climbEntries.map { it.first }
 
     val points = mutableListOf<GraphPoint>()
-    var day = startDate
+    // Start from the later of (configured window start, first actual climb date) so the
+    // line doesn't begin with a long flat-zero run before any data exists.
+    val firstClimbDate = climbEntries.first().first
+    var day = if (firstClimbDate.isAfter(startDate)) firstClimbDate else startDate
 
     while (!day.isAfter(today)) {
         val windowStart = day.minusMonths(n.toLong())
