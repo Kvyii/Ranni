@@ -26,5 +26,10 @@ data class MetricsConfig(
     // Only shown when there is sufficient data (2× the selected period) and period is not Lifetime.
     // @ColumnInfo defaultValue "0" is the migration default for existing users; new installs use true.
     @ColumnInfo(defaultValue = "0")
-    val showPeriodComparison: Boolean = true
+    val showPeriodComparison: Boolean = true,
+    // When true, activity dots on the Progress graph show only climbs above the timeline-window median.
+    // A below-median count (or star when zero) is drawn beneath each week's dot stack.
+    // Default false so existing users see no change until they opt in.
+    @ColumnInfo(defaultValue = "0")
+    val showAboveMedianOnly: Boolean = false
 )

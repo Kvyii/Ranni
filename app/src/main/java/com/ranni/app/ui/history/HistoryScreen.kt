@@ -447,7 +447,7 @@ private fun DayDetail(
                         val time = Instant.ofEpochMilli(climb.loggedAt)
                             .atZone(ZoneId.systemDefault())
                             .format(timeFormatter)
-                        // Repeat climbs are dimmed to visually distinguish them from new/flash sends
+                        // Repeat climbs are dimmed to visually distinguish them from new/flash climbs
                         val alpha = if (climb.climbType == ClimbType.REPEAT.name) 0.4f else 1f
                         Card(
                             colors = CardDefaults.cardColors(
@@ -545,6 +545,7 @@ private fun ProgressTab(viewModel: HistoryViewModel) {
             weeklyActivity = if (dotsEnabled) weeklyActivity else emptyList(),
             showClimbs = config.showClimbDots,
             showExercises = config.showExerciseDots,
+            showAboveMedianOnly = config.showAboveMedianOnly,
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
@@ -930,13 +931,13 @@ private fun StatsTab(viewModel: HistoryViewModel) {
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Summary row: total sends card + sessions card
+                // Summary row: total climbs card + sessions card
                 item {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        // Total sends card
+                        // Total climbs card
                         Card(
                             colors = CardDefaults.cardColors(
                                 containerColor = MaterialTheme.colorScheme.surfaceContainerLow
@@ -967,7 +968,7 @@ private fun StatsTab(viewModel: HistoryViewModel) {
                                     }
                                 }
                                 Text(
-                                    text = "Total sends",
+                                    text = "Total climbs",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -1197,7 +1198,7 @@ private fun DrawScope.drawHatch(
  * Horizontal bar histogram showing NEW and FLASH climb counts per grade.
  *
  * Each grade row shows two bar segments separated by a small gap:
- *  - Left segment (FLASH): hatched to distinguish it from new sends.
+ *  - Left segment (FLASH): hatched to distinguish it from new climbs.
  *  - Right segment (NEW): plain fill / outline with no hatching.
  *
  * For filled gyms the segments use a solid fill at 80% alpha with background-coloured

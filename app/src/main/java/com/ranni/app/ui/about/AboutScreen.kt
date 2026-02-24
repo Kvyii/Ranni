@@ -76,7 +76,7 @@ fun SettingsScreen(
     Column(modifier = Modifier.fillMaxSize()) {
         SettingsRow("Scores", onClick = onNavigateScores)
         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-        SettingsRow("Metric Preferences", onClick = onNavigateMetrics)
+        SettingsRow("Preferences", onClick = onNavigateMetrics)
         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
         SettingsRow("Sounds", onClick = onNavigateSounds)
         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
@@ -183,6 +183,8 @@ fun AboutContent() {
             // Release date
             Text("24/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
             ChangelogText("""
+                • Added comparison option to settings > metrics to show +/- deltas vs the preceding period of equal length (e.g. if you select 1 month, it compares to the previous month; if you select 3 months, it compares to the previous 3 months). Only shown when there is sufficient data (2× the selected period) and period is not Lifetime.
+                • Added median setting for History > Progress to reflect only best 50% of climbs
                 • Fixed graph bug where plot starts before first available data point
                 • Fixed histograph bug where hollow type climbs do not render both bars
                 """.trimIndent())

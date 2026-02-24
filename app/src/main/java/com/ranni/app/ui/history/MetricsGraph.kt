@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
@@ -43,6 +44,7 @@ fun MetricsGraph(
     weeklyActivity: List<WeekActivity> = emptyList(),
     showClimbs: Boolean = true,
     showExercises: Boolean = true,
+    showAboveMedianOnly: Boolean = false,   // When true, renders the below-median count or star per week
     modifier: Modifier = Modifier
 ) {
     if (data.isEmpty()) {
@@ -159,6 +161,61 @@ fun MetricsGraph(
             // Base Y: just above the X-axis line
             val baseY = topPadding + plotHeight - dotRadius
 
+            // Measure the median label height once so both passes use the same offset.
+            // The label style is 9.sp bold — measure a representative character to get the height.
+            val medianLabelGap = if (showAboveMedianOnly && showClimbs) {
+                val sample = textMeasurer.measure(
+                    "8",
+                    style = TextStyle(fontSize = 9.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                )
+                // Total vertical space the label occupies: its height plus a small breathing gap
+                sample.size.height + 1.dp.toPx()
+            } else 0f
+
+            // Pass 1: draw median labels (★ / count) just above the X-axis, below the first dot.
+            // These must be drawn outside the clipRect below because clipRect clips drawText too.
+            if (showAboveMedianOnly && showClimbs) {
+                weeklyActivity.forEach { week ->
+                    val daysBetween = ChronoUnit.DAYS.between(minDate, week.weekStart).toFloat()
+                    val centerX = leftPadding + (daysBetween / totalDays) * plotWidth
+                    if (centerX < leftPadding || centerX > leftPadding + plotWidth) return@forEach
+
+                    // Recompute climbColumnX the same way the dot pass does
+                    val hasExercises = showExercises && week.exerciseCount > 0
+                    val climbColumnX = if (hasExercises) centerX + dotRadius + columnGap / 2 else centerX
+
+                    // No climbs at all this week → "?" to signal a rest/unknown week
+                    val noClimbs = week.climbColors.isEmpty() && week.belowMedianCount == 0
+                    val label = when {
+                        noClimbs -> "?"
+                        week.belowMedianCount == 0 -> "★"
+                        else -> week.belowMedianCount.toString()
+                    }
+                    val labelColor2 = if (noClimbs) labelColor.copy(alpha = 0.4f) else if (week.belowMedianCount == 0) labelColor else labelColor.copy(alpha = 0.8f)
+                    val labelMeasured = textMeasurer.measure(
+                        label,
+                        style = TextStyle(fontSize = 9.sp, color = labelColor2, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                    )
+                    // Place label so its bottom edge sits on the X-axis line, centred horizontally.
+                    // Dots start above baseY + medianLabelGap, so there is clear breathing room.
+                    drawText(
+                        labelMeasured,
+                        topLeft = Offset(
+                            x = climbColumnX - labelMeasured.size.width / 2f,
+                            y = baseY - labelMeasured.size.height + dotRadius
+                        )
+                    )
+                }
+            }
+
+            // Pass 2: draw dots and skulls, clipped to the plot area so nothing bleeds into
+            // the title above or the axis labels below, regardless of how short the canvas is.
+            clipRect(
+                left = leftPadding,
+                top = topPadding,
+                right = leftPadding + plotWidth,
+                bottom = topPadding + plotHeight
+            ) {
             weeklyActivity.forEach { week ->
                 // X position for this week's Monday on the timeline
                 val daysBetween = ChronoUnit.DAYS.between(minDate, week.weekStart).toFloat()
@@ -167,16 +224,21 @@ fun MetricsGraph(
                 // Skip weeks that fall outside the visible plot area
                 if (centerX < leftPadding || centerX > leftPadding + plotWidth) return@forEach
 
-                // Determine which columns to draw and their offsets
+                // Determine which columns to draw and their offsets.
+                // hasClimbColumn is true when there are dots OR a below-median label to show,
+                // so the column position is always computed when showAboveMedianOnly is active.
                 val hasExercises = showExercises && week.exerciseCount > 0
                 val hasClimbs = showClimbs && week.climbColors.isNotEmpty()
                 val hasInjuries = week.injuries.isNotEmpty()
+                // Always true when the feature is on — every week shows a label (★, count, or ?)
+                val hasMedianLabel = showAboveMedianOnly && showClimbs
+                val hasClimbColumn = hasClimbs || hasMedianLabel
 
                 // Position columns side by side centered on centerX
                 val exerciseColumnX: Float
                 val climbColumnX: Float
                 when {
-                    hasExercises && hasClimbs -> {
+                    hasExercises && hasClimbColumn -> {
                         // Two columns: exercise left, climb right
                         exerciseColumnX = centerX - dotRadius - columnGap / 2
                         climbColumnX = centerX + dotRadius + columnGap / 2
@@ -185,7 +247,7 @@ fun MetricsGraph(
                         exerciseColumnX = centerX
                         climbColumnX = 0f // unused
                     }
-                    hasClimbs -> {
+                    hasClimbColumn -> {
                         exerciseColumnX = 0f // unused
                         climbColumnX = centerX
                     }
@@ -196,11 +258,18 @@ fun MetricsGraph(
                     }
                 }
 
-                // Draw exercise dots — stacking upward
+                // When the median label is present, shift all dots up by the label's measured height
+                // plus breathing room so the first dot clears the label below it.
+                // Only shift dots up when there are actually dots to stack above the label.
+                // Injury-only weeks (no climbs, no exercises) stay at baseY so the skull isn't displaced.
+                val hasDots = hasClimbs || hasExercises
+                val startY = if (hasMedianLabel && hasDots) baseY - medianLabelGap else baseY
+
+                // Draw exercise dots — stacking upward from startY
                 // exerciseDotColor is onSurfaceVariant (theme-derived), always legible, no ring needed
                 if (hasExercises) {
                     for (i in 0 until week.exerciseCount) {
-                        val dotY = baseY - i * dotStep
+                        val dotY = startY - i * dotStep
                         if (dotY - dotRadius < topPadding) break // don't overflow above plot
                         drawCircle(
                             color = exerciseDotColor,
@@ -210,19 +279,23 @@ fun MetricsGraph(
                     }
                 }
 
+                // Climb dots also start from startY.
+                var climbTopY = startY
+
                 // Draw climb dots — grouped by gym with separator bars between groups.
-                // Track currentY so skulls can sit above the top-most dot.
-                var climbTopY = baseY
+                // Starts at climbTopY (shifted up by one slot when the median label is present).
                 if (hasClimbs) {
-                    var currentY = baseY
+                    var currentY = climbTopY
                     var prevGym: String? = null
 
-                    week.climbColors.forEach { (gymName, colorName) ->
+                    // Use a labelled loop so we can break out entirely once we hit the top boundary,
+                    // rather than just skipping one entry with return@forEach and continuing the loop.
+                    climbLoop@ for ((gymName, colorName) in week.climbColors) {
                         // Insert a gap + separator bar between different gym groups.
                         if (prevGym != null && gymName != prevGym) {
                             currentY -= separatorGap
                             val sepY = currentY + dotRadius + 3.dp.toPx()
-                            if (sepY < topPadding) return@forEach
+                            if (sepY < topPadding) break@climbLoop // all remaining dots would also overflow
                             val halfWidth = dotRadius * 0.8f
                             drawLine(
                                 color = gymSeparatorColor,
@@ -233,7 +306,7 @@ fun MetricsGraph(
                         }
                         prevGym = gymName
 
-                        if (currentY - dotRadius < topPadding) return@forEach // don't overflow
+                        if (currentY - dotRadius < topPadding) break@climbLoop // all remaining dots would also overflow
                         // Resolve color using (gymName, routeName) — unambiguous across all gyms
                         val dotColor = routeColor(gymName, colorName)
                         if (isOutlineGym(gymName)) {
@@ -263,7 +336,7 @@ fun MetricsGraph(
                         }
                         currentY -= dotStep
                     }
-                    // Record where the top-most dot ended up
+                    // Record where the top-most dot ended up (used to position skulls above)
                     climbTopY = currentY + dotStep
                 }
 
@@ -292,6 +365,7 @@ fun MetricsGraph(
                     }
                 }
             }
+            } // end clipRect
 
             // Map each data point to its (x, y) pixel position
             val pts = data.map { point ->

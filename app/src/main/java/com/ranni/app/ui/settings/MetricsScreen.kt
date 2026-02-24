@@ -174,6 +174,27 @@ fun MetricsScreen(viewModel: MetricsViewModel) {
                 )
             }
 
+            // When on, only climbs above the timeline-window median score are shown as dots.
+            // A count of below-median climbs (or a star when all made the cut) appears beneath each stack.
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                    Text("Show only above-median climbs", style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        "Dots show climbs above the window median. A count below each stack shows how many were filtered.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = config.showAboveMedianOnly,
+                    onCheckedChange = { viewModel.updateShowAboveMedianOnly(it) }
+                )
+            }
+
         }
     }
 }
