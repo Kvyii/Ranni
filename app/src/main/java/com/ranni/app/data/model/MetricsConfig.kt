@@ -24,6 +24,7 @@ data class MetricsConfig(
     val filterRepeats: Boolean = false,
     // When true, the Stats tab shows +/- deltas vs the preceding period of equal length.
     // Only shown when there is sufficient data (2× the selected period) and period is not Lifetime.
+    // @ColumnInfo defaultValue "0" is the migration default for existing users; new installs use true.
     @ColumnInfo(defaultValue = "0")
-    val showPeriodComparison: Boolean = false
+    val showPeriodComparison: Boolean = true
 )

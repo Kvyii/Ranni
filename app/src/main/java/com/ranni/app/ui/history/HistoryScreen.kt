@@ -752,7 +752,7 @@ private val statsPeriodOptions: List<Pair<Int?, String>> = listOf(
 private fun deltaColor(delta: Int): Color = when {
     delta > 0 -> Color(0xFF4CAF50)
     delta < 0 -> MaterialTheme.colorScheme.error
-    else      -> MaterialTheme.colorScheme.onSurfaceVariant
+    else      -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
