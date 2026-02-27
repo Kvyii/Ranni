@@ -84,13 +84,13 @@ fun SettingsScreen(
         // Theme picker — lets the user swap the app colour scheme
         SettingsRow("Theme", onClick = onNavigateTheme)
         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+        // Backup, restore, and data wipe
+        SettingsRow("Backup & Restore", onClick = onNavigateBackup)
+        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
         // Help page with FAQ
         SettingsRow("Help", onClick = onNavigateHelp)
         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
         SettingsRow("About", onClick = onNavigateAbout)
-        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-        // Backup, restore, and data wipe
-        SettingsRow("Backup & Restore", onClick = onNavigateBackup)
         if (showDevTools) {
             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
             SettingsRow("Developer", onClick = onNavigateDev)
@@ -183,6 +183,17 @@ fun AboutContent() {
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
 
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+
+            Text("v2.0.1", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            // Release date
+            Text("28/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+            ChangelogText("""
+                • Added back up and restore functionality
+                • Fixed calendar not updating if app is opened and a new day passes
+                """.trimIndent())
+        }
+
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("v2.0.0", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
             // Release date
             Text("27/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
@@ -196,10 +207,10 @@ fun AboutContent() {
             // Release date
             Text("25/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
             ChangelogText("""
-                • Added comparison option to settings > metrics to show +/- deltas
+                • Added comparison to settings > metrics to show +/-
                 • Added median setting for History > Progress to reflect only best 50% of climbs
-                • Fixed graph bug where plot starts before first available data point
-                • Fixed histograph bug where hollow type climbs do not render both bars
+                • Fixed graph bug where plot starts before first data point
+                • Fixed histograph bug for hollow type climbs
                 • Fixed a bug with Progress graph truncating when points do not occur on the start of week
                 • Fixed a bug with Progress graph not starting at 0
                 • Fixed a bug where app does not sleep
