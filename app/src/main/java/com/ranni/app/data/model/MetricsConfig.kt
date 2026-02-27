@@ -8,7 +8,7 @@ import com.ranni.app.ui.theme.AppTheme
 @Entity(tableName = "metrics_config")
 data class MetricsConfig(
     @PrimaryKey val id: Int = 1,
-    val months: Int = 2,
+    val months: Int = 2,  // Rolling window in months; must be one of 1, 2, 3 (see MONTHS_TO_DAYS)
     val topK: Int = 10,
     val timelineMonths: Int = 3,
     val showClimbDots: Boolean = true,

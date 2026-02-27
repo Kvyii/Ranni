@@ -590,8 +590,8 @@ private fun ProgressTab(viewModel: HistoryViewModel) {
                     val climbDate = Instant.ofEpochMilli(climb.loggedAt)
                         .atZone(ZoneId.systemDefault())
                         .toLocalDate()
-                    // Days remaining until this climb falls out of the metric window (months * 30 days)
-                    val expiryDate = climbDate.plusDays((config.months * 30).toLong())
+                    // Days remaining until this climb falls out of the metric window
+                    val expiryDate = climbDate.plusDays(monthsToDays(config.months))
                     val daysRemaining = java.time.temporal.ChronoUnit.DAYS.between(LocalDate.now(), expiryDate)
                         .coerceAtLeast(0)
                     val date = "${climbDate.format(dateFormatter)} (${daysRemaining}d)"

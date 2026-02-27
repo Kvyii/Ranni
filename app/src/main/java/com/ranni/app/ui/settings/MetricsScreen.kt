@@ -13,16 +13,14 @@ import androidx.compose.ui.unit.dp
 
 private val timelineOptions = listOf(3, 6, 12, 24)
 
+// Rolling metric window options (months); limited to values present in MONTHS_TO_DAYS map.
+private val monthsOptions = listOf(1, 2, 3)
+
 @Composable
 fun MetricsScreen(viewModel: MetricsViewModel) {
     val config by viewModel.config.collectAsState()
 
-    var monthsText by remember(config) { mutableStateOf(config.months.toString()) }
     var topKText by remember(config) { mutableStateOf(config.topK.toString()) }
-
-    // Validate months: must be an integer in 1..12
-    val monthsValue = monthsText.toIntOrNull()
-    val monthsError = monthsValue != null && monthsValue !in 1..12
 
     // Validate topK: must be an integer in 10..20
     val topKValue = topKText.toIntOrNull()
@@ -41,27 +39,26 @@ fun MetricsScreen(viewModel: MetricsViewModel) {
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
-        OutlinedTextField(
-            value = monthsText,
-            onValueChange = { value ->
-                monthsText = value
-                val n = value.toIntOrNull()
-                // Only save if within valid range
-                if (n != null && n in 1..12) viewModel.updateMonths(n)
-            },
-            label = { Text("Months (n)") },
-            supportingText = {
-                if (monthsError) {
-                    Text("Must be between 1 and 12", color = MaterialTheme.colorScheme.error)
-                } else {
-                    Text("Rolling window size in months")
+        // Rolling metric window selector — determines how far back the top-K score is computed.
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Months (n)", style = MaterialTheme.typography.bodyLarge)
+            Text(
+                "Rolling window size in months",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                monthsOptions.forEachIndexed { index, months ->
+                    SegmentedButton(
+                        selected = config.months == months,
+                        onClick = { viewModel.updateMonths(months) },
+                        shape = SegmentedButtonDefaults.itemShape(index, monthsOptions.size)
+                    ) {
+                        Text("${months}m")
+                    }
                 }
-            },
-            isError = monthsError,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth()
-        )
+            }
+        }
 
         OutlinedTextField(
             value = topKText,
