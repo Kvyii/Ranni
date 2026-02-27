@@ -235,9 +235,9 @@ private fun CalendarView(
     injuriesByDate: Map<LocalDate, List<InjuryLog>>,
     onDaySelected: (LocalDate) -> Unit
 ) {
-    val currentMonth = remember { YearMonth.now() }
-    val startMonth = remember { currentMonth.minusMonths(12) }
-    val endMonth = remember { currentMonth.plusMonths(1) }
+    val currentMonth = YearMonth.now()
+    val startMonth = currentMonth.minusMonths(12)
+    val endMonth = currentMonth.plusMonths(1)
     val firstDayOfWeek = remember { firstDayOfWeekFromLocale() }
 
     val calendarState = rememberCalendarState(

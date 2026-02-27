@@ -14,8 +14,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.ranni.app.data.model.gyms
 import com.ranni.app.ui.components.ClimbDot
@@ -29,23 +33,36 @@ fun ScoresScreen() {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Scoring info card
-        Surface(
-            shape = MaterialTheme.shapes.medium,
-            tonalElevation = 2.dp,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Text("Information", style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(4.dp))
-                Text("Scores are for new climbs.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("Flashes are scored at 1.25x.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("Repeats are scored at 0.75x.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
+        // Scoring info — plain, multipliers highlighted in accent colour
+        val accentColor = MaterialTheme.colorScheme.secondaryContainer
+        val subtleColor = MaterialTheme.colorScheme.onSurfaceVariant
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text("Information", style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(4.dp))
+            Text(
+                buildAnnotatedString {
+                    withStyle(SpanStyle(color = subtleColor)) { append("• New climbs are scored at ") }
+                    withStyle(SpanStyle(color = accentColor, fontWeight = FontWeight.Bold)) { append("1.0×") }
+                },
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                buildAnnotatedString {
+                    withStyle(SpanStyle(color = subtleColor)) { append("• Flashes are scored at ") }
+                    withStyle(SpanStyle(color = accentColor, fontWeight = FontWeight.Bold)) { append("1.25×") }
+                },
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                buildAnnotatedString {
+                    withStyle(SpanStyle(color = subtleColor)) { append("• Repeats are scored at ") }
+                    withStyle(SpanStyle(color = accentColor, fontWeight = FontWeight.Bold)) { append("0.75×") }
+                },
+                style = MaterialTheme.typography.bodySmall
+            )
         }
+
+        Spacer(Modifier.height(4.dp))
 
         gyms.forEach { gym ->
             if (gym.comingSoon) {
