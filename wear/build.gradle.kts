@@ -4,7 +4,6 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.ksp)
 }
 
 // Load signing credentials from local.properties (gitignored)
@@ -14,18 +13,20 @@ val localProps = Properties().apply {
 }
 
 android {
-    namespace = "com.ranni.app"
+    namespace  = "com.ranni.wear"
     compileSdk = 35
 
     defaultConfig {
+        // Must match :app applicationId so the Wearable Data Layer routes messages correctly
         applicationId = "com.ranni.app"
-        minSdk = 29
-        targetSdk = 35
-        versionCode = 3
-        versionName = "2.0.0"
+        minSdk        = 26
+        targetSdk     = 35
+        versionCode   = 1
+        versionName   = "1.0"
     }
 
-    // Sign release builds with the release keystore from local.properties
+    // Sign all build types (including debug) with the release keystore so the
+    // Wearable Data Layer certificate check passes against the phone APK.
     signingConfigs {
         create("release") {
             storeFile     = rootProject.file(localProps.getProperty("KEYSTORE_PATH", ""))
@@ -37,7 +38,8 @@ android {
 
     buildTypes {
         debug {
-            buildConfigField("Boolean", "SHOW_DEV_TOOLS", "true")
+            // Use release signing so watch ↔ phone Data Layer cert check passes
+            signingConfig = signingConfigs.getByName("release")
         }
         release {
             isMinifyEnabled = false
@@ -46,9 +48,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            buildConfigField("Boolean", "SHOW_DEV_TOOLS", "false")
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -58,38 +60,31 @@ android {
     }
     buildFeatures {
         compose = true
-        buildConfig = true
     }
 }
 
-// Export Room schemas for AutoMigration support
-ksp {
-    arg("room.schemaLocation", "$projectDir/schemas")
-}
-
 dependencies {
-    implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation(libs.androidx.lifecycle.viewmodel.compose)
-    implementation(libs.androidx.activity.compose)
+    // Wear Compose UI components
+    implementation(libs.wear.compose.material)
+    implementation(libs.wear.compose.foundation)
+    implementation(libs.wear.compose.navigation)
+
+    // Standard Compose runtime — BOM aligns versions with :app
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
-    implementation(libs.androidx.material3)
-    // Animated vector support via View system (AnimatedVectorDrawableCompat)
-    implementation("androidx.vectordrawable:vectordrawable-animated:1.2.0")
-    implementation(libs.androidx.navigation.compose)
-    implementation(libs.androidx.room.runtime)
-    implementation(libs.androidx.room.ktx)
-    implementation(libs.calendar.compose)
-    implementation(libs.androidx.splashscreen)
-    ksp(libs.androidx.room.compiler)
-    // Wearable Data Layer — writes favourite gym and receives climb messages from watch
+
+    // Lifecycle + ViewModel
+    implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.activity.compose)
+
+    // Wearable Data Layer API — DataClient reads + MessageClient sends
     implementation(libs.play.services.wearable)
     // .await() extension for Google Tasks (required for coroutine-based Data Layer calls)
     implementation(libs.kotlinx.coroutines.play.services)
+
     debugImplementation(libs.androidx.ui.tooling)
-    testImplementation("junit:junit:4.13.2")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
 }
