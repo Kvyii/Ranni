@@ -179,7 +179,7 @@ fun AboutContent() {
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
 
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text("v1.2.7.2", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            Text("v1.2.7.4", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
             // Release date
             Text("25/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
             ChangelogText("""
@@ -189,7 +189,12 @@ fun AboutContent() {
                 • Fixed histograph bug where hollow type climbs do not render both bars
                 • Fixed a bug with Progress graph truncating when points do not occur on the start of week
                 • Fixed a bug with Progress graph not starting at 0
+                • Fixed a bug where app does not sleep
                 • Added 3 Gundam themes
+                • Simplified month calculations to use 30 days/month
+                • Adjusted 9 Degrees grading: 
+                    - Pink buffed to 'V2 - V4' from 'V2 - V3'
+                    - Orange buffed to 'V4 - V5' from 'V3 - V5'
                 """.trimIndent())
         }
 

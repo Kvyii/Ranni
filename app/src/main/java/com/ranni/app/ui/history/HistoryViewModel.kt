@@ -28,6 +28,22 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.temporal.TemporalAdjusters
 
+/**
+ * Maps a period in months to its exact day count.
+ * Used for both the rolling metric window (1, 2, 3 months) and the Stats period filter (1, 2, 3, 6, 12 months).
+ * 12 months uses 365 days rather than 360 (12 × 30).
+ */
+private val MONTHS_TO_DAYS = mapOf(
+    1  to 30,
+    2  to 60,
+    3  to 90,
+    6  to 180,
+    12 to 365
+)
+
+/** Returns the day count for [months], falling back to months * 30 for any unlisted value. */
+internal fun monthsToDays(months: Int): Long = (MONTHS_TO_DAYS[months] ?: (months * 30)).toLong()
+
 data class GraphPoint(val date: LocalDate, val value: Float)
 
 /** Per-grade stats row for the Stats tab histogram. */
@@ -103,7 +119,7 @@ class HistoryViewModel(
     // Returns up to 50 climbs within the metric window, sorted by score desc.
     // The UI greys out those beyond topK.
     val topClimbs: StateFlow<List<ClimbLog>> = combine(climbLogs, metricsConfig) { climbs, config ->
-        val windowDays = config.months * 30L
+        val windowDays = monthsToDays(config.months)
         val cutoff = System.currentTimeMillis() - windowDays * 24 * 60 * 60 * 1000
         climbs
             .filter { it.loggedAt > cutoff }
@@ -149,7 +165,7 @@ class HistoryViewModel(
     val statsGymsWithData: StateFlow<Set<String>> = combine(climbLogs, statsPeriodMonths) { climbs, months ->
         // Compute the cutoff timestamp for the current period (0 = Lifetime, no cutoff)
         val cutoff = if (months != null) {
-            System.currentTimeMillis() - months * 30L * 24 * 60 * 60 * 1000
+            System.currentTimeMillis() - monthsToDays(months) * 24 * 60 * 60 * 1000
         } else {
             0L
         }
@@ -223,7 +239,7 @@ private fun computeStats(
 
     // Apply time window filter
     val cutoff = if (periodMonths != null) {
-        System.currentTimeMillis() - periodMonths * 30L * 24 * 60 * 60 * 1000
+        System.currentTimeMillis() - monthsToDays(periodMonths) * 24 * 60 * 60 * 1000
     } else {
         0L  // Lifetime: no cutoff
     }
@@ -308,7 +324,7 @@ private fun computePriorComparison(
     filterRepeats: Boolean
 ): StatsComparison? {
     val now = System.currentTimeMillis()
-    val periodMs = periodMonths * 30L * 24 * 60 * 60 * 1000
+    val periodMs = monthsToDays(periodMonths) * 24 * 60 * 60 * 1000
 
     // Boundary timestamps
     val currentCutoff = now - periodMs          // start of current window
