@@ -70,6 +70,7 @@ fun SettingsScreen(
     onNavigateHelp: () -> Unit,
     onNavigateAbout: () -> Unit,
     onNavigateTheme: () -> Unit,
+    onNavigateBackup: () -> Unit,
     onNavigateDev: () -> Unit = {},
     showDevTools: Boolean = false
 ) {
@@ -87,6 +88,9 @@ fun SettingsScreen(
         SettingsRow("Help", onClick = onNavigateHelp)
         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
         SettingsRow("About", onClick = onNavigateAbout)
+        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+        // Backup, restore, and data wipe
+        SettingsRow("Backup & Restore", onClick = onNavigateBackup)
         if (showDevTools) {
             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
             SettingsRow("Developer", onClick = onNavigateDev)

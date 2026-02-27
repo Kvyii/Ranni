@@ -69,11 +69,15 @@ import com.ranni.app.ui.settings.MetricsViewModel
 import com.ranni.app.ui.settings.SoundsScreen
 import com.ranni.app.data.AlarmPreferences
 import com.ranni.app.data.SharedPrefsGymOrderPreferences
+import com.ranni.app.ui.settings.BackupScreen
 import com.ranni.app.ui.settings.ThemeScreen
 import com.ranni.app.ui.theme.AppTheme
 import com.ranni.app.ui.theme.RanniTheme
+import com.ranni.app.data.db.exportDatabase
+import com.ranni.app.data.db.importDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -132,7 +136,13 @@ fun MainScaffold() {
                 metricsRepo = metricsRepo!!,
                 context = context,
                 screenState = screenState,
-                onScreenStateChange = { screenState = it }
+                onScreenStateChange = { screenState = it },
+                onRestoreDb = {
+                    // Null out the DB reference so remember(db) recreates all repos,
+                    // then go back through Loading to re-open the singleton from the new file.
+                    db = null
+                    screenState = ScreenState.Loading
+                }
             )
         }
     }
@@ -150,7 +160,8 @@ fun MainContent(
     metricsRepo: MetricsRepository,
     context: android.content.Context,
     screenState: ScreenState,
-    onScreenStateChange: (ScreenState) -> Unit
+    onScreenStateChange: (ScreenState) -> Unit,
+    onRestoreDb: () -> Unit
 ) {
     val exerciseRepo = remember { ExerciseRepository(db.exerciseDao()) }
     val sessionRepo = remember { SessionRepository(db.sessionLogDao()) }
@@ -186,6 +197,38 @@ fun MainContent(
         }
     }
 
+    val scope = rememberCoroutineScope()
+
+    // SAF launcher for exporting the database backup
+    val backupExportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/octet-stream")
+    ) { uri ->
+        if (uri != null) {
+            scope.launch {
+                exportDatabase(context, db, uri)
+                    .onSuccess { Toast.makeText(context, "Backup exported", Toast.LENGTH_SHORT).show() }
+                    .onFailure { Toast.makeText(context, "Export failed", Toast.LENGTH_SHORT).show() }
+            }
+        }
+    }
+
+    // SAF launcher for importing a database backup
+    val backupImportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            scope.launch {
+                importDatabase(context, db, uri)
+                    .onSuccess {
+                        // Re-initialise the DB singleton and all repos from the restored file
+                        onRestoreDb()
+                        Toast.makeText(context, "Backup restored", Toast.LENGTH_SHORT).show()
+                    }
+                    .onFailure { Toast.makeText(context, "Restore failed", Toast.LENGTH_SHORT).show() }
+            }
+        }
+    }
+
     var selectedTab by remember { mutableIntStateOf(0) }
 
     val isTopLevel = screenState is ScreenState.ExerciseList
@@ -207,7 +250,8 @@ fun MainContent(
             is ScreenState.SettingsAbout,
             is ScreenState.SettingsDev,
             is ScreenState.SettingsTheme,
-            is ScreenState.SettingsHelp -> ScreenState.About
+            is ScreenState.SettingsHelp,
+            is ScreenState.SettingsBackup -> ScreenState.About
 
             is ScreenState.About -> when (selectedTab) {
                 0 -> ScreenState.Climb
@@ -250,6 +294,7 @@ fun MainContent(
                             is ScreenState.SettingsDev -> "Developer"
                             is ScreenState.SettingsTheme -> "UI Theme"
                             is ScreenState.SettingsHelp -> "Help"
+                            is ScreenState.SettingsBackup -> "Backup & Restore"
                             else -> ""
                         })
                     },
@@ -267,7 +312,9 @@ fun MainContent(
                                 is ScreenState.SettingsSounds,
                                 is ScreenState.SettingsAbout,
                                 is ScreenState.SettingsDev,
-                                is ScreenState.SettingsTheme -> ScreenState.About
+                                is ScreenState.SettingsTheme,
+                                is ScreenState.SettingsHelp,
+                                is ScreenState.SettingsBackup -> ScreenState.About
                                 else -> ScreenState.Climb
                             })
                         }) {
@@ -364,6 +411,7 @@ fun MainContent(
                         onNavigateTheme = { onScreenStateChange(ScreenState.SettingsTheme) },
                         onNavigateHelp = { onScreenStateChange(ScreenState.SettingsHelp) },
                         onNavigateAbout = { onScreenStateChange(ScreenState.SettingsAbout) },
+                        onNavigateBackup = { onScreenStateChange(ScreenState.SettingsBackup) },
                         onNavigateDev = { onScreenStateChange(ScreenState.SettingsDev) },
                         showDevTools = BuildConfig.SHOW_DEV_TOOLS
                     )
@@ -398,6 +446,14 @@ fun MainContent(
                 }
                 is ScreenState.SettingsDev -> {
                     DeveloperScreen(db)
+                }
+                is ScreenState.SettingsBackup -> {
+                    BackupScreen(
+                        db = db,
+                        onExport = { backupExportLauncher.launch("ranni_backup.rannibackup") },
+                        onImport = { backupImportLauncher.launch(arrayOf("application/octet-stream")) },
+                        onWipeComplete = { onRestoreDb() }
+                    )
                 }
                 is ScreenState.Loading -> { /* Handled in MainScaffold */ }
             }
@@ -440,11 +496,12 @@ sealed class ScreenState {
     object SettingsDev : ScreenState()
     object SettingsTheme : ScreenState()
     object SettingsHelp : ScreenState()
+    object SettingsBackup : ScreenState()
 
     // Navigation depth used to determine slide direction for transitions
     val depth: Int get() = when (this) {
         is Loading, is Climb, is ExerciseList, is History -> 0
         is About, is EditExercise, is Session -> 1
-        is SettingsScores, is SettingsMetrics, is SettingsSounds, is SettingsAbout, is SettingsDev, is SettingsTheme, is SettingsHelp -> 2
+        is SettingsScores, is SettingsMetrics, is SettingsSounds, is SettingsAbout, is SettingsDev, is SettingsTheme, is SettingsHelp, is SettingsBackup -> 2
     }
 }

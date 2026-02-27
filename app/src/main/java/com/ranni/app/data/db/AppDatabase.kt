@@ -49,5 +49,10 @@ abstract class AppDatabase : RoomDatabase() {
                     .fallbackToDestructiveMigration()
                     .build().also { INSTANCE = it }
             }
+
+        /** Clears the singleton so the next [getInstance] call reopens the DB file. */
+        fun resetInstance() {
+            synchronized(this) { INSTANCE = null }
+        }
     }
 }
