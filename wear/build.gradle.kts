@@ -1,7 +1,15 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+}
+
+// Load signing credentials from local.properties (gitignored)
+val localProps = Properties().apply {
+    val f = rootProject.file("local.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
 }
 
 android {
@@ -17,9 +25,25 @@ android {
         versionName   = "1.0"
     }
 
+    // Sign all build types (including debug) with the release keystore so the
+    // Wearable Data Layer certificate check passes against the phone APK.
+    signingConfigs {
+        create("release") {
+            storeFile     = rootProject.file(localProps.getProperty("KEYSTORE_PATH", ""))
+            storePassword = localProps.getProperty("KEYSTORE_PASSWORD", "")
+            keyAlias      = localProps.getProperty("KEY_ALIAS", "")
+            keyPassword   = localProps.getProperty("KEY_PASSWORD", "")
+        }
+    }
+
     buildTypes {
+        debug {
+            // Use release signing so watch ↔ phone Data Layer cert check passes
+            signingConfig = signingConfigs.getByName("release")
+        }
         release {
             isMinifyEnabled = false
+            signingConfig   = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

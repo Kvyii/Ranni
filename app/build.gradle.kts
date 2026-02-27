@@ -1,8 +1,16 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
+}
+
+// Load signing credentials from local.properties (gitignored)
+val localProps = Properties().apply {
+    val f = rootProject.file("local.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
 }
 
 android {
@@ -13,8 +21,18 @@ android {
         applicationId = "com.ranni.app"
         minSdk = 29
         targetSdk = 35
-        versionCode = 2
-        versionName = "1.0.1"
+        versionCode = 3
+        versionName = "2.0.0"
+    }
+
+    // Sign release builds with the release keystore from local.properties
+    signingConfigs {
+        create("release") {
+            storeFile     = rootProject.file(localProps.getProperty("KEYSTORE_PATH", ""))
+            storePassword = localProps.getProperty("KEYSTORE_PASSWORD", "")
+            keyAlias      = localProps.getProperty("KEY_ALIAS", "")
+            keyPassword   = localProps.getProperty("KEY_PASSWORD", "")
+        }
     }
 
     buildTypes {
@@ -23,6 +41,7 @@ android {
         }
         release {
             isMinifyEnabled = false
+            signingConfig   = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
