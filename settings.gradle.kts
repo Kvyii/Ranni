@@ -15,3 +15,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "Ranni"
 include(":app")
+include(":wear")

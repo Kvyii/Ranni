@@ -349,7 +349,7 @@ fun MainContent(
                     )
                 }
                 is ScreenState.Climb -> {
-                    val vm = remember { ClimbViewModel(climbRepo, injuryRepo, gymOrderPrefs) }
+                    val vm = remember { ClimbViewModel(climbRepo, injuryRepo, gymOrderPrefs, context.applicationContext) }
                     ClimbScreen(vm)
                 }
                 is ScreenState.History -> {

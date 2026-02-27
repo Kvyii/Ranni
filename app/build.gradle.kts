@@ -66,6 +66,10 @@ dependencies {
     implementation(libs.calendar.compose)
     implementation(libs.androidx.splashscreen)
     ksp(libs.androidx.room.compiler)
+    // Wearable Data Layer — writes favourite gym and receives climb messages from watch
+    implementation(libs.play.services.wearable)
+    // .await() extension for Google Tasks (required for coroutine-based Data Layer calls)
+    implementation(libs.kotlinx.coroutines.play.services)
     debugImplementation(libs.androidx.ui.tooling)
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")

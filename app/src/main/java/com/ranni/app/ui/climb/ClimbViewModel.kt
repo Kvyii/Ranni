@@ -1,5 +1,6 @@
 package com.ranni.app.ui.climb
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ranni.app.data.GymOrderPreferences
@@ -9,6 +10,7 @@ import com.ranni.app.data.model.InjurySeverity
 import com.ranni.app.data.model.gyms
 import com.ranni.app.data.repository.ClimbRepository
 import com.ranni.app.data.repository.InjuryRepository
+import com.ranni.app.data.syncFavouriteGymToWatch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,7 +19,8 @@ import kotlinx.coroutines.launch
 class ClimbViewModel(
     private val repo: ClimbRepository,
     private val injuryRepo: InjuryRepository,
-    private val gymOrderPrefs: GymOrderPreferences
+    private val gymOrderPrefs: GymOrderPreferences,
+    private val appContext: Context
 ) : ViewModel() {
 
     // Active gyms are reorderable; coming-soon are locked at the bottom and never change
@@ -40,6 +43,8 @@ class ClimbViewModel(
         val newValue = if (_favouriteGym.value == gymName) null else gymName
         _favouriteGym.value = newValue
         gymOrderPrefs.setFavouriteGym(newValue)
+        // Sync change to watch so it can skip the gym picker on next launch
+        viewModelScope.launch { syncFavouriteGymToWatch(appContext, newValue) }
     }
 
     // Log a climb with the specified type — score should already have the multiplier applied
