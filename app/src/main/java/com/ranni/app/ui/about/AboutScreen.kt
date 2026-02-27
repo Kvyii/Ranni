@@ -190,6 +190,7 @@ fun AboutContent() {
             ChangelogText("""
                 • Added back up and restore functionality
                 • Fixed calendar not updating if app is opened and a new day passes
+                • Cleaned scores and themes UI
                 """.trimIndent())
         }
 
