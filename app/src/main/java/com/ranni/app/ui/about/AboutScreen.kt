@@ -184,13 +184,14 @@ fun AboutContent() {
 
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
 
-            Text("v2.0.1", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            Text("v2.0.2", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
             // Release date
             Text("28/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
             ChangelogText("""
                 • Added back up and restore functionality
                 • Fixed calendar not updating if app is opened and a new day passes
                 • Cleaned scores and themes UI
+                • Fix bug with calendar width sometimes hiding the most recent day
                 """.trimIndent())
         }
 
