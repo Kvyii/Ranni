@@ -12,6 +12,7 @@
   <img src="https://img.shields.io/badge/Platform-Android-green?style=flat" alt="Platform">
   <img src="https://img.shields.io/badge/Min_SDK-29-blue?style=flat" alt="Min SDK">
   <img src="https://img.shields.io/badge/Kotlin-Jetpack_Compose-purple?style=flat" alt="Kotlin">
+  <img src="https://img.shields.io/badge/Wear_OS-supported-blue?style=flat" alt="Wear OS">
 </p>
 
 ---
@@ -27,6 +28,8 @@
 **Scoring** — Each route grade has a point value; track your climbing score over time.
 
 **Injury Tracking** — Log and monitor injuries alongside your sessions.
+
+**Wear OS** — Log climbs directly from your wrist. The watch app shows your gyms and routes, lets you select a climb type (New / Flash / Repeat), and syncs the entry to your phone via the Wearable Data Layer.
 
 ## Tech Stack
 

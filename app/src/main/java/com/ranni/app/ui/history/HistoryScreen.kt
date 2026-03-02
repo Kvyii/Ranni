@@ -547,7 +547,11 @@ private fun ProgressTab(viewModel: HistoryViewModel) {
             .minusMonths(config.timelineMonths.toLong())
             .with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
     }
-    val axisMaxDate = LocalDate.now()
+    // Extend to end of current week (Sunday) so that when today is a Monday the
+    // current week's column isn't pushed against the right clip boundary, which
+    // would hide the climb-dot column (shifted right of center) while the exercise
+    // column (shifted left of center) remains visible.
+    val axisMaxDate = LocalDate.now().with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY))
 
     Column(modifier = Modifier.fillMaxSize()) {
         // Graph with weekly dot overlay — top half of available space
