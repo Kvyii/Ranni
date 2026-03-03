@@ -238,7 +238,8 @@ private fun CalendarView(
     val currentMonth = YearMonth.now()
     val startMonth = currentMonth.minusMonths(12)
     val endMonth = currentMonth.plusMonths(1)
-    val firstDayOfWeek = remember { firstDayOfWeekFromLocale() }
+    // Always start the week on Monday regardless of locale
+    val firstDayOfWeek = DayOfWeek.MONDAY
 
     val calendarState = rememberCalendarState(
         startMonth = startMonth,
@@ -248,9 +249,9 @@ private fun CalendarView(
     )
 
     // Measure available height so day cells can fill it exactly.
-    // We assume worst-case 6 week rows and subtract the fixed header height (56dp).
+    // Header = 56dp month nav row + 20dp day-of-week label row.
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-        val headerHeight = 56.dp
+        val headerHeight = 76.dp
         val cellHeight = (maxHeight - headerHeight) / 6
 
         HorizontalCalendar(
@@ -1531,26 +1532,50 @@ private fun GradeHistogram(
 @Composable
 private fun MonthHeader(yearMonth: YearMonth, calendarState: CalendarState) {
     val scope = rememberCoroutineScope()
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        IconButton(onClick = {
-            scope.launch { calendarState.animateScrollToMonth(yearMonth.minusMonths(1)) }
-        }) {
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Previous month")
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val mutedColor = MaterialTheme.colorScheme.onSurfaceVariant
+    // Fixed Monday-first week order, matching CalendarView
+    val daysOfWeek = remember {
+        (0 until 7).map { DayOfWeek.MONDAY.plus(it.toLong()) }
+    }
+
+    Column {
+        // Month navigation row
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            IconButton(onClick = {
+                scope.launch { calendarState.animateScrollToMonth(yearMonth.minusMonths(1)) }
+            }) {
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Previous month")
+            }
+            Text(
+                text = "${yearMonth.month.getDisplayName(TextStyle.FULL, Locale.getDefault())} ${yearMonth.year}",
+                style = MaterialTheme.typography.titleMedium
+            )
+            IconButton(onClick = {
+                scope.launch { calendarState.animateScrollToMonth(yearMonth.plusMonths(1)) }
+            }) {
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Next month")
+            }
         }
-        Text(
-            text = "${yearMonth.month.getDisplayName(TextStyle.FULL, Locale.getDefault())} ${yearMonth.year}",
-            style = MaterialTheme.typography.titleMedium
-        )
-        IconButton(onClick = {
-            scope.launch { calendarState.animateScrollToMonth(yearMonth.plusMonths(1)) }
-        }) {
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Next month")
+
+        // Day-of-week label row — weekends use primary colour to stand out
+        Row(modifier = Modifier.fillMaxWidth()) {
+            daysOfWeek.forEach { dow ->
+                val isWeekend = dow == DayOfWeek.SATURDAY || dow == DayOfWeek.SUNDAY
+                Text(
+                    text = dow.getDisplayName(TextStyle.NARROW, Locale.getDefault()),
+                    modifier = Modifier.weight(1f),
+                    textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (isWeekend) primaryColor else mutedColor
+                )
+            }
         }
     }
 }
