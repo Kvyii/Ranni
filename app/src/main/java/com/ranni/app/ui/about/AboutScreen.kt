@@ -191,6 +191,7 @@ fun AboutContent() {
                 • UI updates:
                     - Empty days now show an 'x'
                     - Added day of week to calendar
+                    - Now shows number of climbs truncated in the History > Progress graph
                     - Fixed bug where dot preferences did not take effect
                 """.trimIndent())
         }

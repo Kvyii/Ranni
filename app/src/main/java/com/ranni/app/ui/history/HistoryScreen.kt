@@ -568,7 +568,6 @@ private fun ProgressTab(viewModel: HistoryViewModel) {
             weeklyActivity = if (dotsEnabled) weeklyActivity else emptyList(),
             showClimbs = config.showClimbDots,
             showExercises = config.showExerciseDots,
-            showAboveMedianOnly = config.showAboveMedianOnly,
             axisMinDate = axisMinDate,
             axisMaxDate = axisMaxDate,
             modifier = Modifier

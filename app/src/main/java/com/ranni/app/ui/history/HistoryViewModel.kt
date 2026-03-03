@@ -85,11 +85,14 @@ data class WeekActivity(
     // Each entry is (gymName, routeName) — both needed to look up color and outline status unambiguously.
     // When showAboveMedianOnly is on, only above-median climbs are included here.
     val climbColors: List<Pair<String, String>>,
-    val exerciseCount: Int,             // Number of exercise sessions (capped at 25)
+    val exerciseCount: Int,             // Number of exercise sessions (capped at MAX_EXERCISE_DOTS)
     val injuries: List<InjurySeverity>, // Injuries this week, sorted worst-first, capped at 3
-    // Count of climbs at or below the timeline-window median, omitted when showAboveMedianOnly is off.
-    // 0 means all of this week's climbs beat the median (renders as a star in the graph).
-    val belowMedianCount: Int = 0
+    // Count of climbs hidden from dots: below-median climbs + climbs truncated by MAX_CLIMB_DOTS cap.
+    // 0 means nothing was hidden (renders as a star in the graph).
+    val belowMedianCount: Int = 0,
+    // Count of exercise sessions truncated by MAX_EXERCISE_DOTS cap.
+    // 0 means all sessions fit (renders as a star); only counted when showExerciseDots is on.
+    val hiddenExerciseCount: Int = 0
 )
 
 class HistoryViewModel(
@@ -134,7 +137,8 @@ class HistoryViewModel(
             computeWeeklyActivity(
                 climbs, sessions, injuries,
                 config.topK, config.timelineMonths,
-                config.filterRepeats, config.showAboveMedianOnly
+                config.filterRepeats, config.showAboveMedianOnly,
+                config.showExerciseDots
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -493,7 +497,8 @@ private fun computeWeeklyActivity(
     topK: Int,
     timelineMonths: Int,
     filterRepeats: Boolean = false,         // Excludes REPEAT climbs from dot rendering when true
-    showAboveMedianOnly: Boolean = false     // Filters dots to above-median climbs when true
+    showAboveMedianOnly: Boolean = false,    // Filters dots to above-median climbs when true
+    showExerciseDots: Boolean = true        // When true, truncated exercise sessions are counted in hiddenCount
 ): List<WeekActivity> {
     val zone = ZoneId.systemDefault()
     val today = LocalDate.now()
@@ -565,26 +570,33 @@ private fun computeWeeklyActivity(
         val weekClimbs = climbsByWeek[weekStart] ?: emptyList()
 
         // Split week's climbs into above-median and at-or-below-median pools.
-        // When feature is off, all climbs are treated as above-median (belowMedianCount stays 0).
+        // When the feature is off, all climbs are eligible for dot rendering (below pool is empty).
         val (aboveMedian, belowMedian) = if (showAboveMedianOnly) {
             weekClimbs.partition { it.score > medianScore }
         } else {
-            weekClimbs to emptyList()
+            weekClimbs to emptyList<ClimbLog>()
         }
 
-        // Top climbs from the above-median pool, sorted by score desc, capped at MAX_CLIMB_DOTS.
-        // Re-grouped by gym in list order, then sorted ascending within each gym so the
-        // highest-scoring dot is drawn last (on top of each gym's stack).
-        val colors = aboveMedian
-            .sortedByDescending { it.score }
-            .take(MAX_CLIMB_DOTS)
+        // Sort the dot-eligible pool and cap at MAX_CLIMB_DOTS.
+        // Any eligible climbs that don't fit within the cap are also counted as "hidden".
+        val sortedEligible = aboveMedian.sortedByDescending { it.score }
+        val cappedClimbs = sortedEligible.take(MAX_CLIMB_DOTS)
+        val truncatedCount = sortedEligible.size - cappedClimbs.size
+
+        // Re-group capped climbs by gym in gym-list order, then sorted ascending within each gym
+        // so the highest-scoring dot is drawn last (on top of each gym's stack).
+        val colors = cappedClimbs
             .groupBy { it.gymName }
             .toSortedMap(compareBy { gymOrder[it] ?: Int.MAX_VALUE })
             .flatMap { (_, gymClimbs) -> gymClimbs.sortedBy { it.score }.map { it.gymName to it.color } }
 
-        // Exercise count capped at MAX_EXERCISE_DOTS
-        val exerciseCount = (sessionsByWeek[weekStart]?.size ?: 0)
-            .coerceAtMost(MAX_EXERCISE_DOTS)
+        // Exercise count capped at MAX_EXERCISE_DOTS; track overflow separately for its own label.
+        val rawExerciseCount = sessionsByWeek[weekStart]?.size ?: 0
+        val exerciseCount = rawExerciseCount.coerceAtMost(MAX_EXERCISE_DOTS)
+        val hiddenExerciseCount = if (showExerciseDots) rawExerciseCount - exerciseCount else 0
+
+        // Hidden climb count = below-median climbs (if feature on) + climbs truncated by cap.
+        val hiddenClimbCount = belowMedian.size + truncatedCount
 
         // Injuries sorted worst-first (SEVERE → MODERATE → MILD), capped at MAX_INJURY_SKULLS
         val weekInjuries = (injuriesByWeek[weekStart] ?: emptyList())
@@ -592,7 +604,7 @@ private fun computeWeeklyActivity(
             .sortedWith(compareBy { severityOrder[it] ?: Int.MAX_VALUE })
             .take(MAX_INJURY_SKULLS)
 
-        weeks.add(WeekActivity(weekStart, colors, exerciseCount, weekInjuries, belowMedian.size))
+        weeks.add(WeekActivity(weekStart, colors, exerciseCount, weekInjuries, hiddenClimbCount, hiddenExerciseCount))
         weekStart = weekStart.plusWeeks(1)
     }
 
