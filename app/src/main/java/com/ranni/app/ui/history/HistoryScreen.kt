@@ -652,6 +652,23 @@ private fun ProgressTab(viewModel: HistoryViewModel) {
     }
 }
 
+/**
+ * Draws a dot-sized X (same 5.5dp footprint as a ClimbDot/exercise dot)
+ * to indicate no activity in that column for the day.
+ */
+@Composable
+private fun EmptyX(color: androidx.compose.ui.graphics.Color) {
+    Canvas(modifier = Modifier.size(5.5.dp)) {
+        val strokeWidth = 2.dp.toPx()
+        // Inset by 1dp on each side so the X is smaller than the bounding box
+        val pad = 1.dp.toPx()
+        // Diagonal top-left → bottom-right
+        drawLine(color = color, start = androidx.compose.ui.geometry.Offset(pad, pad), end = androidx.compose.ui.geometry.Offset(size.width - pad, size.height - pad), strokeWidth = strokeWidth, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+        // Diagonal top-right → bottom-left
+        drawLine(color = color, start = androidx.compose.ui.geometry.Offset(size.width - pad, pad), end = androidx.compose.ui.geometry.Offset(pad, size.height - pad), strokeWidth = strokeWidth, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+    }
+}
+
 @Composable
 private fun Day(
     day: CalendarDay,
@@ -691,34 +708,39 @@ private fun Day(
         val cappedClimbs = dotClimbLogs
             .sortedWith(compareByDescending<ClimbLog> { it.score }.thenByDescending { it.loggedAt })
             .take(8)
-        if (cappedSessions.isNotEmpty() || cappedClimbs.isNotEmpty() || worstInjury != null) {
+        // Show dots/X for past and current days in this month
+        val isPastOrToday = isCurrentMonth && !day.date.isAfter(LocalDate.now())
+        if (cappedSessions.isNotEmpty() || cappedClimbs.isNotEmpty() || worstInjury != null || isPastOrToday) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(2.dp),
                 verticalAlignment = Alignment.Bottom
             ) {
-                // Exercise dots — left column
+                // Exercise column — dots or a single X if no sessions
                 Column(
                     verticalArrangement = Arrangement.spacedBy(2.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    cappedSessions.forEach { _ ->
-                        // Exercise session dot — uses onSurfaceVariant which is always legible
-                        Box(
-                            modifier = Modifier
-                                .size(5.5.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.onSurfaceVariant)
-                        )
+                    if (cappedSessions.isNotEmpty()) {
+                        cappedSessions.forEach { _ ->
+                            // Exercise session dot — uses onSurfaceVariant which is always legible
+                            Box(
+                                modifier = Modifier
+                                    .size(5.5.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.onSurfaceVariant)
+                            )
+                        }
+                    } else if (isPastOrToday) {
+                        // No exercises — draw a dot-sized X using Canvas
+                        EmptyX(color = onSurface.copy(alpha = 0.4f))
                     }
                 }
-                // Climb dots — right column, with skull above
+                // Climb column — dots or a single X if no climbs
                 Column(
                     verticalArrangement = Arrangement.spacedBy(2.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     // Skull icon for the worst injury sits above the climb dots.
-                    // Wrapped in a Box with an outline-colored circle behind it so the pre-colored
-                    // skull drawable remains visible on both light and dark backgrounds.
                     if (worstInjury != null) {
                         // Skull icon — pre-colored drawable, no outline ring needed
                         Image(
@@ -727,8 +749,13 @@ private fun Day(
                             modifier = Modifier.size(8.dp)
                         )
                     }
-                    cappedClimbs.forEach { climb ->
-                        ClimbDot(gymName = climb.gymName, routeName = climb.color, size = 5.5.dp, strokeWidth = 1.dp)
+                    if (cappedClimbs.isNotEmpty()) {
+                        cappedClimbs.forEach { climb ->
+                            ClimbDot(gymName = climb.gymName, routeName = climb.color, size = 5.5.dp, strokeWidth = 1.dp)
+                        }
+                    } else if (isPastOrToday) {
+                        // No climbs — draw a dot-sized X using Canvas
+                        EmptyX(color = onSurface.copy(alpha = 0.4f))
                     }
                 }
             }
