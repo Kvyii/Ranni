@@ -32,9 +32,11 @@ import com.ranni.app.data.model.InjurySeverity
 import com.ranni.app.data.model.isOutlineGym
 import com.ranni.app.data.model.needsContrastRing
 import com.ranni.app.data.model.routeColor
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
+import java.time.temporal.TemporalAdjusters
 
 private val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yy")
 
@@ -99,8 +101,10 @@ fun MetricsGraph(
             // Use explicit axis bounds when provided so dots span the full weekly-activity range
             // even when the line starts later (i.e. the first climb date is after the timeline start).
             // Add a half-week margin on each side so the first/last columns never land at the edges
-            val minDate = (axisMinDate ?: data.first().date).minusDays(4)
-            val maxDate = (axisMaxDate ?: data.last().date).plusDays(4)
+            val axisStartDate = axisMinDate ?: data.first().date
+            val axisEndDate = axisMaxDate ?: data.last().date
+            val minDate = axisStartDate.minusDays(4)
+            val maxDate = axisEndDate.plusDays(4)
             val totalDays = ChronoUnit.DAYS.between(minDate, maxDate).toFloat().coerceAtLeast(1f)
 
             // Draw Y axis
@@ -139,22 +143,43 @@ fun MetricsGraph(
                 }
             }
 
-            // X-axis labels: 3 evenly spaced dates
-            val labelCount = 3
-            for (i in 0 until labelCount) {
-                val fraction = i.toFloat() / (labelCount - 1)
-                val dayOffset = (totalDays * fraction).toLong()
-                val labelDate = minDate.plusDays(dayOffset)
+            // X-axis tick marks at every week start, labels at first / middle / last Monday
+            val axisEndMonday = axisEndDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+            val totalAxisDays = ChronoUnit.DAYS.between(axisStartDate, axisEndMonday)
+            val midMonday = axisStartDate.plusDays(totalAxisDays / 2)
+                .with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+            val labelDates = listOf(axisStartDate, midMonday, axisEndMonday)
+
+            // Tick marks at every week-start Monday; labelled ticks are taller and thicker
+            val tickHeight = 3.dp.toPx()
+            val labelledTickHeight = 6.dp.toPx()
+            var tickMonday = axisStartDate
+            while (!tickMonday.isAfter(axisEndMonday)) {
+                val tickFraction = ChronoUnit.DAYS.between(minDate, tickMonday).toFloat() / totalDays
+                val tickX = leftPadding + tickFraction * plotWidth
+                val isLabelled = tickMonday in labelDates
+                drawLine(
+                    color = axisColor,
+                    start = Offset(tickX, topPadding + plotHeight),
+                    end = Offset(tickX, topPadding + plotHeight + if (isLabelled) labelledTickHeight else tickHeight),
+                    strokeWidth = if (isLabelled) 2.dp.toPx() else 1.dp.toPx()
+                )
+                tickMonday = tickMonday.plusWeeks(1)
+            }
+
+            // Date labels at first, middle, and last Monday
+            val labelYOffset = topPadding + plotHeight + labelledTickHeight + 3.dp.toPx()
+            labelDates.forEachIndexed { i, labelDate ->
+                val fraction = ChronoUnit.DAYS.between(minDate, labelDate).toFloat() / totalDays
                 val labelText = labelDate.format(dateFormatter)
                 val measured = textMeasurer.measure(labelText, labelStyle)
-                val x = leftPadding + fraction * plotWidth - measured.size.width / 2f
-                drawText(
-                    measured,
-                    topLeft = Offset(
-                        x.coerceIn(leftPadding, leftPadding + plotWidth - measured.size.width),
-                        topPadding + plotHeight + 6.dp.toPx()
-                    )
-                )
+                val anchorX = leftPadding + fraction * plotWidth
+                val x = when (i) {
+                    0 -> anchorX
+                    labelDates.size - 1 -> anchorX - measured.size.width
+                    else -> anchorX - measured.size.width / 2f
+                }
+                drawText(measured, topLeft = Offset(x, labelYOffset))
             }
 
             // --- Weekly activity dots: drawn on the plot area, rising from X-axis ---
