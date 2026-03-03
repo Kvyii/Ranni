@@ -32,9 +32,11 @@ import com.ranni.app.data.model.InjurySeverity
 import com.ranni.app.data.model.isOutlineGym
 import com.ranni.app.data.model.needsContrastRing
 import com.ranni.app.data.model.routeColor
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
+import java.time.temporal.TemporalAdjusters
 
 private val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yy")
 
@@ -45,7 +47,6 @@ fun MetricsGraph(
     weeklyActivity: List<WeekActivity> = emptyList(),
     showClimbs: Boolean = true,
     showExercises: Boolean = true,
-    showAboveMedianOnly: Boolean = false,   // When true, renders the below-median count or star per week
     // Explicit axis date bounds so dots span the full timeline window even when the line
     // starts later (first climb date). Defaults to data range if not provided.
     axisMinDate: LocalDate? = null,
@@ -86,7 +87,7 @@ fun MetricsGraph(
         )
 
         Canvas(modifier = Modifier.fillMaxSize()) {
-            val leftPadding = 26.dp.toPx()
+            val leftPadding = 34.dp.toPx()
             val bottomPadding = 28.dp.toPx()
             val topPadding = 8.dp.toPx()
             val rightPadding = 8.dp.toPx()
@@ -99,8 +100,11 @@ fun MetricsGraph(
             val maxY = data.maxOf { it.value }.coerceAtLeast(1f)
             // Use explicit axis bounds when provided so dots span the full weekly-activity range
             // even when the line starts later (i.e. the first climb date is after the timeline start).
-            val minDate = axisMinDate ?: data.first().date
-            val maxDate = axisMaxDate ?: data.last().date
+            // Add a half-week margin on each side so the first/last columns never land at the edges
+            val axisStartDate = axisMinDate ?: data.first().date
+            val axisEndDate = axisMaxDate ?: data.last().date
+            val minDate = axisStartDate.minusDays(4)
+            val maxDate = axisEndDate.plusDays(4)
             val totalDays = ChronoUnit.DAYS.between(minDate, maxDate).toFloat().coerceAtLeast(1f)
 
             // Draw Y axis
@@ -139,22 +143,43 @@ fun MetricsGraph(
                 }
             }
 
-            // X-axis labels: 3 evenly spaced dates
-            val labelCount = 3
-            for (i in 0 until labelCount) {
-                val fraction = i.toFloat() / (labelCount - 1)
-                val dayOffset = (totalDays * fraction).toLong()
-                val labelDate = minDate.plusDays(dayOffset)
+            // X-axis tick marks at every week start, labels at first / middle / last Monday
+            val axisEndMonday = axisEndDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+            val totalAxisDays = ChronoUnit.DAYS.between(axisStartDate, axisEndMonday)
+            val midMonday = axisStartDate.plusDays(totalAxisDays / 2)
+                .with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+            val labelDates = listOf(axisStartDate, midMonday, axisEndMonday)
+
+            // Tick marks at every week-start Monday; labelled ticks are taller and thicker
+            val tickHeight = 3.dp.toPx()
+            val labelledTickHeight = 6.dp.toPx()
+            var tickMonday = axisStartDate
+            while (!tickMonday.isAfter(axisEndMonday)) {
+                val tickFraction = ChronoUnit.DAYS.between(minDate, tickMonday).toFloat() / totalDays
+                val tickX = leftPadding + tickFraction * plotWidth
+                val isLabelled = tickMonday in labelDates
+                drawLine(
+                    color = axisColor,
+                    start = Offset(tickX, topPadding + plotHeight),
+                    end = Offset(tickX, topPadding + plotHeight + if (isLabelled) labelledTickHeight else tickHeight),
+                    strokeWidth = if (isLabelled) 2.dp.toPx() else 1.dp.toPx()
+                )
+                tickMonday = tickMonday.plusWeeks(1)
+            }
+
+            // Date labels at first, middle, and last Monday
+            val labelYOffset = topPadding + plotHeight + labelledTickHeight + 3.dp.toPx()
+            labelDates.forEachIndexed { i, labelDate ->
+                val fraction = ChronoUnit.DAYS.between(minDate, labelDate).toFloat() / totalDays
                 val labelText = labelDate.format(dateFormatter)
                 val measured = textMeasurer.measure(labelText, labelStyle)
-                val x = leftPadding + fraction * plotWidth - measured.size.width / 2f
-                drawText(
-                    measured,
-                    topLeft = Offset(
-                        x.coerceIn(leftPadding, leftPadding + plotWidth - measured.size.width),
-                        topPadding + plotHeight + 6.dp.toPx()
-                    )
-                )
+                val anchorX = leftPadding + fraction * plotWidth
+                val x = when (i) {
+                    0 -> anchorX
+                    labelDates.size - 1 -> anchorX - measured.size.width
+                    else -> anchorX - measured.size.width / 2f
+                }
+                drawText(measured, topLeft = Offset(x, labelYOffset))
             }
 
             // --- Weekly activity dots: drawn on the plot area, rising from X-axis ---
@@ -168,9 +193,10 @@ fun MetricsGraph(
             // Base Y: just above the X-axis line
             val baseY = topPadding + plotHeight - dotRadius
 
-            // Measure the median label height once so both passes use the same offset.
+            // Measure the label height once so both passes use the same offset.
             // The label style is 9.sp bold — measure a representative character to get the height.
-            val medianLabelGap = if (showAboveMedianOnly && showClimbs) {
+            // Used to shift dots upward so they clear the truncation label drawn below them.
+            val medianLabelGap = if (showClimbs || showExercises) {
                 val sample = textMeasurer.measure(
                     "8",
                     style = TextStyle(fontSize = 9.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
@@ -179,39 +205,61 @@ fun MetricsGraph(
                 sample.size.height + 1.dp.toPx()
             } else 0f
 
-            // Pass 1: draw median labels (★ / count) just above the X-axis, below the first dot.
+            // Pass 1: draw truncation labels (★ / count) just above the X-axis, below the first dot.
+            // Climb and exercise labels are drawn independently below their respective columns.
+            // ★ = nothing hidden; number = how many were hidden beyond the cap.
             // These must be drawn outside the clipRect below because clipRect clips drawText too.
-            if (showAboveMedianOnly && showClimbs) {
+            if (showClimbs || showExercises) {
                 weeklyActivity.forEach { week ->
                     val daysBetween = ChronoUnit.DAYS.between(minDate, week.weekStart).toFloat()
                     val centerX = leftPadding + (daysBetween / totalDays) * plotWidth
                     if (centerX < leftPadding || centerX > leftPadding + plotWidth) return@forEach
 
-                    // Recompute climbColumnX the same way the dot pass does
+                    // Recompute column positions the same way the dot pass does
                     val hasExercises = showExercises && week.exerciseCount > 0
-                    val climbColumnX = if (hasExercises) centerX + dotRadius + columnGap / 2 else centerX
-
-                    // No climbs at all this week → "?" to signal a rest/unknown week
-                    val noClimbs = week.climbColors.isEmpty() && week.belowMedianCount == 0
-                    val label = when {
-                        noClimbs -> "?"
-                        week.belowMedianCount == 0 -> "★"
-                        else -> week.belowMedianCount.toString()
+                    val hasClimbColumn = showClimbs && (week.climbColors.isNotEmpty() || week.belowMedianCount > 0)
+                    val exerciseColumnX: Float
+                    val climbColumnX: Float
+                    when {
+                        hasExercises && hasClimbColumn -> {
+                            exerciseColumnX = centerX - dotRadius - columnGap / 2
+                            climbColumnX = centerX + dotRadius + columnGap / 2
+                        }
+                        hasExercises -> {
+                            exerciseColumnX = centerX
+                            climbColumnX = 0f
+                        }
+                        hasClimbColumn -> {
+                            exerciseColumnX = 0f
+                            climbColumnX = centerX
+                        }
+                        else -> return@forEach
                     }
-                    val labelColor2 = if (noClimbs) labelColor.copy(alpha = 0.4f) else if (week.belowMedianCount == 0) labelColor else labelColor.copy(alpha = 0.8f)
-                    val labelMeasured = textMeasurer.measure(
-                        label,
-                        style = TextStyle(fontSize = 9.sp, color = labelColor2, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
-                    )
-                    // Place label so its bottom edge sits on the X-axis line, centred horizontally.
-                    // Dots start above baseY + medianLabelGap, so there is clear breathing room.
-                    drawText(
-                        labelMeasured,
-                        topLeft = Offset(
-                            x = climbColumnX - labelMeasured.size.width / 2f,
-                            y = baseY - labelMeasured.size.height + dotRadius
+
+                    // Bottom anchor shared by both labels so their baselines align regardless of glyph height.
+                    val labelBottomY = baseY + dotRadius
+
+                    // Climb truncation label — shown when climb dots are on and there are climbs (or hidden climbs)
+                    if (hasClimbColumn) {
+                        val label = if (week.belowMedianCount == 0) "★" else week.belowMedianCount.toString()
+                        val color = if (week.belowMedianCount == 0) labelColor else labelColor.copy(alpha = 0.8f)
+                        val measured = textMeasurer.measure(
+                            label,
+                            style = TextStyle(fontSize = 9.sp, color = color, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
                         )
-                    )
+                        drawText(measured, topLeft = Offset(x = climbColumnX - measured.size.width / 2f, y = labelBottomY - measured.size.height))
+                    }
+
+                    // Exercise truncation label — shown when exercise dots are on and there are sessions
+                    if (hasExercises) {
+                        val label = if (week.hiddenExerciseCount == 0) "★" else week.hiddenExerciseCount.toString()
+                        val color = if (week.hiddenExerciseCount == 0) labelColor else labelColor.copy(alpha = 0.8f)
+                        val measured = textMeasurer.measure(
+                            label,
+                            style = TextStyle(fontSize = 9.sp, color = color, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                        )
+                        drawText(measured, topLeft = Offset(x = exerciseColumnX - measured.size.width / 2f, y = labelBottomY - measured.size.height))
+                    }
                 }
             }
 
@@ -224,7 +272,9 @@ fun MetricsGraph(
                 bottom = topPadding + plotHeight
             ) {
             weeklyActivity.forEach { week ->
-                // X position for this week's Monday on the timeline
+                // X position for this week's Monday on the timeline.
+                // Clamped inward by one dot column's width so the left/right column never
+                // bleeds outside the clip rect when the week lands at the very edge.
                 val daysBetween = ChronoUnit.DAYS.between(minDate, week.weekStart).toFloat()
                 val centerX = leftPadding + (daysBetween / totalDays) * plotWidth
 
@@ -233,13 +283,12 @@ fun MetricsGraph(
 
                 // Determine which columns to draw and their offsets.
                 // hasClimbColumn is true when there are dots OR a below-median label to show,
-                // so the column position is always computed when showAboveMedianOnly is active.
+                // so the column position is always computed when climb dots are shown.
                 val hasExercises = showExercises && week.exerciseCount > 0
                 val hasClimbs = showClimbs && week.climbColors.isNotEmpty()
                 val hasInjuries = week.injuries.isNotEmpty()
-                // Always true when the feature is on — every week shows a label (★, count, or ?)
-                val hasMedianLabel = showAboveMedianOnly && showClimbs
-                val hasClimbColumn = hasClimbs || hasMedianLabel
+                // hasClimbColumn is true whenever there are dots or a label to anchor the column.
+                val hasClimbColumn = hasClimbs || (showClimbs && week.belowMedianCount > 0)
 
                 // Position columns side by side centered on centerX
                 val exerciseColumnX: Float
@@ -270,7 +319,7 @@ fun MetricsGraph(
                 // Only shift dots up when there are actually dots to stack above the label.
                 // Injury-only weeks (no climbs, no exercises) stay at baseY so the skull isn't displaced.
                 val hasDots = hasClimbs || hasExercises
-                val startY = if (hasMedianLabel && hasDots) baseY - medianLabelGap else baseY
+                val startY = if ((showClimbs || showExercises) && hasDots) baseY - medianLabelGap else baseY
 
                 // Draw exercise dots — stacking upward from startY
                 // exerciseDotColor is onSurfaceVariant (theme-derived), always legible, no ring needed

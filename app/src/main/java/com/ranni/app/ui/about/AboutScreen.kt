@@ -182,16 +182,59 @@ fun AboutContent() {
         // Extra spacing between each version entry
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
 
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+
+            Text("v2.1.0", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            // Release date
+            Text("03/03/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+            ChangelogText("""
+                • UI updates:
+                    - Empty days now show an 'x'
+                    - Added day of week to calendar
+                    - Now shows number of climbs truncated in the History > Progress graph
+                    - Fixed bug where dot preferences did not take effect
+                """.trimIndent())
+        }
+
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
 
-            Text("v2.0.2", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            Text("v2.0.3", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
             // Release date
-            Text("28/02/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+            Text("02/03/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
             ChangelogText("""
                 • Added back up and restore functionality
                 • Fixed calendar not updating if app is opened and a new day passes
                 • Cleaned scores and themes UI
                 • Fix bug with calendar width sometimes hiding the most recent day
+                • Nerf scores:
+                    Indoor Custom V-grade
+                        V0: 100 → 75
+                        V1: 175 → 125
+                        V2: 275 → 150
+                        V3: 400 → 225
+                        V4: 550 → 300
+                        V5: 725 → 500
+                        V6: 900 → 700
+                        V7: 1100 → 950
+                        V8: 1300 → 1200
+                        V9: 1500 → 1450
+                        V10: 1700 → 1700 (no change)
+                        V11: 1850 → 1850 (no change)
+                        V12: 2000 → 2000 (no change)
+                    Outdoor V-grade
+                        V0: 110 → 85
+                        V1: 195 → 140
+                        V2: 300 → 170
+                        V3: 440 → 255
+                        V4: 605 → 340
+                        V5: 800 → 560
+                        V6: 990 → 780
+                        V7: 1210 → 1050
+                        V8: 1430 → 1325
+                        V9: 1650 → 1600
+                        V10: 1870 → 1800
+                        V11: 2035 → 1950
+                        V12: 2200 → 2100
                 """.trimIndent())
         }
 

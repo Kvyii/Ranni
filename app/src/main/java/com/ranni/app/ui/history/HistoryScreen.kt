@@ -201,6 +201,8 @@ private fun CalendarTab(viewModel: HistoryViewModel) {
                     climbsByDate = climbsByDate,
                     dotClimbsByDate = dotClimbsByDate,
                     injuriesByDate = injuriesByDate,
+                    showClimbDots = config.showClimbDots,
+                    showExerciseDots = config.showExerciseDots,
                     onDaySelected = { day ->
                         navigatingForward = true
                         selectedDate = day
@@ -233,12 +235,15 @@ private fun CalendarView(
     climbsByDate: Map<LocalDate, List<ClimbLog>>,
     dotClimbsByDate: Map<LocalDate, List<ClimbLog>>,
     injuriesByDate: Map<LocalDate, List<InjuryLog>>,
+    showClimbDots: Boolean,
+    showExerciseDots: Boolean,
     onDaySelected: (LocalDate) -> Unit
 ) {
     val currentMonth = YearMonth.now()
     val startMonth = currentMonth.minusMonths(12)
     val endMonth = currentMonth.plusMonths(1)
-    val firstDayOfWeek = remember { firstDayOfWeekFromLocale() }
+    // Always start the week on Monday regardless of locale
+    val firstDayOfWeek = DayOfWeek.MONDAY
 
     val calendarState = rememberCalendarState(
         startMonth = startMonth,
@@ -248,9 +253,9 @@ private fun CalendarView(
     )
 
     // Measure available height so day cells can fill it exactly.
-    // We assume worst-case 6 week rows and subtract the fixed header height (56dp).
+    // Header = 56dp month nav row + 20dp day-of-week label row.
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-        val headerHeight = 56.dp
+        val headerHeight = 76.dp
         val cellHeight = (maxHeight - headerHeight) / 6
 
         HorizontalCalendar(
@@ -264,6 +269,8 @@ private fun CalendarView(
                     climbLogs = climbsByDate[day.date].orEmpty(),
                     dotClimbLogs = dotClimbsByDate[day.date].orEmpty(),
                     injuryLogs = injuriesByDate[day.date].orEmpty(),
+                    showClimbDots = showClimbDots,
+                    showExerciseDots = showExerciseDots,
                     isSelected = false  // no persistent selection state on the calendar itself
                 ) {
                     // Only navigate into current-month days
@@ -561,7 +568,6 @@ private fun ProgressTab(viewModel: HistoryViewModel) {
             weeklyActivity = if (dotsEnabled) weeklyActivity else emptyList(),
             showClimbs = config.showClimbDots,
             showExercises = config.showExerciseDots,
-            showAboveMedianOnly = config.showAboveMedianOnly,
             axisMinDate = axisMinDate,
             axisMaxDate = axisMaxDate,
             modifier = Modifier
@@ -652,6 +658,23 @@ private fun ProgressTab(viewModel: HistoryViewModel) {
     }
 }
 
+/**
+ * Draws a dot-sized X (same 5.5dp footprint as a ClimbDot/exercise dot)
+ * to indicate no activity in that column for the day.
+ */
+@Composable
+private fun EmptyX(color: androidx.compose.ui.graphics.Color) {
+    Canvas(modifier = Modifier.size(5.5.dp)) {
+        val strokeWidth = 2.dp.toPx()
+        // Inset by 1dp on each side so the X is smaller than the bounding box
+        val pad = 1.dp.toPx()
+        // Diagonal top-left → bottom-right
+        drawLine(color = color, start = androidx.compose.ui.geometry.Offset(pad, pad), end = androidx.compose.ui.geometry.Offset(size.width - pad, size.height - pad), strokeWidth = strokeWidth, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+        // Diagonal top-right → bottom-left
+        drawLine(color = color, start = androidx.compose.ui.geometry.Offset(size.width - pad, pad), end = androidx.compose.ui.geometry.Offset(pad, size.height - pad), strokeWidth = strokeWidth, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+    }
+}
+
 @Composable
 private fun Day(
     day: CalendarDay,
@@ -660,6 +683,8 @@ private fun Day(
     climbLogs: List<ClimbLog>,       // Full list — passed through for any downstream detail use
     dotClimbLogs: List<ClimbLog>,    // Filtered list — REPEATs excluded when filterRepeats is on
     injuryLogs: List<InjuryLog>,
+    showClimbDots: Boolean,
+    showExerciseDots: Boolean,
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
@@ -686,49 +711,68 @@ private fun Day(
         verticalArrangement = Arrangement.Bottom,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        val cappedSessions = sessionLogs.take(8)
         // Use dotClimbLogs for dots so REPEATs are hidden when filterRepeats is enabled.
-        val cappedClimbs = dotClimbLogs
-            .sortedWith(compareByDescending<ClimbLog> { it.score }.thenByDescending { it.loggedAt })
-            .take(8)
-        if (cappedSessions.isNotEmpty() || cappedClimbs.isNotEmpty() || worstInjury != null) {
+        val cappedSessions = if (showExerciseDots) sessionLogs.take(8) else emptyList()
+        val cappedClimbs = if (showClimbDots) {
+            dotClimbLogs
+                .sortedWith(compareByDescending<ClimbLog> { it.score }.thenByDescending { it.loggedAt })
+                .take(8)
+        } else emptyList()
+        // Show dots/X for past and current days in this month
+        val isPastOrToday = isCurrentMonth && !day.date.isAfter(LocalDate.now())
+        // Only render the dots row if at least one dot type is enabled
+        val showDotsRow = (showExerciseDots || showClimbDots) &&
+            (cappedSessions.isNotEmpty() || cappedClimbs.isNotEmpty() || worstInjury != null || isPastOrToday)
+        if (showDotsRow) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(2.dp),
                 verticalAlignment = Alignment.Bottom
             ) {
-                // Exercise dots — left column
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    cappedSessions.forEach { _ ->
-                        // Exercise session dot — uses onSurfaceVariant which is always legible
-                        Box(
-                            modifier = Modifier
-                                .size(5.5.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.onSurfaceVariant)
-                        )
+                // Exercise column — only shown when showExerciseDots is enabled
+                if (showExerciseDots) {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        if (cappedSessions.isNotEmpty()) {
+                            cappedSessions.forEach { _ ->
+                                // Exercise session dot — uses onSurfaceVariant which is always legible
+                                Box(
+                                    modifier = Modifier
+                                        .size(5.5.dp)
+                                        .clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.onSurfaceVariant)
+                                )
+                            }
+                        } else if (isPastOrToday) {
+                            // No exercises — draw a dot-sized X using Canvas
+                            EmptyX(color = onSurface.copy(alpha = 0.4f))
+                        }
                     }
                 }
-                // Climb dots — right column, with skull above
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    // Skull icon for the worst injury sits above the climb dots.
-                    // Wrapped in a Box with an outline-colored circle behind it so the pre-colored
-                    // skull drawable remains visible on both light and dark backgrounds.
-                    if (worstInjury != null) {
-                        // Skull icon — pre-colored drawable, no outline ring needed
-                        Image(
-                            painter = androidx.compose.ui.res.painterResource(worstInjury.skullRes),
-                            contentDescription = null,
-                            modifier = Modifier.size(8.dp)
-                        )
-                    }
-                    cappedClimbs.forEach { climb ->
-                        ClimbDot(gymName = climb.gymName, routeName = climb.color, size = 5.5.dp, strokeWidth = 1.dp)
+                // Climb column — only shown when showClimbDots is enabled
+                if (showClimbDots) {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        // Skull icon for the worst injury sits above the climb dots.
+                        if (worstInjury != null) {
+                            // Skull icon — pre-colored drawable, no outline ring needed
+                            Image(
+                                painter = androidx.compose.ui.res.painterResource(worstInjury.skullRes),
+                                contentDescription = null,
+                                modifier = Modifier.size(8.dp)
+                            )
+                        }
+                        if (cappedClimbs.isNotEmpty()) {
+                            cappedClimbs.forEach { climb ->
+                                ClimbDot(gymName = climb.gymName, routeName = climb.color, size = 5.5.dp, strokeWidth = 1.dp)
+                            }
+                        } else if (isPastOrToday) {
+                            // No climbs — draw a dot-sized X using Canvas
+                            EmptyX(color = onSurface.copy(alpha = 0.4f))
+                        }
                     }
                 }
             }
@@ -1504,26 +1548,50 @@ private fun GradeHistogram(
 @Composable
 private fun MonthHeader(yearMonth: YearMonth, calendarState: CalendarState) {
     val scope = rememberCoroutineScope()
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        IconButton(onClick = {
-            scope.launch { calendarState.animateScrollToMonth(yearMonth.minusMonths(1)) }
-        }) {
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Previous month")
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val mutedColor = MaterialTheme.colorScheme.onSurfaceVariant
+    // Fixed Monday-first week order, matching CalendarView
+    val daysOfWeek = remember {
+        (0 until 7).map { DayOfWeek.MONDAY.plus(it.toLong()) }
+    }
+
+    Column {
+        // Month navigation row
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            IconButton(onClick = {
+                scope.launch { calendarState.animateScrollToMonth(yearMonth.minusMonths(1)) }
+            }) {
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Previous month")
+            }
+            Text(
+                text = "${yearMonth.month.getDisplayName(TextStyle.FULL, Locale.getDefault())} ${yearMonth.year}",
+                style = MaterialTheme.typography.titleMedium
+            )
+            IconButton(onClick = {
+                scope.launch { calendarState.animateScrollToMonth(yearMonth.plusMonths(1)) }
+            }) {
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Next month")
+            }
         }
-        Text(
-            text = "${yearMonth.month.getDisplayName(TextStyle.FULL, Locale.getDefault())} ${yearMonth.year}",
-            style = MaterialTheme.typography.titleMedium
-        )
-        IconButton(onClick = {
-            scope.launch { calendarState.animateScrollToMonth(yearMonth.plusMonths(1)) }
-        }) {
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Next month")
+
+        // Day-of-week label row — weekends use primary colour to stand out
+        Row(modifier = Modifier.fillMaxWidth()) {
+            daysOfWeek.forEach { dow ->
+                val isWeekend = dow == DayOfWeek.SATURDAY || dow == DayOfWeek.SUNDAY
+                Text(
+                    text = dow.getDisplayName(TextStyle.NARROW, Locale.getDefault()),
+                    modifier = Modifier.weight(1f),
+                    textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (isWeekend) primaryColor else mutedColor
+                )
+            }
         }
     }
 }
