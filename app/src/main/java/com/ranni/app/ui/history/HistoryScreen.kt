@@ -201,6 +201,8 @@ private fun CalendarTab(viewModel: HistoryViewModel) {
                     climbsByDate = climbsByDate,
                     dotClimbsByDate = dotClimbsByDate,
                     injuriesByDate = injuriesByDate,
+                    showClimbDots = config.showClimbDots,
+                    showExerciseDots = config.showExerciseDots,
                     onDaySelected = { day ->
                         navigatingForward = true
                         selectedDate = day
@@ -233,6 +235,8 @@ private fun CalendarView(
     climbsByDate: Map<LocalDate, List<ClimbLog>>,
     dotClimbsByDate: Map<LocalDate, List<ClimbLog>>,
     injuriesByDate: Map<LocalDate, List<InjuryLog>>,
+    showClimbDots: Boolean,
+    showExerciseDots: Boolean,
     onDaySelected: (LocalDate) -> Unit
 ) {
     val currentMonth = YearMonth.now()
@@ -265,6 +269,8 @@ private fun CalendarView(
                     climbLogs = climbsByDate[day.date].orEmpty(),
                     dotClimbLogs = dotClimbsByDate[day.date].orEmpty(),
                     injuryLogs = injuriesByDate[day.date].orEmpty(),
+                    showClimbDots = showClimbDots,
+                    showExerciseDots = showExerciseDots,
                     isSelected = false  // no persistent selection state on the calendar itself
                 ) {
                     // Only navigate into current-month days
@@ -678,6 +684,8 @@ private fun Day(
     climbLogs: List<ClimbLog>,       // Full list — passed through for any downstream detail use
     dotClimbLogs: List<ClimbLog>,    // Filtered list — REPEATs excluded when filterRepeats is on
     injuryLogs: List<InjuryLog>,
+    showClimbDots: Boolean,
+    showExerciseDots: Boolean,
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
@@ -704,59 +712,68 @@ private fun Day(
         verticalArrangement = Arrangement.Bottom,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        val cappedSessions = sessionLogs.take(8)
         // Use dotClimbLogs for dots so REPEATs are hidden when filterRepeats is enabled.
-        val cappedClimbs = dotClimbLogs
-            .sortedWith(compareByDescending<ClimbLog> { it.score }.thenByDescending { it.loggedAt })
-            .take(8)
+        val cappedSessions = if (showExerciseDots) sessionLogs.take(8) else emptyList()
+        val cappedClimbs = if (showClimbDots) {
+            dotClimbLogs
+                .sortedWith(compareByDescending<ClimbLog> { it.score }.thenByDescending { it.loggedAt })
+                .take(8)
+        } else emptyList()
         // Show dots/X for past and current days in this month
         val isPastOrToday = isCurrentMonth && !day.date.isAfter(LocalDate.now())
-        if (cappedSessions.isNotEmpty() || cappedClimbs.isNotEmpty() || worstInjury != null || isPastOrToday) {
+        // Only render the dots row if at least one dot type is enabled
+        val showDotsRow = (showExerciseDots || showClimbDots) &&
+            (cappedSessions.isNotEmpty() || cappedClimbs.isNotEmpty() || worstInjury != null || isPastOrToday)
+        if (showDotsRow) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(2.dp),
                 verticalAlignment = Alignment.Bottom
             ) {
-                // Exercise column — dots or a single X if no sessions
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    if (cappedSessions.isNotEmpty()) {
-                        cappedSessions.forEach { _ ->
-                            // Exercise session dot — uses onSurfaceVariant which is always legible
-                            Box(
-                                modifier = Modifier
-                                    .size(5.5.dp)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.onSurfaceVariant)
-                            )
+                // Exercise column — only shown when showExerciseDots is enabled
+                if (showExerciseDots) {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        if (cappedSessions.isNotEmpty()) {
+                            cappedSessions.forEach { _ ->
+                                // Exercise session dot — uses onSurfaceVariant which is always legible
+                                Box(
+                                    modifier = Modifier
+                                        .size(5.5.dp)
+                                        .clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.onSurfaceVariant)
+                                )
+                            }
+                        } else if (isPastOrToday) {
+                            // No exercises — draw a dot-sized X using Canvas
+                            EmptyX(color = onSurface.copy(alpha = 0.4f))
                         }
-                    } else if (isPastOrToday) {
-                        // No exercises — draw a dot-sized X using Canvas
-                        EmptyX(color = onSurface.copy(alpha = 0.4f))
                     }
                 }
-                // Climb column — dots or a single X if no climbs
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    // Skull icon for the worst injury sits above the climb dots.
-                    if (worstInjury != null) {
-                        // Skull icon — pre-colored drawable, no outline ring needed
-                        Image(
-                            painter = androidx.compose.ui.res.painterResource(worstInjury.skullRes),
-                            contentDescription = null,
-                            modifier = Modifier.size(8.dp)
-                        )
-                    }
-                    if (cappedClimbs.isNotEmpty()) {
-                        cappedClimbs.forEach { climb ->
-                            ClimbDot(gymName = climb.gymName, routeName = climb.color, size = 5.5.dp, strokeWidth = 1.dp)
+                // Climb column — only shown when showClimbDots is enabled
+                if (showClimbDots) {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        // Skull icon for the worst injury sits above the climb dots.
+                        if (worstInjury != null) {
+                            // Skull icon — pre-colored drawable, no outline ring needed
+                            Image(
+                                painter = androidx.compose.ui.res.painterResource(worstInjury.skullRes),
+                                contentDescription = null,
+                                modifier = Modifier.size(8.dp)
+                            )
                         }
-                    } else if (isPastOrToday) {
-                        // No climbs — draw a dot-sized X using Canvas
-                        EmptyX(color = onSurface.copy(alpha = 0.4f))
+                        if (cappedClimbs.isNotEmpty()) {
+                            cappedClimbs.forEach { climb ->
+                                ClimbDot(gymName = climb.gymName, routeName = climb.color, size = 5.5.dp, strokeWidth = 1.dp)
+                            }
+                        } else if (isPastOrToday) {
+                            // No climbs — draw a dot-sized X using Canvas
+                            EmptyX(color = onSurface.copy(alpha = 0.4f))
+                        }
                     }
                 }
             }

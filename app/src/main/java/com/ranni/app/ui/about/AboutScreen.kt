@@ -190,7 +190,8 @@ fun AboutContent() {
             ChangelogText("""
                 • UI updates:
                     - Empty days now show an 'x'
-                    
+                    - Added day of week to calendar
+                    - Fixed bug where dot preferences did not take effect
                 """.trimIndent())
         }
 
