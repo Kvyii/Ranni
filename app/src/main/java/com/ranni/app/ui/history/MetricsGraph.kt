@@ -98,8 +98,9 @@ fun MetricsGraph(
             val maxY = data.maxOf { it.value }.coerceAtLeast(1f)
             // Use explicit axis bounds when provided so dots span the full weekly-activity range
             // even when the line starts later (i.e. the first climb date is after the timeline start).
-            val minDate = axisMinDate ?: data.first().date
-            val maxDate = axisMaxDate ?: data.last().date
+            // Add a half-week margin on each side so the first/last columns never land at the edges
+            val minDate = (axisMinDate ?: data.first().date).minusDays(4)
+            val maxDate = (axisMaxDate ?: data.last().date).plusDays(4)
             val totalDays = ChronoUnit.DAYS.between(minDate, maxDate).toFloat().coerceAtLeast(1f)
 
             // Draw Y axis
@@ -186,13 +187,8 @@ fun MetricsGraph(
             if (showClimbs || showExercises) {
                 weeklyActivity.forEach { week ->
                     val daysBetween = ChronoUnit.DAYS.between(minDate, week.weekStart).toFloat()
-                    val rawCenterX = leftPadding + (daysBetween / totalDays) * plotWidth
-                    if (rawCenterX < leftPadding || rawCenterX > leftPadding + plotWidth) return@forEach
-                    val columnHalfWidth = dotRadius + columnGap / 2
-                    val centerX = rawCenterX.coerceIn(
-                        leftPadding + columnHalfWidth + dotRadius,
-                        leftPadding + plotWidth - columnHalfWidth - dotRadius
-                    )
+                    val centerX = leftPadding + (daysBetween / totalDays) * plotWidth
+                    if (centerX < leftPadding || centerX > leftPadding + plotWidth) return@forEach
 
                     // Recompute column positions the same way the dot pass does
                     val hasExercises = showExercises && week.exerciseCount > 0
@@ -255,15 +251,10 @@ fun MetricsGraph(
                 // Clamped inward by one dot column's width so the left/right column never
                 // bleeds outside the clip rect when the week lands at the very edge.
                 val daysBetween = ChronoUnit.DAYS.between(minDate, week.weekStart).toFloat()
-                val rawCenterX = leftPadding + (daysBetween / totalDays) * plotWidth
-                val columnHalfWidth = dotRadius + columnGap / 2
-                val centerX = rawCenterX.coerceIn(
-                    leftPadding + columnHalfWidth + dotRadius,
-                    leftPadding + plotWidth - columnHalfWidth - dotRadius
-                )
+                val centerX = leftPadding + (daysBetween / totalDays) * plotWidth
 
                 // Skip weeks that fall outside the visible plot area
-                if (rawCenterX < leftPadding || rawCenterX > leftPadding + plotWidth) return@forEach
+                if (centerX < leftPadding || centerX > leftPadding + plotWidth) return@forEach
 
                 // Determine which columns to draw and their offsets.
                 // hasClimbColumn is true when there are dots OR a below-median label to show,
