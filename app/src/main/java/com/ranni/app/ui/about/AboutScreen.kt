@@ -184,15 +184,17 @@ fun AboutContent() {
 
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
 
-            Text("v2.1.0", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            Text("v2.1.1", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
             // Release date
-            Text("03/03/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+            Text("04/03/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
             ChangelogText("""
                 • UI updates:
                     - Empty days now show an 'x'
                     - Added day of week to calendar
                     - Now shows number of climbs truncated in the History > Progress graph
                     - Fixed bug where dot preferences did not take effect
+                    - Changed skull colours
+                    - Reduced max dots shown in progress to 24
                 """.trimIndent())
         }
 

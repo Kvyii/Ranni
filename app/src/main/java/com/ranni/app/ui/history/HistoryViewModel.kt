@@ -474,7 +474,7 @@ private const val MAX_DISPLAY_CLIMBS = 200
 private const val MAX_EXERCISE_DOTS = 25
 
 /** Hard cap on climb dots per week in the Progress tab tally. */
-private const val MAX_CLIMB_DOTS = 30
+private const val MAX_CLIMB_DOTS = 24
 
 /** Max skull icons shown per week in the Progress tab (sorted worst-first). */
 private const val MAX_INJURY_SKULLS = 3

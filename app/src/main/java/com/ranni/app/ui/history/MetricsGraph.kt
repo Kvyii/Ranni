@@ -81,9 +81,10 @@ fun MetricsGraph(
 
         // Pre-colored skull painters resolved once in Composable scope for use inside Canvas
         val skullPainters = mapOf(
-            InjurySeverity.MILD to painterResource(R.drawable.skull_mild),
+            InjurySeverity.MILD     to painterResource(R.drawable.skull_mild),
             InjurySeverity.MODERATE to painterResource(R.drawable.skull_moderate),
-            InjurySeverity.SEVERE to painterResource(R.drawable.skull_severe),
+            InjurySeverity.SEVERE   to painterResource(R.drawable.skull_severe),
+            InjurySeverity.DEATH    to painterResource(R.drawable.skull_death),
         )
 
         Canvas(modifier = Modifier.fillMaxSize()) {

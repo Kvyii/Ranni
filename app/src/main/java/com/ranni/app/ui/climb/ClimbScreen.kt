@@ -402,6 +402,7 @@ private fun InjuryRow(
                 InjurySeverity.MILD     -> "Hurts but could keep climbing"
                 InjurySeverity.MODERATE -> "Hurts a lot. Impedes climbing"
                 InjurySeverity.SEVERE   -> "Welp. No climbing for a while"
+                InjurySeverity.DEATH    -> "Welcome to Valhalla"
             },
             style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
