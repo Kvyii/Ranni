@@ -10,21 +10,24 @@ import com.ranni.app.R
 enum class InjurySeverity {
     MILD,
     MODERATE,
-    SEVERE;
+    SEVERE,
+    DEATH;
 
     /** Tint color used when rendering the skull icon for this severity. */
     val color: Color get() = when (this) {
-        MILD -> Color(0xFFAAAAAA)       // gray
+        MILD     -> Color(0xFFAAAAAA)   // gray
         MODERATE -> Color(0xFFFFC107)   // amber
-        SEVERE -> Color(0xFFF44336)     // red
+        SEVERE   -> Color(0xFFF44336)   // red
+        DEATH    -> Color(0xFF9C27B0)   // purple (regal, for Valhalla)
     }
 
     /** Pre-colored skull drawable for this severity (no runtime tinting needed). */
     @get:DrawableRes
     val skullRes: Int get() = when (this) {
-        MILD -> R.drawable.skull_mild
+        MILD     -> R.drawable.skull_mild
         MODERATE -> R.drawable.skull_moderate
-        SEVERE -> R.drawable.skull_severe
+        SEVERE   -> R.drawable.skull_severe
+        DEATH    -> R.drawable.skull_death
     }
 }
 
