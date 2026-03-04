@@ -184,7 +184,7 @@ fun AboutContent() {
 
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
 
-            Text("v2.1.1", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            Text("v2.1.2", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
             // Release date
             Text("04/03/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
             ChangelogText("""
@@ -195,6 +195,7 @@ fun AboutContent() {
                     - Fixed bug where dot preferences did not take effect
                     - Changed skull colours
                     - Reduced max dots shown in progress to 24
+                    - Hide exercise dots on 6m plot
                 """.trimIndent())
         }
 

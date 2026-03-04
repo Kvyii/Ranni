@@ -567,7 +567,7 @@ private fun ProgressTab(viewModel: HistoryViewModel) {
             title = "Average of Top ${config.topK} climbs over the Last ${config.months} months",
             weeklyActivity = if (dotsEnabled) weeklyActivity else emptyList(),
             showClimbs = config.showClimbDots,
-            showExercises = config.showExerciseDots,
+            showExercises = config.showExerciseDots && config.timelineMonths < 6,
             axisMinDate = axisMinDate,
             axisMaxDate = axisMaxDate,
             modifier = Modifier
