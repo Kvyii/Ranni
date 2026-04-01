@@ -2,6 +2,7 @@ package com.ranni.app.ui.history
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
@@ -11,6 +12,9 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -18,6 +22,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -51,8 +57,10 @@ import com.ranni.app.R
 import com.ranni.app.data.SharedPrefsGymOrderPreferences
 import com.ranni.app.data.model.ClimbLog
 import com.ranni.app.data.model.ClimbType
+import com.ranni.app.data.model.Gym
 import com.ranni.app.data.model.InjuryLog
 import com.ranni.app.data.model.InjurySeverity
+import com.ranni.app.data.model.RouteColor
 import com.ranni.app.data.model.SessionLog
 import com.ranni.app.data.model.gyms
 import com.ranni.app.data.model.isOutlineGym
@@ -63,6 +71,7 @@ import com.ranni.app.ui.components.ClimbDot
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.YearMonth
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -109,6 +118,8 @@ private fun CalendarTab(viewModel: HistoryViewModel) {
 
     // Which day the user has drilled into (null = show the calendar full-screen)
     var selectedDate by remember { mutableStateOf<LocalDate?>(null) }
+    // When true, the amend climb flow is shown instead of the day detail
+    var showAmendFlow by remember { mutableStateOf(false) }
     // Direction flag set before state change so AnimatedContent picks the right slide direction
     var navigatingForward by remember { mutableStateOf(true) }
 
@@ -156,10 +167,15 @@ private fun CalendarTab(viewModel: HistoryViewModel) {
         }
     }
 
-    // Navigate back to the calendar (shared by BackHandler and swipe gesture)
+    // Navigate back: if in amend flow, return to day detail; otherwise return to calendar
     val goBack: () -> Unit = {
-        navigatingForward = false
-        selectedDate = null
+        if (showAmendFlow) {
+            navigatingForward = false
+            showAmendFlow = false
+        } else {
+            navigatingForward = false
+            selectedDate = null
+        }
     }
 
     // Swipe-right-to-go-back: no visual translation, just trigger goBack() on threshold
@@ -182,9 +198,16 @@ private fun CalendarTab(viewModel: HistoryViewModel) {
                 )
             }
     ) {
+        // Composite key: null = calendar, "detail" = day detail, "amend" = amend flow
+        val screenKey = when {
+            selectedDate == null -> "calendar"
+            showAmendFlow -> "amend"
+            else -> "detail"
+        }
+
         // Slide in from right when drilling into a day; slide in from left when going back
         AnimatedContent(
-            targetState = selectedDate,
+            targetState = screenKey,
             transitionSpec = {
                 if (navigatingForward)
                     slideInHorizontally { it } togetherWith slideOutHorizontally { -it }
@@ -193,33 +216,55 @@ private fun CalendarTab(viewModel: HistoryViewModel) {
             },
             label = "calendarDetail",
             modifier = Modifier.fillMaxSize()
-        ) { date ->
-            if (date == null) {
-                // --- Full-screen calendar view ---
-                CalendarView(
-                    sessionsByDate = sessionsByDate,
-                    climbsByDate = climbsByDate,
-                    dotClimbsByDate = dotClimbsByDate,
-                    injuriesByDate = injuriesByDate,
-                    showClimbDots = config.showClimbDots,
-                    showExerciseDots = config.showExerciseDots,
-                    onDaySelected = { day ->
-                        navigatingForward = true
-                        selectedDate = day
-                    }
-                )
-            } else {
-                // --- Full-screen day detail view ---
-                DayDetail(
-                    date = date,
-                    sessionLogs = sessionsByDate[date].orEmpty(),
-                    climbLogs = climbsByDate[date].orEmpty(),
-                    injuryLogs = injuriesByDate[date].orEmpty(),
-                    onDeleteLog = { viewModel.deleteLog(it) },
-                    onDeleteClimb = { viewModel.deleteClimb(it) },
-                    onDeleteInjury = { viewModel.deleteInjury(it) },
-                    onBack = goBack
-                )
+        ) { key ->
+            when (key) {
+                "calendar" -> {
+                    // --- Full-screen calendar view ---
+                    CalendarView(
+                        sessionsByDate = sessionsByDate,
+                        climbsByDate = climbsByDate,
+                        dotClimbsByDate = dotClimbsByDate,
+                        injuriesByDate = injuriesByDate,
+                        showClimbDots = config.showClimbDots,
+                        showExerciseDots = config.showExerciseDots,
+                        onDaySelected = { day ->
+                            navigatingForward = true
+                            selectedDate = day
+                        }
+                    )
+                }
+                "amend" -> {
+                    // --- Amend climb flow: gym/route picker → type → time picker ---
+                    val date = selectedDate ?: return@AnimatedContent
+                    AmendClimbFlow(
+                        date = date,
+                        onConfirm = { color, gymName, score, climbType, loggedAt ->
+                            viewModel.logAmendedClimb(color, gymName, score, climbType, loggedAt)
+                            // Return to day detail after logging
+                            navigatingForward = false
+                            showAmendFlow = false
+                        },
+                        onBack = goBack
+                    )
+                }
+                else -> {
+                    // --- Full-screen day detail view ---
+                    val date = selectedDate ?: return@AnimatedContent
+                    DayDetail(
+                        date = date,
+                        sessionLogs = sessionsByDate[date].orEmpty(),
+                        climbLogs = climbsByDate[date].orEmpty(),
+                        injuryLogs = injuriesByDate[date].orEmpty(),
+                        onDeleteLog = { viewModel.deleteLog(it) },
+                        onDeleteClimb = { viewModel.deleteClimb(it) },
+                        onDeleteInjury = { viewModel.deleteInjury(it) },
+                        onAmend = {
+                            navigatingForward = true
+                            showAmendFlow = true
+                        },
+                        onBack = goBack
+                    )
+                }
             }
         }
     }
@@ -297,6 +342,7 @@ private fun DayDetail(
     onDeleteLog: (SessionLog) -> Unit,
     onDeleteClimb: (ClimbLog) -> Unit,
     onDeleteInjury: (InjuryLog) -> Unit,
+    onAmend: () -> Unit,
     onBack: () -> Unit
 ) {
     // Intercept Android system back button
@@ -379,13 +425,25 @@ private fun DayDetail(
 
         HorizontalDivider(modifier = Modifier.padding(bottom = 4.dp))
 
+        // Whether the amend button should be shown (past days only)
+        val showAmend = date.isBefore(LocalDate.now())
+
         // Empty state
         if (sessionLogs.isEmpty() && dayClimbs.isEmpty() && dayInjuries.isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxSize().padding(24.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Text("Nothing logged on this day", style = MaterialTheme.typography.bodyMedium)
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Nothing logged on this day", style = MaterialTheme.typography.bodyMedium)
+                    // Show amend button even on empty days so users can back-fill
+                    if (showAmend) {
+                        Spacer(modifier = Modifier.height(24.dp))
+                        FilledTonalButton(onClick = onAmend) {
+                            Text("Amend")
+                        }
+                    }
+                }
             }
         } else {
             LazyColumn(
@@ -530,8 +588,226 @@ private fun DayDetail(
                         }
                     }
                 }
+
+                // Amend button — only shown for past days
+                if (showAmend) {
+                    item {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        FilledTonalButton(
+                            onClick = onAmend,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp)
+                        ) {
+                            Text("Amend")
+                        }
+                    }
+                }
             }
         }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// AmendClimbFlow — gym/route picker → type dialog → time picker → confirm
+// ---------------------------------------------------------------------------
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AmendClimbFlow(
+    date: LocalDate,
+    onConfirm: (color: String, gymName: String, score: Int, climbType: ClimbType, loggedAt: Long) -> Unit,
+    onBack: () -> Unit
+) {
+    // Intercept system back button
+    BackHandler(enabled = true, onBack = onBack)
+
+    // Only show active (non-coming-soon) gyms
+    val activeGyms = remember { gyms.filter { !it.comingSoon } }
+
+    // Tracks which gym card is expanded (null = all collapsed)
+    var expandedCard by remember { mutableStateOf<String?>(null) }
+    // Route + gym selected for the type dialog
+    var selectedColor by remember { mutableStateOf<RouteColor?>(null) }
+    var selectedGym by remember { mutableStateOf<String?>(null) }
+    // Pending climb details waiting for time picker confirmation
+    var pendingClimb by remember { mutableStateOf<PendingAmendClimb?>(null) }
+
+    // "Log climb?" type dialog — New / Flash / Repeat
+    if (selectedColor != null) {
+        val color = selectedColor!!
+        val gym = selectedGym ?: ""
+        AlertDialog(
+            onDismissRequest = { selectedColor = null; selectedGym = null },
+            text = {
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Text("Log climb?", style = MaterialTheme.typography.titleMedium)
+                }
+            },
+            confirmButton = {
+                // Three climb type buttons: New (1x), Flash (1.25x), Repeat (0.75x)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    TextButton(onClick = {
+                        // New: base score (1x multiplier)
+                        pendingClimb = PendingAmendClimb(color.name, gym, color.score, ClimbType.NEW)
+                        selectedColor = null; selectedGym = null
+                    }) { Text("New") }
+                    TextButton(onClick = {
+                        // Flash: 1.25x score multiplier
+                        val flashScore = (color.score * 1.25).toInt()
+                        pendingClimb = PendingAmendClimb(color.name, gym, flashScore, ClimbType.FLASH)
+                        selectedColor = null; selectedGym = null
+                    }) { Text("Flash") }
+                    TextButton(onClick = {
+                        // Repeat: 0.75x score multiplier
+                        val repeatScore = (color.score * 0.75).toInt()
+                        pendingClimb = PendingAmendClimb(color.name, gym, repeatScore, ClimbType.REPEAT)
+                        selectedColor = null; selectedGym = null
+                    }) { Text("Repeat") }
+                }
+            }
+        )
+    }
+
+    // Time picker dialog — shown after selecting climb type
+    if (pendingClimb != null) {
+        val climb = pendingClimb!!
+        val timePickerState = rememberTimePickerState(
+            initialHour = 12,
+            initialMinute = 0,
+            is24Hour = false
+        )
+        AlertDialog(
+            onDismissRequest = { pendingClimb = null },
+            title = {
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Text("Select time", style = MaterialTheme.typography.titleMedium)
+                }
+            },
+            text = {
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    TimePicker(state = timePickerState)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    // Build timestamp from selected date + chosen time
+                    val localTime = LocalTime.of(timePickerState.hour, timePickerState.minute)
+                    val loggedAt = date.atTime(localTime)
+                        .atZone(ZoneId.systemDefault())
+                        .toInstant()
+                        .toEpochMilli()
+                    onConfirm(climb.color, climb.gymName, climb.score, climb.climbType, loggedAt)
+                    pendingClimb = null
+                }) { Text("Confirm") }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingClimb = null }) { Text("Cancel") }
+            }
+        )
+    }
+
+    // Gym / route picker (simplified version of ClimbScreen — no drag, no injury, no star)
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        // Header
+        Text(
+            "Select climb",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.secondaryContainer
+        )
+
+        // Gym cards — expand to show routes
+        activeGyms.forEach { gym ->
+            val isExpanded = expandedCard == gym.name
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                tonalElevation = 2.dp,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                expandedCard = if (isExpanded) null else gym.name
+                            }
+                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(gym.name, style = MaterialTheme.typography.titleMedium)
+                        // Expand / collapse arrow
+                        Icon(
+                            if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                            contentDescription = null
+                        )
+                    }
+
+                    AnimatedVisibility(visible = isExpanded) {
+                        Column {
+                            gym.routes.forEach { rc ->
+                                AmendColorRow(
+                                    gymName = gym.name,
+                                    routeColor = rc,
+                                    onClick = {
+                                        selectedColor = rc
+                                        selectedGym = gym.name
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Holds climb details between type selection and time picker confirmation. */
+private data class PendingAmendClimb(
+    val color: String,
+    val gymName: String,
+    val score: Int,
+    val climbType: ClimbType
+)
+
+/** Route color row for the amend flow — mirrors ClimbScreen's ColorRow. */
+@Composable
+private fun AmendColorRow(
+    gymName: String,
+    routeColor: RouteColor,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        // Color swatch circle
+        ClimbDot(gymName = gymName, routeName = routeColor.name, size = 32.dp, strokeWidth = 2.dp, showFilledBorder = true)
+        Text(
+            routeColor.name,
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            routeColor.grade,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 

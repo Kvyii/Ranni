@@ -209,6 +209,11 @@ class HistoryViewModel(
         gymOrderPrefs.setLastStatsPeriod(months)
     }
 
+    // Log a climb with a custom timestamp (used by the amend flow for past-day entries)
+    fun logAmendedClimb(color: String, gymName: String, score: Int, climbType: ClimbType, loggedAt: Long) {
+        viewModelScope.launch { climbRepo.logClimb(color, gymName, score, climbType, loggedAt) }
+    }
+
     fun deleteLog(log: SessionLog) {
         viewModelScope.launch { sessionRepo.deleteLog(log) }
     }
