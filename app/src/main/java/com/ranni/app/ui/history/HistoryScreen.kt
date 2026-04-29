@@ -234,12 +234,18 @@ private fun CalendarTab(viewModel: HistoryViewModel) {
                     )
                 }
                 "amend" -> {
-                    // --- Amend climb flow: gym/route picker → type → time picker ---
+                    // --- Amend flow: gym/route picker + injury picker → time picker ---
                     val date = selectedDate ?: return@AnimatedContent
                     AmendClimbFlow(
                         date = date,
-                        onConfirm = { color, gymName, score, climbType, loggedAt ->
+                        onConfirmClimb = { color, gymName, score, climbType, loggedAt ->
                             viewModel.logAmendedClimb(color, gymName, score, climbType, loggedAt)
+                            // Return to day detail after logging
+                            navigatingForward = false
+                            showAmendFlow = false
+                        },
+                        onConfirmInjury = { severity, loggedAt ->
+                            viewModel.logAmendedInjury(severity, loggedAt)
                             // Return to day detail after logging
                             navigatingForward = false
                             showAmendFlow = false
@@ -609,14 +615,18 @@ private fun DayDetail(
 }
 
 // ---------------------------------------------------------------------------
-// AmendClimbFlow — gym/route picker → type dialog → time picker → confirm
+// AmendClimbFlow — gym/route picker + injury picker → time picker → confirm
 // ---------------------------------------------------------------------------
+
+// Sentinel key for the injury card in the amend flow's expandedCard state
+private const val AMEND_INJURY_CARD_KEY = "__injury__"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AmendClimbFlow(
     date: LocalDate,
-    onConfirm: (color: String, gymName: String, score: Int, climbType: ClimbType, loggedAt: Long) -> Unit,
+    onConfirmClimb: (color: String, gymName: String, score: Int, climbType: ClimbType, loggedAt: Long) -> Unit,
+    onConfirmInjury: (severity: InjurySeverity, loggedAt: Long) -> Unit,
     onBack: () -> Unit
 ) {
     // Intercept system back button
@@ -625,13 +635,15 @@ private fun AmendClimbFlow(
     // Only show active (non-coming-soon) gyms
     val activeGyms = remember { gyms.filter { !it.comingSoon } }
 
-    // Tracks which gym card is expanded (null = all collapsed)
+    // Tracks which card is expanded (gym name or AMEND_INJURY_CARD_KEY; null = all collapsed)
     var expandedCard by remember { mutableStateOf<String?>(null) }
     // Route + gym selected for the type dialog
     var selectedColor by remember { mutableStateOf<RouteColor?>(null) }
     var selectedGym by remember { mutableStateOf<String?>(null) }
     // Pending climb details waiting for time picker confirmation
     var pendingClimb by remember { mutableStateOf<PendingAmendClimb?>(null) }
+    // Pending injury severity waiting for time picker confirmation
+    var pendingInjury by remember { mutableStateOf<InjurySeverity?>(null) }
 
     // "Log climb?" type dialog — New / Flash / Repeat
     if (selectedColor != null) {
@@ -672,16 +684,16 @@ private fun AmendClimbFlow(
         )
     }
 
-    // Time picker dialog — shown after selecting climb type
-    if (pendingClimb != null) {
-        val climb = pendingClimb!!
+    // Time picker dialog — shown after selecting climb type or injury severity
+    val showTimePicker = pendingClimb != null || pendingInjury != null
+    if (showTimePicker) {
         val timePickerState = rememberTimePickerState(
             initialHour = 12,
             initialMinute = 0,
             is24Hour = false
         )
         AlertDialog(
-            onDismissRequest = { pendingClimb = null },
+            onDismissRequest = { pendingClimb = null; pendingInjury = null },
             title = {
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     Text("Select time", style = MaterialTheme.typography.titleMedium)
@@ -700,17 +712,23 @@ private fun AmendClimbFlow(
                         .atZone(ZoneId.systemDefault())
                         .toInstant()
                         .toEpochMilli()
-                    onConfirm(climb.color, climb.gymName, climb.score, climb.climbType, loggedAt)
-                    pendingClimb = null
+                    if (pendingClimb != null) {
+                        val climb = pendingClimb!!
+                        onConfirmClimb(climb.color, climb.gymName, climb.score, climb.climbType, loggedAt)
+                        pendingClimb = null
+                    } else if (pendingInjury != null) {
+                        onConfirmInjury(pendingInjury!!, loggedAt)
+                        pendingInjury = null
+                    }
                 }) { Text("Confirm") }
             },
             dismissButton = {
-                TextButton(onClick = { pendingClimb = null }) { Text("Cancel") }
+                TextButton(onClick = { pendingClimb = null; pendingInjury = null }) { Text("Cancel") }
             }
         )
     }
 
-    // Gym / route picker (simplified version of ClimbScreen — no drag, no injury, no star)
+    // Gym / route picker + injury picker
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -720,7 +738,7 @@ private fun AmendClimbFlow(
     ) {
         // Header
         Text(
-            "Select climb",
+            "Amend",
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.secondaryContainer
@@ -770,6 +788,45 @@ private fun AmendClimbFlow(
                 }
             }
         }
+
+        // Injury card — same expandable pattern as gym cards
+        val isInjuryExpanded = expandedCard == AMEND_INJURY_CARD_KEY
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            tonalElevation = 2.dp,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            expandedCard = if (isInjuryExpanded) null else AMEND_INJURY_CARD_KEY
+                        }
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Injury", style = MaterialTheme.typography.titleMedium)
+                    Icon(
+                        if (isInjuryExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                        contentDescription = null
+                    )
+                }
+
+                AnimatedVisibility(visible = isInjuryExpanded) {
+                    Column {
+                        // One row per severity level
+                        InjurySeverity.entries.forEach { severity ->
+                            AmendInjuryRow(
+                                severity = severity,
+                                onClick = { pendingInjury = severity }
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -807,6 +864,47 @@ private fun AmendColorRow(
             routeColor.grade,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+/** Injury severity row for the amend flow — mirrors ClimbScreen's InjuryRow. */
+@Composable
+private fun AmendInjuryRow(
+    severity: InjurySeverity,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        // Skull icon colored per severity
+        Image(
+            painter = androidx.compose.ui.res.painterResource(severity.skullRes),
+            contentDescription = null,
+            modifier = Modifier.size(25.dp)
+        )
+        Text(
+            severity.name.lowercase().replaceFirstChar { it.uppercase() },
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.weight(1f)
+        )
+        // Hint text describing what this severity feels like
+        Text(
+            text = when (severity) {
+                InjurySeverity.MILD     -> "Hurts but could keep climbing"
+                InjurySeverity.MODERATE -> "Hurts a lot. Impedes climbing"
+                InjurySeverity.SEVERE   -> "Welp. No climbing for a while"
+                InjurySeverity.DEATH    -> "Welcome to Valhalla"
+            },
+            style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.End,
+            maxLines = 1,
         )
     }
 }

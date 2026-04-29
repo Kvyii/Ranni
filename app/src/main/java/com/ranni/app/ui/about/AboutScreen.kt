@@ -184,6 +184,17 @@ fun AboutContent() {
 
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
 
+            Text("v2.2.1", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            // Release date
+            Text("29/04/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+            ChangelogText("""
+                • UI updates:
+                    - Added amend feature to add injuries to previous days
+                """.trimIndent())
+        }
+
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+
             Text("v2.2.0", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
             // Release date
             Text("01/04/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
