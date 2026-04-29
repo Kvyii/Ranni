@@ -8,9 +8,10 @@ import kotlinx.coroutines.flow.Flow
 class InjuryRepository(private val dao: InjuryLogDao) {
     fun getAllLogs(): Flow<List<InjuryLog>> = dao.getAllLogs()
 
-    /** Insert a new injury marker for the current date/time with the given severity. */
-    suspend fun logInjury(severity: InjurySeverity) =
-        dao.insert(InjuryLog(severity = severity.name))
+    /** Insert a new injury marker with the given severity.
+     *  Optional [loggedAt] overrides the default timestamp (used by the amend flow for past-day entries). */
+    suspend fun logInjury(severity: InjurySeverity, loggedAt: Long = System.currentTimeMillis()) =
+        dao.insert(InjuryLog(severity = severity.name, loggedAt = loggedAt))
 
     suspend fun deleteLog(log: InjuryLog) = dao.delete(log)
 }

@@ -214,6 +214,11 @@ class HistoryViewModel(
         viewModelScope.launch { climbRepo.logClimb(color, gymName, score, climbType, loggedAt) }
     }
 
+    // Log an injury with a custom timestamp (used by the amend flow for past-day entries)
+    fun logAmendedInjury(severity: InjurySeverity, loggedAt: Long) {
+        viewModelScope.launch { injuryRepo.logInjury(severity, loggedAt) }
+    }
+
     fun deleteLog(log: SessionLog) {
         viewModelScope.launch { sessionRepo.deleteLog(log) }
     }
