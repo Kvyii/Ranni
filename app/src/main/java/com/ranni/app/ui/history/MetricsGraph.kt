@@ -425,10 +425,23 @@ fun MetricsGraph(
             } // end clipRect
 
             // Map each data point to its (x, y) pixel position
-            val pts = data.map { point ->
+            val rawPts = data.map { point ->
                 val x = leftPadding + (ChronoUnit.DAYS.between(minDate, point.date) / totalDays) * plotWidth
                 val y = topPadding + plotHeight - (point.value / maxY) * plotHeight
                 Offset(x, y)
+            }
+
+            // Extend the line to the Y axis when the first data point starts past it.
+            // Projects the slope of the first segment back to x = leftPadding.
+            val pts = if (rawPts.size >= 2 && rawPts[0].x > leftPadding + 1f) {
+                val dx = rawPts[1].x - rawPts[0].x
+                val dy = rawPts[1].y - rawPts[0].y
+                val slope = if (dx != 0f) dy / dx else 0f
+                val edgeY = (rawPts[0].y - slope * (rawPts[0].x - leftPadding))
+                    .coerceIn(topPadding, topPadding + plotHeight)
+                listOf(Offset(leftPadding, edgeY)) + rawPts
+            } else {
+                rawPts
             }
 
             // Draw line path using monotone cubic interpolation (on top of dots).
