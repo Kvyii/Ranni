@@ -18,7 +18,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -632,8 +631,8 @@ private fun AmendClimbFlow(
     // Intercept system back button
     BackHandler(enabled = true, onBack = onBack)
 
-    // Only show active (non-coming-soon) gyms
-    val activeGyms = remember { gyms.filter { !it.comingSoon } }
+    // Only show active (non-coming-soon, non-hidden) gyms
+    val activeGyms = remember { gyms.filter { !it.comingSoon && !it.hidden } }
 
     // Tracks which card is expanded (gym name or AMEND_INJURY_CARD_KEY; null = all collapsed)
     var expandedCard by remember { mutableStateOf<String?>(null) }
@@ -1110,11 +1109,11 @@ private fun Day(
                     ) {
                         if (cappedSessions.isNotEmpty()) {
                             cappedSessions.forEach { _ ->
-                                // Exercise session dot — uses onSurfaceVariant which is always legible
+                                // Exercise session marker — uses onSurfaceVariant which is always legible
                                 Box(
                                     modifier = Modifier
                                         .size(5.5.dp)
-                                        .clip(CircleShape)
+                                        .clip(RoundedCornerShape(1.5.dp))
                                         .background(MaterialTheme.colorScheme.onSurfaceVariant)
                                 )
                             }

@@ -64,7 +64,9 @@ fun ScoresScreen() {
 
         Spacer(Modifier.height(4.dp))
 
-        gyms.forEach { gym ->
+        // Hidden gyms (e.g. Outdoor YDS Grade) are excluded here too — same rationale as the
+        // Select Climb screen: not selectable, but routeMap lookups for past logs still work.
+        gyms.filter { !it.hidden }.forEach { gym ->
             if (gym.comingSoon) {
                 Surface(
                     shape = MaterialTheme.shapes.medium,

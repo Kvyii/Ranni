@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Gentle back-leg sway: ~2.3s total (100ms offset + 1100ms × 2 half-cycles) -->
+<!-- Gentle back-leg sway: ~1.15s total (50ms offset + 550ms × 2 half-cycles) -->
 <objectAnimator xmlns:android="http://schemas.android.com/apk/res/android"
     android:propertyName="rotation"
-    android:duration="1100"
-    android:startOffset="100"
+    android:duration="550"
+    android:startOffset="50"
     android:valueFrom="0"
     android:valueTo="-6"
     android:valueType="floatType"

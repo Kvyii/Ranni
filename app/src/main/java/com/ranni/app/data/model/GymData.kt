@@ -1,6 +1,8 @@
 package com.ranni.app.data.model
 
+import androidx.annotation.DrawableRes
 import androidx.compose.ui.graphics.Color
+import com.ranni.app.R
 
 data class RouteColor(
     val name: String,
@@ -15,11 +17,21 @@ data class Gym(
     val comingSoon: Boolean = false,
     // When true, dots and bars for this gym render as hollow outlines instead of filled shapes
     val hollowDots: Boolean = false,
+    // Optional gym logo shown to the left of the name on the Select Climb card header.
+    // Logos vary in aspect ratio (square icons vs. wide wordmark banners) — rendered at a
+    // fixed height with natural width, never cropped or stretched. Null means no logo (falls
+    // back to name-only, e.g. for gyms without branded artwork yet).
+    @DrawableRes val logoRes: Int? = null,
+    // When true, this gym is excluded from the Select Climb list (active + coming-soon) but its
+    // routes stay in routeMap so routeColor/routeGrade lookups keep resolving correctly for any
+    // climbs already logged against it.
+    val hidden: Boolean = false,
 )
 
 val gyms = listOf(
     Gym(
         name = "9 Degrees",
+        logoRes = R.drawable.gym_logo_9_degrees,
         routes = listOf(
             RouteColor("Green",  "VB",      Color(0xFF60B555),   75),
             RouteColor("Blue",   "V0 - V1", Color(0xFF4279C7),  100),
@@ -72,6 +84,7 @@ val gyms = listOf(
     Gym(
         name = "Outdoor (YDS Grade)",
         hollowDots = true,
+        hidden = true,
         routes = listOf(
             RouteColor("5.9",   "5.9",   Color(0xFF67578c),  85),
             RouteColor("5.10c", "5.10c", Color(0xFF67578c),  140),
@@ -89,8 +102,8 @@ val gyms = listOf(
             RouteColor("5.14b", "5.14b", Color(0xFF67578c), 2350),
         )
     ),
-    Gym(name = "Nomad", routes = emptyList(), comingSoon = true),
-    Gym(name = "Blochaus", routes = emptyList(), comingSoon = true),
+    Gym(name = "Nomad", routes = emptyList(), comingSoon = true, logoRes = R.drawable.gym_logo_nomad),
+    Gym(name = "Blochaus", routes = emptyList(), comingSoon = true, logoRes = R.drawable.gym_logo_blochaus),
 )
 
 // Unambiguous route lookup keyed by (gymName, routeName) pair.

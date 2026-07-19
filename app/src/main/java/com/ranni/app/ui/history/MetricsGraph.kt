@@ -11,6 +11,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -98,7 +99,6 @@ fun MetricsGraph(
 
             if (plotWidth <= 0 || plotHeight <= 0) return@Canvas
 
-            val maxY = data.maxOf { it.value }.coerceAtLeast(1f)
             // Use explicit axis bounds when provided so dots span the full weekly-activity range
             // even when the line starts later (i.e. the first climb date is after the timeline start).
             // Add a half-week margin on each side so the first/last columns never land at the edges
@@ -107,6 +107,17 @@ fun MetricsGraph(
             val minDate = axisStartDate.minusDays(4)
             val maxDate = axisEndDate.plusDays(4)
             val totalDays = ChronoUnit.DAYS.between(minDate, maxDate).toFloat().coerceAtLeast(1f)
+
+            // Y-axis scale is driven only by values inside the visible window — points before
+            // axisStartDate exist purely as off-screen lead-in for the line's entry slope and
+            // must not stretch the scale, or the visible curve gets squashed/clipped against
+            // the top of the plot by a peak that's never actually shown.
+            val visibleValues = data.filter { !it.date.isBefore(axisStartDate) }.map { it.value }
+            val dataMaxY = (visibleValues.maxOrNull() ?: data.maxOf { it.value }).coerceAtLeast(1f)
+            // Add 10% headroom above the real peak so the curve never renders flush against the
+            // top of the plot — without this, a point exactly at the max value draws at the very
+            // top pixel and reads as if the line were clipped/truncated.
+            val maxY = dataMaxY * 1.1f
 
             // Draw Y axis
             drawLine(
@@ -322,16 +333,17 @@ fun MetricsGraph(
                 val hasDots = hasClimbs || hasExercises
                 val startY = if ((showClimbs || showExercises) && hasDots) baseY - medianLabelGap else baseY
 
-                // Draw exercise dots — stacking upward from startY
+                // Draw exercise markers — stacking upward from startY
                 // exerciseDotColor is onSurfaceVariant (theme-derived), always legible, no ring needed
                 if (hasExercises) {
                     for (i in 0 until week.exerciseCount) {
                         val dotY = startY - i * dotStep
                         if (dotY - dotRadius < topPadding) break // don't overflow above plot
-                        drawCircle(
+                        drawRoundRect(
                             color = exerciseDotColor,
-                            radius = dotRadius,
-                            center = Offset(exerciseColumnX, dotY)
+                            topLeft = Offset(exerciseColumnX - dotRadius, dotY - dotRadius),
+                            size = Size(dotRadius * 2f, dotRadius * 2f),
+                            cornerRadius = CornerRadius(dotRadius * 0.5f)
                         )
                     }
                 }
@@ -366,27 +378,33 @@ fun MetricsGraph(
                         if (currentY - dotRadius < topPadding) break@climbLoop // all remaining dots would also overflow
                         // Resolve color using (gymName, routeName) — unambiguous across all gyms
                         val dotColor = routeColor(gymName, colorName)
+                        val dotTopLeft = Offset(climbColumnX - dotRadius, currentY - dotRadius)
+                        val dotSize = Size(dotRadius * 2f, dotRadius * 2f)
+                        val dotCornerRadius = CornerRadius(dotRadius * 0.5f)
                         if (isOutlineGym(gymName)) {
-                            // Hollow ring — stroke uses the route's own color
-                            drawCircle(
+                            // Hollow outline — stroke uses the route's own color
+                            drawRoundRect(
                                 color = dotColor,
-                                radius = dotRadius,
-                                center = Offset(climbColumnX, currentY),
+                                topLeft = dotTopLeft,
+                                size = dotSize,
+                                cornerRadius = dotCornerRadius,
                                 style = Stroke(width = 1.dp.toPx())
                             )
                         } else {
-                            drawCircle(
+                            drawRoundRect(
                                 color = dotColor,
-                                radius = dotRadius,
-                                center = Offset(climbColumnX, currentY)
+                                topLeft = dotTopLeft,
+                                size = dotSize,
+                                cornerRadius = dotCornerRadius
                             )
-                            // Hairline ring only for near-black/white colors that would otherwise
+                            // Hairline outline only for near-black/white colors that would otherwise
                             // vanish against the background on one of the themes
                             if (dotColor.needsContrastRing()) {
-                                drawCircle(
+                                drawRoundRect(
                                     color = dotOutlineColor,
-                                    radius = dotRadius,
-                                    center = Offset(climbColumnX, currentY),
+                                    topLeft = dotTopLeft,
+                                    size = dotSize,
+                                    cornerRadius = dotCornerRadius,
                                     style = Stroke(width = 0.3.dp.toPx())
                                 )
                             }
@@ -424,27 +442,20 @@ fun MetricsGraph(
             }
             } // end clipRect
 
-            // Map each data point to its (x, y) pixel position
-            val rawPts = data.map { point ->
+            // Map each data point to its (x, y) pixel position. Points may fall left of
+            // leftPadding (x < leftPadding) when the first real data date is before the
+            // axis window start — that's expected and handled by the clip below.
+            val pts = data.map { point ->
                 val x = leftPadding + (ChronoUnit.DAYS.between(minDate, point.date) / totalDays) * plotWidth
                 val y = topPadding + plotHeight - (point.value / maxY) * plotHeight
                 Offset(x, y)
             }
 
-            // Extend the line to the Y axis when the first data point starts past it.
-            // Projects the slope of the first segment back to x = leftPadding.
-            val pts = if (rawPts.size >= 2 && rawPts[0].x > leftPadding + 1f) {
-                val dx = rawPts[1].x - rawPts[0].x
-                val dy = rawPts[1].y - rawPts[0].y
-                val slope = if (dx != 0f) dy / dx else 0f
-                val edgeY = (rawPts[0].y - slope * (rawPts[0].x - leftPadding))
-                    .coerceIn(topPadding, topPadding + plotHeight)
-                listOf(Offset(leftPadding, edgeY)) + rawPts
-            } else {
-                rawPts
-            }
-
-            // Draw line path using monotone cubic interpolation (on top of dots).
+            // Build the monotone cubic curve from the full point set — including any points
+            // left of the Y axis — so the segment crossing the axis has the correct slope
+            // instead of being fabricated. The clipRect below then hides everything left of
+            // leftPadding, so the visible line meets the Y axis already in motion rather than
+            // starting flat/fabricated exactly at the border.
             // Monotone cubic guarantees the curve passes through every data point and
             // never overshoots between adjacent points, so no artificial dips or peaks.
             val path = Path()
@@ -495,11 +506,21 @@ fun MetricsGraph(
                     path.cubicTo(cp1x, cp1y, cp2x, cp2y, pts[i + 1].x, pts[i + 1].y)
                 }
             }
-            drawPath(
-                path,
-                color = lineColor,
-                style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
-            )
+            // Clip to the plot rectangle so only the bounded-date portion of the curve is
+            // visible — the line enters from the Y axis already in motion, continuous with
+            // its true trajectory, instead of a fabricated or truncated edge point.
+            clipRect(
+                left = leftPadding,
+                top = topPadding,
+                right = leftPadding + plotWidth,
+                bottom = topPadding + plotHeight
+            ) {
+                drawPath(
+                    path,
+                    color = lineColor,
+                    style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+                )
+            }
         }
     }
 }

@@ -52,6 +52,44 @@ enum class AppTheme(val colorScheme: ColorScheme, val displayName: String) {
         )
     ),
 
+    // Ranni Dark's accent identity on true-black surfaces — saves battery on OLED screens
+    // and gives maximum contrast. Containers get a hair of lift (near-black, not pure black)
+    // so cards/nav bars stay visually separated from the pure-black background.
+    RANNI_OLED(
+        displayName = "Ranni OLED",
+        colorScheme = darkColorScheme(
+            // Accent — selected tabs, active icons, graph lines, sliders
+            primary          = Color(0xFF9d9bd1),
+            // Secondary accent — second graph line series
+            tertiary         = Color(0xFF9492c6),
+            // App background — true black for OLED power savings / max contrast
+            background       = Color(0xFF000000),
+            // Card / sheet / dialog surfaces — true black, same as background
+            surface          = Color(0xFF000000),
+            // Navigation bar and tab bar container — near-black, just enough lift to
+            // stay visible against the pure-black background
+            surfaceContainer = Color(0xFF0A0A0D),
+            // Primary text colour on background / surfaces
+            onSurface        = Color(0xFFf2f3fc),
+            // Secondary text, inactive icons, hint text
+            onSurfaceVariant = Color(0xFFf2f3fc),
+            // Validation errors, danger / destructive actions
+            error            = Color(0xFFcfb6de),
+            // Text / icons drawn on top of error-coloured surfaces
+            onError          = Color(0xFF601410),
+            // Climb dot border colour
+            outline          = Color(0xFF938F99),
+            // Graph grid lines, horizontal dividers
+            outlineVariant   = Color(0xFF49454F),
+            // Nav bar selected item pill background
+            secondaryContainer    = Color(0xFF6b6791),
+            // Nav bar selected icon and label colour
+            onSecondaryContainer  = Color(0xFFE3E1F5),
+            // Exercise card background — near-black, same lift as surfaceContainer
+            surfaceContainerLow   = Color(0xFF0A0A0D),
+        )
+    ),
+
     // Standard Material 3 dark palette — matches Android system defaults
     ANDROID_DARK(
         displayName = "Android Dark",
@@ -593,6 +631,7 @@ fun RanniTheme(
 ) {
     MaterialTheme(
         colorScheme = theme.colorScheme,
+        typography = RanniTypography,
         content = content
     )
 }

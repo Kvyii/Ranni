@@ -1,6 +1,8 @@
 package com.ranni.app.ui.climb
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -17,8 +19,11 @@ import androidx.compose.foundation.Image
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.res.painterResource
@@ -30,7 +35,8 @@ import com.ranni.app.R
 import com.ranni.app.data.model.ClimbType
 import com.ranni.app.data.model.InjurySeverity
 import com.ranni.app.data.model.RouteColor
-import com.ranni.app.ui.components.ClimbDot
+import com.ranni.app.data.model.isOutlineGym
+import com.ranni.app.data.model.needsContrastRing
 
 // Sentinel key used to identify the injury card in the expandedCard state
 private const val INJURY_CARD_KEY = "__injury__"
@@ -252,7 +258,15 @@ fun ClimbScreen(viewModel: ClimbViewModel) {
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(gym.name, style = MaterialTheme.typography.titleMedium)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                gym.logoRes?.let { logoRes ->
+                                    GymLogo(logoRes = logoRes, gymName = gym.name)
+                                }
+                                Text(gym.name, style = MaterialTheme.typography.titleMedium)
+                            }
                             // Right-hand controls: star toggle then expand arrow
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -311,7 +325,16 @@ fun ClimbScreen(viewModel: ClimbViewModel) {
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(gym.name, style = MaterialTheme.typography.titleMedium)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            // Dimmed to reinforce the "coming soon" (not yet active) state
+                            gym.logoRes?.let { logoRes ->
+                                GymLogo(logoRes = logoRes, gymName = gym.name, modifier = Modifier.alpha(0.5f))
+                            }
+                            Text(gym.name, style = MaterialTheme.typography.titleMedium)
+                        }
                         Text("Coming soon", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
@@ -413,31 +436,64 @@ private fun InjuryRow(
     }
 }
 
+/**
+ * Gym logo shown left of the name on the card header. Fit within a fixed box so every logo
+ * gets a consistent visual footprint, regardless of how much whitespace is baked into its own
+ * source asset — some logos (e.g. Nomad's wordmark) have almost no internal padding and would
+ * otherwise fill the row edge-to-edge and look oversized next to logos that already have
+ * breathing room baked in, so those get extra padding applied here instead of in the asset.
+ */
+@Composable
+private fun GymLogo(
+    logoRes: Int,
+    gymName: String,
+    modifier: Modifier = Modifier
+) {
+    val extraPadding = if (gymName == "Nomad") 6.dp else 0.dp
+    Image(
+        painter = painterResource(logoRes),
+        contentDescription = null,
+        modifier = modifier
+            .height(28.dp)
+            .padding(vertical = extraPadding),
+        contentScale = androidx.compose.ui.layout.ContentScale.FillHeight
+    )
+}
+
 @Composable
 private fun ColorRow(
     gymName: String,
     routeColor: RouteColor,
     onClick: () -> Unit
 ) {
-    Row(
+    val color = routeColor.color
+    // Custom/Outdoor gyms render hollow (outlined) — same distinction ClimbDot used to draw
+    val isOutline = isOutlineGym(gymName)
+    val textColor = when {
+        isOutline -> color
+        // Near-black/white route colors need a dark/light text override so the grade stays legible
+        !color.needsContrastRing() -> Color.White
+        color.luminance() > 0.5f -> Color.Black
+        else -> Color.White
+    }
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(14.dp)
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .height(40.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .then(
+                if (isOutline) Modifier.border(2.dp, color, RoundedCornerShape(8.dp))
+                else Modifier.background(color)
+            )
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
     ) {
-        // Color swatch circle — hollow or filled based on gym, via ClimbDot
-        ClimbDot(gymName = gymName, routeName = routeColor.name, size = 32.dp, strokeWidth = 2.dp, showFilledBorder = true)
-        Text(
-            routeColor.name,
-            style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.weight(1f)
-        )
         Text(
             routeColor.grade,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = textColor
         )
     }
 }
