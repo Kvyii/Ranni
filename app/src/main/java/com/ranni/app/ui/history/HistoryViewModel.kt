@@ -399,6 +399,12 @@ private fun computeGraphPoints(climbs: List<ClimbLog>, n: Int, k: Int, timelineM
     val zone = ZoneId.systemDefault()
     val today = LocalDate.now()
     val startDate = today.minusMonths(timelineMonths.toLong())
+    // Begin computing one full rolling-window-width before the visible timeline start so the
+    // curve has real lead-in trend data approaching the Y axis, instead of the first plotted
+    // point already being a flat, fully-averaged value with no history behind it. The renderer
+    // (MetricsGraph) clips anything before startDate, so these lead-in points are invisible —
+    // they only exist to give the curve its correct real slope where it crosses the axis.
+    val queryStart = startDate.minusMonths(n.toLong())
 
     // Pre-convert climbs to (date, score) pairs sorted by date for binary search
     val climbEntries = climbs.map { climb ->
@@ -411,20 +417,20 @@ private fun computeGraphPoints(climbs: List<ClimbLog>, n: Int, k: Int, timelineM
     val points = mutableListOf<GraphPoint>()
     val firstClimbDate = climbEntries.first().first
 
-    // When the first climb is after the timeline start, anchor the line at 0 on the Monday
+    // When the first climb is after the query start, anchor the line at 0 on the Monday
     // of the week prior to the first climb's week. This gives a clean ramp-up from zero
     // instead of the line appearing to start mid-air at an elevated value.
-    if (firstClimbDate.isAfter(startDate)) {
+    if (firstClimbDate.isAfter(queryStart)) {
         val firstWeekMonday = firstClimbDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
         val anchorDate = firstWeekMonday.minusWeeks(1)
-        // Only add the anchor if it falls within (or at) the timeline window
-        if (!anchorDate.isBefore(startDate)) {
+        // Only add the anchor if it falls within (or at) the query window
+        if (!anchorDate.isBefore(queryStart)) {
             points.add(GraphPoint(anchorDate, 0f))
         }
     }
 
-    // Start iterating from the later of (timeline start, first climb date)
-    var day = if (firstClimbDate.isAfter(startDate)) firstClimbDate else startDate
+    // Start iterating from the later of (query start, first climb date)
+    var day = if (firstClimbDate.isAfter(queryStart)) firstClimbDate else queryStart
 
     while (!day.isAfter(today)) {
         val windowStart = day.minusMonths(n.toLong())

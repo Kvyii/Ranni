@@ -184,6 +184,25 @@ fun AboutContent() {
 
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
 
+            Text("v3.0.0", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            // Release date
+            Text("20/07/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+            ChangelogText("""
+                • Faster startup — splash screen loading time halved
+                • Custom app-wide font (Manrope) for a less generic look
+                • Select climb: route rows are now a colour-filled grade pill instead of a dot + name (hollow outline preserved for Custom/Outdoor gyms)
+                • Select climb: subtle shadow added to colour swatches for more depth
+                • Select climb: gym logos now shown next to gym name, where available
+                • Hid Outdoor (YDS Grade) gym from selection — past logs still work fine
+                • History: climb/exercise markers changed from circles to slightly-rounded squares, in the calendar and the Progress graph
+                • Fixed Progress graph line not being continuous with the Y-axis border
+                • Fixed Progress graph line being clipped against the top of the chart
+                • Added Ranni OLED theme — true black surfaces for OLED screens
+                """.trimIndent())
+        }
+
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+
             Text("v2.2.2", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
             // Release date
             Text("31/05/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))

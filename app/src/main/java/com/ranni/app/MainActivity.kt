@@ -84,7 +84,7 @@ class MainActivity : ComponentActivity() {
         // Hold the system splash screen long enough for the AVD animation to finish
         val startTime = SystemClock.uptimeMillis()
         installSplashScreen().setKeepOnScreenCondition {
-            SystemClock.uptimeMillis() - startTime < 2400L
+            SystemClock.uptimeMillis() - startTime < 1200L
         }
 
         super.onCreate(savedInstanceState)

@@ -23,9 +23,12 @@ class ClimbViewModel(
     private val appContext: Context
 ) : ViewModel() {
 
-    // Active gyms are reorderable; coming-soon are locked at the bottom and never change
-    private val allActiveGyms: List<Gym> = gyms.filter { !it.comingSoon }
-    val comingSoonGyms: List<Gym> = gyms.filter { it.comingSoon }
+    // Active gyms are reorderable; coming-soon are locked at the bottom and never change.
+    // Hidden gyms (Gym.hidden) are excluded from both — their routes stay in routeMap so
+    // historical climb logs against them still resolve, they're just not selectable.
+    private val visibleGyms: List<Gym> = gyms.filter { !it.hidden }
+    private val allActiveGyms: List<Gym> = visibleGyms.filter { !it.comingSoon }
+    val comingSoonGyms: List<Gym> = visibleGyms.filter { it.comingSoon }
 
     // Ordered active gyms — initialised from saved prefs, falls back to default order
     private val _orderedActiveGyms = MutableStateFlow(loadOrderedGyms())
