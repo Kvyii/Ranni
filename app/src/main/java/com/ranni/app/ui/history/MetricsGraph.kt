@@ -207,8 +207,12 @@ fun MetricsGraph(
         )
 
         val lineColor = MaterialTheme.colorScheme.primary
-        // Distinct accent color for the flash-only line so it reads as a separate series
-        val secondaryLineColor = MaterialTheme.colorScheme.tertiary
+        // Distinct accent color for the flash-only line so it reads as a separate series.
+        // Darkened (not just a different hue) so a thick, same-width dashed line still reads as
+        // clearly secondary to the solid main line instead of competing with it for attention.
+        val secondaryLineColor = androidx.compose.ui.graphics.lerp(
+            MaterialTheme.colorScheme.tertiary, Color.Black, 0.35f
+        )
         val axisColor = MaterialTheme.colorScheme.outlineVariant
         val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
         // Captured here so they are accessible inside the Canvas DrawScope
