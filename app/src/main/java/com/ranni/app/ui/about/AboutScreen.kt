@@ -184,6 +184,17 @@ fun AboutContent() {
 
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
 
+            Text("v3.2.0", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            // Release date
+            Text("20/07/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+            ChangelogText("""
+                • History > Progress: added a flash-strength line (dotted) alongside the main average, to gauge flash performance separately
+                • Fixed the Progress graph line dipping below the axis or fabricating trend motion during long gaps with no climbs logged
+                """.trimIndent())
+        }
+
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+
             Text("v3.1.0", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
             // Release date
             Text("20/07/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))

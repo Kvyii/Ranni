@@ -913,6 +913,7 @@ private fun AmendInjuryRow(
 @Composable
 private fun ProgressTab(viewModel: HistoryViewModel) {
     val graphData by viewModel.graphData.collectAsState()
+    val flashGraphData by viewModel.flashGraphData.collectAsState()
     val topClimbs by viewModel.topClimbs.collectAsState()
     val weeklyActivity by viewModel.weeklyActivity.collectAsState()
     val config by viewModel.metricsConfig.collectAsState()
@@ -942,6 +943,7 @@ private fun ProgressTab(viewModel: HistoryViewModel) {
             weeklyActivity = if (dotsEnabled) weeklyActivity else emptyList(),
             showClimbs = config.showClimbDots,
             showExercises = config.showExerciseDots && config.timelineMonths < 6,
+            secondaryData = flashGraphData,
             axisMinDate = axisMinDate,
             axisMaxDate = axisMaxDate,
             modifier = Modifier
