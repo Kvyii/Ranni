@@ -16,7 +16,12 @@ data class Gym(
     val name: String,
     val routes: List<RouteColor>,
     val comingSoon: Boolean = false,
-)
+    // Optional UI label shown instead of `name`. `name` stays the routeMap lookup key —
+    // keep in sync with :app GymData.kt's Gym.displayName.
+    val displayName: String? = null,
+) {
+    val label: String get() = displayName ?: name
+}
 
 val gyms = listOf(
     Gym(
@@ -52,6 +57,7 @@ val gyms = listOf(
     ),
     Gym(
         name = "Outdoor (V-Grade)",
+        displayName = "Outdoor",
         routes = listOf(
             RouteColor("V0",  "V0",  Color(0xFF283673),  110),
             RouteColor("V1",  "V1",  Color(0xFF283673),  195),

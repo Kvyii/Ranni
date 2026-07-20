@@ -62,6 +62,7 @@ import com.ranni.app.data.model.InjurySeverity
 import com.ranni.app.data.model.RouteColor
 import com.ranni.app.data.model.SessionLog
 import com.ranni.app.data.model.gyms
+import com.ranni.app.data.model.gymDisplayName
 import com.ranni.app.data.model.isOutlineGym
 import com.ranni.app.data.model.needsContrastRing
 import com.ranni.app.data.model.routeColor
@@ -545,7 +546,7 @@ private fun DayDetail(
                                     ClimbDot(gymName = climb.gymName, routeName = climb.color, size = 12.dp)
                                     Text(routeGrade(climb.gymName, climb.color), style = MaterialTheme.typography.bodyLarge)
                                     // Gym name + climb type label combined to avoid extra spacing
-                                    val gymName = climb.gymName.ifEmpty { "Unknown" }
+                                    val gymName = gymDisplayName(climb.gymName.ifEmpty { "Unknown" })
                                     val typeLabel = when (climb.climbType) {
                                         ClimbType.FLASH.name -> " - Flash"
                                         ClimbType.REPEAT.name -> " - Repeat"
@@ -762,7 +763,7 @@ private fun AmendClimbFlow(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(gym.name, style = MaterialTheme.typography.titleMedium)
+                        Text(gym.label, style = MaterialTheme.typography.titleMedium)
                         // Expand / collapse arrow
                         Icon(
                             if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
@@ -1000,7 +1001,7 @@ private fun ProgressTab(viewModel: HistoryViewModel) {
                                 ClimbDot(gymName = climb.gymName, routeName = climb.color, size = 12.dp)
                                 Text(routeGrade(climb.gymName, climb.color), style = MaterialTheme.typography.bodyLarge)
                                 // Gym name + climb type label combined to avoid extra spacing
-                                val gymName = climb.gymName.ifEmpty { "Unknown" }
+                                val gymName = gymDisplayName(climb.gymName.ifEmpty { "Unknown" })
                                 val typeLabel = when (climb.climbType) {
                                     ClimbType.FLASH.name -> " - Flash"
                                     ClimbType.REPEAT.name -> " - Repeat"
@@ -1242,7 +1243,7 @@ private fun StatsTab(viewModel: HistoryViewModel) {
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = selectedGym ?: "Select gym",
+                        text = selectedGym?.let { gymDisplayName(it) } ?: "Select gym",
                         maxLines = 1,
                         modifier = Modifier.weight(1f),
                         textAlign = TextAlign.Start
@@ -1255,7 +1256,7 @@ private fun StatsTab(viewModel: HistoryViewModel) {
                     // Only show gyms that have climb data in the selected period
                     filteredGymNames.forEach { gymName ->
                         DropdownMenuItem(
-                            text = { Text(gymName) },
+                            text = { Text(gymDisplayName(gymName)) },
                             onClick = {
                                 viewModel.setStatsGym(gymName)
                                 gymDropdownExpanded = false

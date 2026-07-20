@@ -30,7 +30,7 @@ fun GymPickerScreen(
             Chip(
                 modifier = Modifier.fillMaxWidth(0.9f),
                 onClick  = { onGymSelected(gym.name) },
-                label    = { Text(gym.name) },
+                label    = { Text(gym.label) },
                 colors   = ChipDefaults.primaryChipColors()
             )
         }

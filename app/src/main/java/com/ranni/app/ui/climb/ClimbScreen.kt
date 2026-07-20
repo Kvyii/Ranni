@@ -265,7 +265,7 @@ fun ClimbScreen(viewModel: ClimbViewModel) {
                                 gym.logoRes?.let { logoRes ->
                                     GymLogo(logoRes = logoRes, gymName = gym.name)
                                 }
-                                Text(gym.name, style = MaterialTheme.typography.titleMedium)
+                                Text(gym.label, style = MaterialTheme.typography.titleMedium)
                             }
                             // Right-hand controls: star toggle then expand arrow
                             Row(
@@ -333,7 +333,7 @@ fun ClimbScreen(viewModel: ClimbViewModel) {
                             gym.logoRes?.let { logoRes ->
                                 GymLogo(logoRes = logoRes, gymName = gym.name, modifier = Modifier.alpha(0.5f))
                             }
-                            Text(gym.name, style = MaterialTheme.typography.titleMedium)
+                            Text(gym.label, style = MaterialTheme.typography.titleMedium)
                         }
                         Text("Coming soon", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
@@ -442,6 +442,9 @@ private fun InjuryRow(
  * source asset — some logos (e.g. Nomad's wordmark) have almost no internal padding and would
  * otherwise fill the row edge-to-edge and look oversized next to logos that already have
  * breathing room baked in, so those get extra padding applied here instead of in the asset.
+ *
+ * Custom/Outdoor use plain black-glyph-on-transparent icon assets (not branded artwork), so
+ * they're tinted to the theme's text colour via Icon instead of rendered as fixed-colour Image.
  */
 @Composable
 private fun GymLogo(
@@ -449,15 +452,31 @@ private fun GymLogo(
     gymName: String,
     modifier: Modifier = Modifier
 ) {
-    val extraPadding = if (gymName == "Nomad") 6.dp else 0.dp
-    Image(
-        painter = painterResource(logoRes),
-        contentDescription = null,
-        modifier = modifier
-            .height(28.dp)
-            .padding(vertical = extraPadding),
-        contentScale = androidx.compose.ui.layout.ContentScale.FillHeight
-    )
+    val extraPadding = when (gymName) {
+        "Nomad" -> 6.dp
+        "Custom", "Outdoor (V-Grade)" -> 4.dp
+        else -> 0.dp
+    }
+    val tintableIcon = gymName == "Custom" || gymName == "Outdoor (V-Grade)"
+    if (tintableIcon) {
+        Icon(
+            painter = painterResource(logoRes),
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurface,
+            modifier = modifier
+                .height(28.dp)
+                .padding(vertical = extraPadding)
+        )
+    } else {
+        Image(
+            painter = painterResource(logoRes),
+            contentDescription = null,
+            modifier = modifier
+                .height(28.dp)
+                .padding(vertical = extraPadding),
+            contentScale = androidx.compose.ui.layout.ContentScale.FillHeight
+        )
+    }
 }
 
 @Composable

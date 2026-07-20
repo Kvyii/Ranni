@@ -184,6 +184,19 @@ fun AboutContent() {
 
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
 
+            Text("v3.1.0", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            // Release date
+            Text("20/07/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+            ChangelogText("""
+                • Blochaus is now open for selection, with its own colour-graded routes
+                • Added icons for Outdoor and Custom gyms
+                • Renamed "Outdoor (V-Grade)" to "Outdoor" for a cleaner display name
+                • Select Climb: gym cards brightened slightly on the Ranni OLED theme for better contrast against the black background
+                """.trimIndent())
+        }
+
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+
             Text("v3.0.0", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
             // Release date
             Text("20/07/2026", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))

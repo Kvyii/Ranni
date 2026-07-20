@@ -64,8 +64,9 @@ enum class AppTheme(val colorScheme: ColorScheme, val displayName: String) {
             tertiary         = Color(0xFF9492c6),
             // App background — true black for OLED power savings / max contrast
             background       = Color(0xFF000000),
-            // Card / sheet / dialog surfaces — true black, same as background
-            surface          = Color(0xFF000000),
+            // Card / sheet / dialog surfaces — a hair off true black so tonal-elevated
+            // surfaces (e.g. Select Climb gym cards) stay visible against the background
+            surface          = Color(0xFF030304),
             // Navigation bar and tab bar container — near-black, just enough lift to
             // stay visible against the pure-black background
             surfaceContainer = Color(0xFF0A0A0D),
