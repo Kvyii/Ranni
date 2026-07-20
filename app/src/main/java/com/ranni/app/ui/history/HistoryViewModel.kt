@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.DayOfWeek
@@ -115,9 +116,25 @@ class HistoryViewModel(
     val injuryLogs: StateFlow<List<InjuryLog>> = injuryRepo.getAllLogs()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val graphData: StateFlow<List<GraphPoint>> = combine(climbLogs, metricsConfig) { climbs, config ->
-        computeGraphPoints(climbs, config.months, config.topK, config.timelineMonths)
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    // Main and flash-only Progress lines are computed together so they share sample dates
+    // wherever possible (see computeGraphPointSeries) — otherwise each line's smoothed curve
+    // is interpolated through a different set of x-positions and can visually cross the other
+    // line even though the flash average can never mathematically exceed the main average
+    // (flash climbs are always a strict subset of all climbs) on any single date.
+    private val graphSeries: StateFlow<Pair<List<GraphPoint>, List<GraphPoint>>> =
+        combine(climbLogs, metricsConfig) { climbs, config ->
+            computeGraphPointSeries(climbs, config.months, config.topK, config.timelineMonths)
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList<GraphPoint>() to emptyList())
+
+    val graphData: StateFlow<List<GraphPoint>> = graphSeries
+        .map { it.first }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Same rolling-average calculation as graphData, but restricted to FLASH climbs only —
+    // a separate trend line to gauge flash strength in isolation from NEW/REPEAT sends.
+    val flashGraphData: StateFlow<List<GraphPoint>> = graphSeries
+        .map { it.second }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // Returns up to 50 climbs within the metric window, sorted by score desc.
     // The UI greys out those beyond topK.
@@ -393,8 +410,26 @@ private fun computePriorComparison(
     )
 }
 
-private fun computeGraphPoints(climbs: List<ClimbLog>, n: Int, k: Int, timelineMonths: Int): List<GraphPoint> {
-    if (climbs.isEmpty() || n <= 0 || k <= 0) return emptyList()
+/**
+ * Computes the main Progress line (rolling top-K average over all climbs) and the flash-only
+ * line (same formula, restricted to FLASH climbs) together, in a single day-by-day pass.
+ *
+ * Both lines only emit a new point when their value changes (avoids staircase artefacts in the
+ * smoothed curve), but critically each line also emits a point whenever the *other* line's value
+ * changes. Without this, the two lines are interpolated as smooth curves through independent,
+ * differently-timed sets of x-positions — and even though the flash average can never
+ * mathematically exceed the main average on any single date (flash climbs are always a subset
+ * of all climbs), the two independently-interpolated curves can still visually cross between
+ * their real sample points. Sharing kink dates keeps both curves anchored at the same
+ * x-coordinates wherever either one changes, eliminating that illusion.
+ */
+private fun computeGraphPointSeries(
+    climbs: List<ClimbLog>,
+    n: Int,
+    k: Int,
+    timelineMonths: Int
+): Pair<List<GraphPoint>, List<GraphPoint>> {
+    if (climbs.isEmpty() || n <= 0 || k <= 0) return emptyList<GraphPoint>() to emptyList()
 
     val zone = ZoneId.systemDefault()
     val today = LocalDate.now()
@@ -406,26 +441,63 @@ private fun computeGraphPoints(climbs: List<ClimbLog>, n: Int, k: Int, timelineM
     // they only exist to give the curve its correct real slope where it crosses the axis.
     val queryStart = startDate.minusMonths(n.toLong())
 
-    // Pre-convert climbs to (date, score) pairs sorted by date for binary search
-    val climbEntries = climbs.map { climb ->
+    // Pre-convert climbs to (date, score) pairs sorted by date for binary search — one list for
+    // all climbs, one for flash-only climbs, each independently searched per day.
+    val allEntries = climbs.map { climb ->
+        val date = Instant.ofEpochMilli(climb.loggedAt).atZone(zone).toLocalDate()
+        date to climb.score
+    }.sortedBy { it.first }
+    val flashEntries = climbs.filter { it.climbType == ClimbType.FLASH.name }.map { climb ->
         val date = Instant.ofEpochMilli(climb.loggedAt).atZone(zone).toLocalDate()
         date to climb.score
     }.sortedBy { it.first }
 
-    val dates = climbEntries.map { it.first }
+    val allDates = allEntries.map { it.first }
+    val flashDates = flashEntries.map { it.first }
+
+    // Binary-searches [dates] for the inclusive index range covering (windowStart, day], i.e.
+    // the same window boundary logic the original single-series function used.
+    fun windowRange(dates: List<LocalDate>, windowStart: LocalDate, day: LocalDate): IntRange {
+        val lo = dates.binarySearch { it.compareTo(windowStart) }.let { idx ->
+            val insertionPoint = if (idx < 0) -(idx + 1) else idx + 1
+            var i = insertionPoint
+            while (i < dates.size && dates[i] == windowStart) i++
+            i
+        }
+        val hi = dates.binarySearch { it.compareTo(day) }.let { idx ->
+            if (idx < 0) -(idx + 1) - 1
+            else {
+                var i = idx
+                while (i + 1 < dates.size && dates[i + 1] == day) i++
+                i
+            }
+        }
+        return lo..hi
+    }
+
+    fun metricFor(entries: List<Pair<LocalDate, Int>>, range: IntRange): Float =
+        if (range.first <= range.last) {
+            entries.subList(range.first, range.last + 1)
+                .map { it.second }
+                .sortedDescending()
+                .take(k)
+                .sum()
+                .toFloat() / k
+        } else 0f
 
     val points = mutableListOf<GraphPoint>()
-    val firstClimbDate = climbEntries.first().first
+    val flashPoints = mutableListOf<GraphPoint>()
+    val firstClimbDate = allEntries.first().first
 
-    // When the first climb is after the query start, anchor the line at 0 on the Monday
+    // When the first climb is after the query start, anchor both lines at 0 on the Monday
     // of the week prior to the first climb's week. This gives a clean ramp-up from zero
     // instead of the line appearing to start mid-air at an elevated value.
     if (firstClimbDate.isAfter(queryStart)) {
         val firstWeekMonday = firstClimbDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
         val anchorDate = firstWeekMonday.minusWeeks(1)
-        // Only add the anchor if it falls within (or at) the query window
         if (!anchorDate.isBefore(queryStart)) {
             points.add(GraphPoint(anchorDate, 0f))
+            flashPoints.add(GraphPoint(anchorDate, 0f))
         }
     }
 
@@ -435,52 +507,46 @@ private fun computeGraphPoints(climbs: List<ClimbLog>, n: Int, k: Int, timelineM
     while (!day.isAfter(today)) {
         val windowStart = day.minusMonths(n.toLong())
 
-        // Binary search for window boundaries, then adjust for duplicates
-        val lo = dates.binarySearch { it.compareTo(windowStart) }.let { idx ->
-            val insertionPoint = if (idx < 0) -(idx + 1) else idx + 1
-            // Scan forward to skip any remaining entries equal to windowStart
-            var i = insertionPoint
-            while (i < dates.size && dates[i] == windowStart) i++
-            i
-        }
-        val hi = dates.binarySearch { it.compareTo(day) }.let { idx ->
-            if (idx < 0) -(idx + 1) - 1
-            else {
-                // Scan forward to find last entry equal to day
-                var i = idx
-                while (i + 1 < dates.size && dates[i + 1] == day) i++
-                i
-            }
-        }
+        val metric = metricFor(allEntries, windowRange(allDates, windowStart, day))
+        // Clamped to the main metric: flash climbs are always a subset of all climbs, so the
+        // flash average can never truly exceed the main average on the same date. The clamp
+        // guards against floating-point edge cases; the renderer additionally draws this line
+        // with straight segments (not a smoothed curve) so it can never visually bulge above
+        // the main line's curve between two real points either.
+        val flashMetric = metricFor(flashEntries, windowRange(flashDates, windowStart, day))
+            .coerceAtMost(metric)
 
-        val metric = if (lo <= hi) {
-            climbEntries.subList(lo, hi + 1)
-                .map { it.second }
-                .sortedDescending()
-                .take(k)
-                .sum()
-                .toFloat() / k
-        } else 0f
-
-        // Only record a point when the metric value changes (or on the first/last day).
-        // This prevents flat runs from producing staircase artefacts in the smoothed curve —
-        // each step becomes a single transition between two distinct values instead of
-        // dozens of identical daily points that force sharp corners.
+        // Record a point in EITHER series whenever EITHER metric changes, so both curves share
+        // the same kink dates (x-coordinates) — this is what prevents the two independently
+        // smoothed curves from visually crossing between their real sample points.
         val isFirst = points.isEmpty()
-        val valueChanged = points.isNotEmpty() && metric != points.last().value
-        if (isFirst || valueChanged) {
+        val mainChanged = points.isNotEmpty() && metric != points.last().value
+        val flashChanged = flashPoints.isNotEmpty() && flashMetric != flashPoints.last().value
+        if (isFirst || mainChanged || flashChanged) {
+            // Before recording the new value, anchor the flat run that just ended by also
+            // emitting a point at the previous day still holding the OLD value. Without this,
+            // a long flat run (e.g. 55 days at 0) collapses to a single point at its start, and
+            // the interpolated curve treats the entire span as one smooth transition — visually
+            // rising well before the real change actually happened. Skipped on the very first
+            // point (nothing to anchor) and when the previous day is already recorded (the
+            // anchor-at-0 block above may have just added `day - 1 week`, not `day - 1`).
+            if (!isFirst && points.last().date != day.minusDays(1)) {
+                points.add(GraphPoint(day.minusDays(1), points.last().value))
+                flashPoints.add(GraphPoint(day.minusDays(1), flashPoints.last().value))
+            }
             points.add(GraphPoint(day, metric))
+            flashPoints.add(GraphPoint(day, flashMetric))
         }
         day = day.plusDays(1)
     }
 
-    // Always ensure the final day (today) is represented so the line reaches the right edge
+    // Always ensure the final day (today) is represented so both lines reach the right edge
     if (points.isNotEmpty() && points.last().date != today) {
-        val lastMetric = points.last().value
-        points.add(GraphPoint(today, lastMetric))
+        points.add(GraphPoint(today, points.last().value))
+        flashPoints.add(GraphPoint(today, flashPoints.last().value))
     }
 
-    return points
+    return points to flashPoints
 }
 
 /** Max climbs shown in the Progress tab list (beyond topK they are greyed out). */

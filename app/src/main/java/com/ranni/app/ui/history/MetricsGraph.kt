@@ -16,6 +16,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -41,6 +42,138 @@ import java.time.temporal.TemporalAdjusters
 
 private val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yy")
 
+/** Number of straight-line samples used to flatten each cubic segment in [appendSmoothRun]. */
+private const val CURVE_SAMPLES_PER_SEGMENT = 12
+
+/**
+ * Builds the main line's path: straight through every segment where both endpoints are at
+ * value 0 (a real "nothing happened" gap — smoothing it would fabricate motion that never
+ * occurred, which is exactly the bug this graph used to have), and smoothly curved through every
+ * other segment (real climbing activity, where a curve reads better than sharp staircase steps).
+ *
+ * [pts] must already be in pixel space; [floorY] is the pixel y of value = 0.
+ */
+private fun buildMonotonePath(pts: List<Offset>, floorY: Float): Path {
+    val path = Path()
+    if (pts.isEmpty()) return path
+    if (pts.size == 1) {
+        path.moveTo(pts[0].x, pts[0].y.coerceAtMost(floorY))
+        return path
+    }
+
+    // A segment is "zero-to-zero" when both endpoints sit on the floor line — i.e. the real
+    // value was 0 at both ends, not just visually near it (floats, so use a tight epsilon).
+    fun isZero(y: Float) = kotlin.math.abs(y - floorY) < 0.01f
+
+    // Classify each segment (pts[i] to pts[i+1]) as flat (both ends at 0 — draw straight, no
+    // smoothing) or curved (real activity on at least one end — eligible for smoothing).
+    // Then group consecutive curved segments into runs; each run is smoothed independently so a
+    // curve never spans across a flat-zero boundary into the next run — that boundary is
+    // exactly where the old bug fabricated an early rise out of zero.
+    path.moveTo(pts[0].x, pts[0].y.coerceAtMost(floorY))
+    var runStart = 0
+    var i = 0
+    while (i < pts.size - 1) {
+        if (isZero(pts[i].y) && isZero(pts[i + 1].y)) {
+            // Flush any pending curved run up to (but not including) this flat segment first.
+            if (i > runStart) appendSmoothRun(path, pts.subList(runStart, i + 1), floorY)
+            path.lineTo(pts[i + 1].x, pts[i + 1].y.coerceAtMost(floorY))
+            runStart = i + 1
+        }
+        i++
+    }
+    // Flush any trailing curved run that reaches the end of the series.
+    if (runStart < pts.size - 1) appendSmoothRun(path, pts.subList(runStart, pts.size), floorY)
+    return path
+}
+
+/**
+ * Appends a monotone cubic Hermite curve through [pts] to [path] (assumes the path is already
+ * positioned at pts[0] via a prior moveTo/lineTo). Guarantees the curve passes through every
+ * point and never wildly overshoots between adjacent points (Fritsch–Carlson limiting).
+ *
+ * [floorY] is the pixel y-position of value = 0. The Fritsch–Carlson radius-3 tangent clamp
+ * prevents *wild* overshoot but does not guarantee a segment stays within its own two endpoints'
+ * range — a steep decline immediately followed by a near-flat run can still produce a tangent
+ * that dips the curve slightly below 0 right after crossing it. Since values can never
+ * legitimately be negative, the curve is flattened into short line segments and each sampled y
+ * is clamped to [floorY] (pixel space is flipped, so "below 0" means "y > floorY").
+ */
+private fun appendSmoothRun(path: Path, pts: List<Offset>, floorY: Float) {
+    if (pts.size < 2) return
+
+    // Step 1: compute secant slopes between consecutive points
+    val n = pts.size
+    val dx = FloatArray(n - 1) { i -> pts[i + 1].x - pts[i].x }
+    val dy = FloatArray(n - 1) { i -> pts[i + 1].y - pts[i].y }
+    val secants = FloatArray(n - 1) { i -> if (dx[i] != 0f) dy[i] / dx[i] else 0f }
+
+    // Step 2: initialise tangents using the average of neighbouring secants
+    val tangents = FloatArray(n)
+    tangents[0] = secants[0]
+    tangents[n - 1] = secants[n - 2]
+    for (i in 1 until n - 1) {
+        tangents[i] = (secants[i - 1] + secants[i]) / 2f
+    }
+
+    // Step 3: enforce monotonicity — scale tangents that would cause overshoot
+    for (i in 0 until n - 1) {
+        if (secants[i] == 0f) {
+            // Flat segment: force both endpoints to zero so the curve stays flat. Applies to
+            // any flat run (zero floor or a non-zero plateau) — a bounded tangent for non-zero
+            // plateaus was tried and caused real overshoot beyond the data's own range, so flat
+            // segments render as sharp corners here; only the segment shape is affected; values
+            // themselves stay exact.
+            tangents[i] = 0f
+            tangents[i + 1] = 0f
+        } else {
+            val alpha = tangents[i] / secants[i]
+            val beta = tangents[i + 1] / secants[i]
+            val norm = alpha * alpha + beta * beta
+            if (norm > 9f) {
+                // Clamp to the Fritsch–Carlson circle of radius 3 to prevent overshoot
+                val scale = 3f / kotlin.math.sqrt(norm)
+                tangents[i] = alpha * scale * secants[i]
+                tangents[i + 1] = beta * scale * secants[i]
+            }
+        }
+    }
+
+    // Step 4: flatten each cubic Bezier segment into short line segments, clamping every
+    // sampled y to floorY so the rendered curve can never dip below the value = 0 axis line,
+    // even where the tangent math above allows a small undershoot mid-segment.
+    for (i in 0 until n - 1) {
+        val cp1x = pts[i].x + dx[i] / 3f
+        val cp1y = pts[i].y + tangents[i] * dx[i] / 3f
+        val cp2x = pts[i + 1].x - dx[i] / 3f
+        val cp2y = pts[i + 1].y - tangents[i + 1] * dx[i] / 3f
+        for (s in 1..CURVE_SAMPLES_PER_SEGMENT) {
+            val t = s.toFloat() / CURVE_SAMPLES_PER_SEGMENT
+            val u = 1f - t
+            val x = u * u * u * pts[i].x + 3f * u * u * t * cp1x + 3f * u * t * t * cp2x + t * t * t * pts[i + 1].x
+            val y = u * u * u * pts[i].y + 3f * u * u * t * cp1y + 3f * u * t * t * cp2y + t * t * t * pts[i + 1].y
+            path.lineTo(x, y.coerceAtMost(floorY))
+        }
+    }
+}
+
+/**
+ * Builds a straight-segment (non-curved) path through [pts]. Unlike a smoothed spline, a
+ * straight line between two points can never rise above the higher of its two endpoints —
+ * used for the flash-only line so it is mathematically guaranteed to never render above the
+ * main line's curve at any pixel, given its endpoint values are already clamped to the main
+ * line's values at the same dates (see computeGraphPointSeries).
+ */
+private fun buildLinearPath(pts: List<Offset>): Path {
+    val path = Path()
+    if (pts.isEmpty()) return path
+    path.moveTo(pts[0].x, pts[0].y)
+    for (i in 1 until pts.size) {
+        path.lineTo(pts[i].x, pts[i].y)
+    }
+    return path
+}
+
 @Composable
 fun MetricsGraph(
     data: List<GraphPoint>,
@@ -48,6 +181,10 @@ fun MetricsGraph(
     weeklyActivity: List<WeekActivity> = emptyList(),
     showClimbs: Boolean = true,
     showExercises: Boolean = true,
+    // Optional second trend line — same rolling-average calculation as `data`, computed over a
+    // restricted climb set (e.g. flashes only). Drawn as a sparsely dotted line in its own color
+    // so it reads as a secondary series rather than competing with the main line.
+    secondaryData: List<GraphPoint>? = null,
     // Explicit axis date bounds so dots span the full timeline window even when the line
     // starts later (first climb date). Defaults to data range if not provided.
     axisMinDate: LocalDate? = null,
@@ -70,6 +207,8 @@ fun MetricsGraph(
         )
 
         val lineColor = MaterialTheme.colorScheme.primary
+        // Distinct accent color for the flash-only line so it reads as a separate series
+        val secondaryLineColor = MaterialTheme.colorScheme.tertiary
         val axisColor = MaterialTheme.colorScheme.outlineVariant
         val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
         // Captured here so they are accessible inside the Canvas DrawScope
@@ -112,7 +251,11 @@ fun MetricsGraph(
             // axisStartDate exist purely as off-screen lead-in for the line's entry slope and
             // must not stretch the scale, or the visible curve gets squashed/clipped against
             // the top of the plot by a peak that's never actually shown.
-            val visibleValues = data.filter { !it.date.isBefore(axisStartDate) }.map { it.value }
+            // Includes the secondary (flash-only) series too, so if it ever peaks higher than
+            // the main line the scale still accommodates it instead of clipping it off-plot.
+            val visibleValues = (data + secondaryData.orEmpty())
+                .filter { !it.date.isBefore(axisStartDate) }
+                .map { it.value }
             val dataMaxY = (visibleValues.maxOrNull() ?: data.maxOf { it.value }).coerceAtLeast(1f)
             // Add 10% headroom above the real peak so the curve never renders flush against the
             // top of the plot — without this, a point exactly at the max value draws at the very
@@ -442,10 +585,10 @@ fun MetricsGraph(
             }
             } // end clipRect
 
-            // Map each data point to its (x, y) pixel position. Points may fall left of
-            // leftPadding (x < leftPadding) when the first real data date is before the
-            // axis window start — that's expected and handled by the clip below.
-            val pts = data.map { point ->
+            // Maps data points to (x, y) pixel positions. Points may fall left of leftPadding
+            // when the first real data date is before the axis window start — that's expected
+            // and handled by the clip below.
+            fun toPoints(series: List<GraphPoint>) = series.map { point ->
                 val x = leftPadding + (ChronoUnit.DAYS.between(minDate, point.date) / totalDays) * plotWidth
                 val y = topPadding + plotHeight - (point.value / maxY) * plotHeight
                 Offset(x, y)
@@ -456,56 +599,11 @@ fun MetricsGraph(
             // instead of being fabricated. The clipRect below then hides everything left of
             // leftPadding, so the visible line meets the Y axis already in motion rather than
             // starting flat/fabricated exactly at the border.
-            // Monotone cubic guarantees the curve passes through every data point and
-            // never overshoots between adjacent points, so no artificial dips or peaks.
-            val path = Path()
-            if (pts.size == 1) {
-                // Single point — just move to it (nothing to draw)
-                path.moveTo(pts[0].x, pts[0].y)
-            } else {
-                // Step 1: compute secant slopes between consecutive points
-                val n = pts.size
-                val dx = FloatArray(n - 1) { i -> pts[i + 1].x - pts[i].x }
-                val dy = FloatArray(n - 1) { i -> pts[i + 1].y - pts[i].y }
-                val secants = FloatArray(n - 1) { i -> if (dx[i] != 0f) dy[i] / dx[i] else 0f }
+            val path = buildMonotonePath(toPoints(data), floorY = topPadding + plotHeight)
+            // Straight segments, not a smoothed curve — guarantees the flash line can never
+            // visually bulge above the main line between two points (see buildLinearPath).
+            val secondaryPath = secondaryData?.takeIf { it.isNotEmpty() }?.let { buildLinearPath(toPoints(it)) }
 
-                // Step 2: initialise tangents using the average of neighbouring secants
-                val tangents = FloatArray(n)
-                tangents[0] = secants[0]
-                tangents[n - 1] = secants[n - 2]
-                for (i in 1 until n - 1) {
-                    tangents[i] = (secants[i - 1] + secants[i]) / 2f
-                }
-
-                // Step 3: enforce monotonicity — scale tangents that would cause overshoot
-                for (i in 0 until n - 1) {
-                    if (secants[i] == 0f) {
-                        // Flat segment: force both endpoints to zero so the curve stays flat
-                        tangents[i] = 0f
-                        tangents[i + 1] = 0f
-                    } else {
-                        val alpha = tangents[i] / secants[i]
-                        val beta = tangents[i + 1] / secants[i]
-                        val norm = alpha * alpha + beta * beta
-                        if (norm > 9f) {
-                            // Clamp to the Fritsch–Carlson circle of radius 3 to prevent overshoot
-                            val scale = 3f / kotlin.math.sqrt(norm)
-                            tangents[i] = alpha * scale * secants[i]
-                            tangents[i + 1] = beta * scale * secants[i]
-                        }
-                    }
-                }
-
-                // Step 4: build the cubic Bezier path from the monotone tangents
-                path.moveTo(pts[0].x, pts[0].y)
-                for (i in 0 until n - 1) {
-                    val cp1x = pts[i].x + dx[i] / 3f
-                    val cp1y = pts[i].y + tangents[i] * dx[i] / 3f
-                    val cp2x = pts[i + 1].x - dx[i] / 3f
-                    val cp2y = pts[i + 1].y - tangents[i + 1] * dx[i] / 3f
-                    path.cubicTo(cp1x, cp1y, cp2x, cp2y, pts[i + 1].x, pts[i + 1].y)
-                }
-            }
             // Clip to the plot rectangle so only the bounded-date portion of the curve is
             // visible — the line enters from the Y axis already in motion, continuous with
             // its true trajectory, instead of a fabricated or truncated edge point.
@@ -515,6 +613,20 @@ fun MetricsGraph(
                 right = leftPadding + plotWidth,
                 bottom = topPadding + plotHeight
             ) {
+                // Flash-only line drawn first (underneath) as a sparse dotted line so the solid
+                // main line stays the primary visual focus.
+                secondaryPath?.let {
+                    drawPath(
+                        it,
+                        color = secondaryLineColor,
+                        style = Stroke(
+                            width = 2.dp.toPx(),
+                            cap = StrokeCap.Round,
+                            join = StrokeJoin.Round,
+                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(1.dp.toPx(), 10.dp.toPx()))
+                        )
+                    )
+                }
                 drawPath(
                     path,
                     color = lineColor,
