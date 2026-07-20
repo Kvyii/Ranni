@@ -16,7 +16,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -617,8 +616,8 @@ fun MetricsGraph(
                 right = leftPadding + plotWidth,
                 bottom = topPadding + plotHeight
             ) {
-                // Flash-only line drawn first (underneath) as a sparse dotted line so the solid
-                // main line stays the primary visual focus.
+                // Flash-only line drawn first (underneath), solid, in a darker distinct color so
+                // it's clearly a separate series without competing with the main line on top.
                 secondaryPath?.let {
                     drawPath(
                         it,
@@ -626,8 +625,7 @@ fun MetricsGraph(
                         style = Stroke(
                             width = 2.dp.toPx(),
                             cap = StrokeCap.Round,
-                            join = StrokeJoin.Round,
-                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(1.dp.toPx(), 10.dp.toPx()))
+                            join = StrokeJoin.Round
                         )
                     )
                 }
