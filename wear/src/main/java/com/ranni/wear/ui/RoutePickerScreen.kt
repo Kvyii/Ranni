@@ -38,7 +38,7 @@ fun RoutePickerScreen(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         item {
-            Text(gym.name)
+            Text(gym.label)
         }
         items(gym.routes) { route ->
             Chip(

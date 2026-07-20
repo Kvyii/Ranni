@@ -80,7 +80,7 @@ fun ScoresScreen() {
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(gym.name, style = MaterialTheme.typography.titleMedium)
+                        Text(gym.label, style = MaterialTheme.typography.titleMedium)
                         Text("Coming soon", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
@@ -100,7 +100,7 @@ fun ScoresScreen() {
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(gym.name, style = MaterialTheme.typography.titleMedium)
+                            Text(gym.label, style = MaterialTheme.typography.titleMedium)
                             Icon(
                                 if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
                                 contentDescription = null

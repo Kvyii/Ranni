@@ -21,8 +21,8 @@ android {
         applicationId = "com.ranni.app"
         minSdk = 29
         targetSdk = 35
-        versionCode = 4
-        versionName = "3.0.0"
+        versionCode = 5
+        versionName = "3.1.0"
     }
 
     // Sign release builds with the release keystore from local.properties

@@ -26,7 +26,13 @@ data class Gym(
     // routes stay in routeMap so routeColor/routeGrade lookups keep resolving correctly for any
     // climbs already logged against it.
     val hidden: Boolean = false,
-)
+    // Optional UI label shown instead of `name`. `name` stays the DB storage key used in
+    // climb_logs and routeMap — never change it for existing gyms, or historical logs and
+    // routeColor/routeGrade lookups silently break. Null falls back to displaying `name`.
+    val displayName: String? = null,
+) {
+    val label: String get() = displayName ?: name
+}
 
 val gyms = listOf(
     Gym(
@@ -46,6 +52,7 @@ val gyms = listOf(
     Gym(
         name = "Custom",
         hollowDots = true,
+        logoRes = R.drawable.gym_logo_custom,
         routes = listOf(
             RouteColor("V0",  "V0",  Color(0xFFEDEDED),  75),
             RouteColor("V1",  "V1",  Color(0xFFEDEDED),  125),
@@ -64,7 +71,9 @@ val gyms = listOf(
     ),
     Gym(
         name = "Outdoor (V-Grade)",
+        displayName = "Outdoor",
         hollowDots = true,
+        logoRes = R.drawable.gym_logo_outdoor,
         routes = listOf(
             RouteColor("V0",  "V0",  Color(0xFF283673),   85),
             RouteColor("V1",  "V1",  Color(0xFF283673),  140),
@@ -103,7 +112,21 @@ val gyms = listOf(
         )
     ),
     Gym(name = "Nomad", routes = emptyList(), comingSoon = true, logoRes = R.drawable.gym_logo_nomad),
-    Gym(name = "Blochaus", routes = emptyList(), comingSoon = true, logoRes = R.drawable.gym_logo_blochaus),
+    Gym(
+        name = "Blochaus",
+        logoRes = R.drawable.gym_logo_blochaus,
+        // Scored at the top edge of each band, matching how 9 Degrees scores its own bands
+        // (e.g. "V2 - V4" = 250, the V4 value). Purple/Black align with 9 Degrees' Pink/Black
+        // top edges; Yellow and White match 9 Degrees' Purple (V6-V8) and White (V7+) directly.
+        routes = listOf(
+            RouteColor("Blue",   "VB",    Color(0xFF0EA5DE),   75),
+            RouteColor("Red",    "V0-V1", Color(0xFFED1B24),  100),
+            RouteColor("Purple", "V1-V3", Color(0xFFBE1A8D),  250),
+            RouteColor("Black",  "V3-V6", Color(0xFF000000),  700),
+            RouteColor("Yellow", "V6-V8", Color(0xFFFFCB05), 1000),
+            RouteColor("White",  "V8+",   Color(0xFFF1F3F2), 1300),
+        )
+    ),
 )
 
 // Unambiguous route lookup keyed by (gymName, routeName) pair.
@@ -124,6 +147,11 @@ fun routeGrade(gymName: String, routeName: String): String =
 // Returns true if dots/bars for this gym should render as hollow outlines.
 // Derived directly from the Gym.hollowDots flag — no separate string list to maintain.
 fun isOutlineGym(name: String): Boolean = gyms.find { it.name == name }?.hollowDots == true
+
+// Convenience: resolve a stored gym name (the routeMap/DB key) to its display label.
+// Used wherever a raw climb.gymName string needs to be shown to the user, so renamed
+// display labels (e.g. "Outdoor (V-Grade)" -> "Outdoor") apply to historical logs too.
+fun gymDisplayName(name: String): String = gyms.find { it.name == name }?.label ?: name
 
 // Returns true if this color is near-black (lum < 0.06) or near-white (lum > 0.85),
 // meaning it needs a contrasting outline ring to stay visible on both light and dark themes.
